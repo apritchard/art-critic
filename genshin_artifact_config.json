@@ -1,0 +1,7479 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "7.2",
+  "generated": "2026-11-13",
+  "keyFormat": "GOOD (Genshin Open Object Description), matching Irminsul exports",
+  "conventions": {
+    "sets4.tier": "1 = best in slot, 2 = good alternative, 3 = fallback",
+    "sets2": "Each entry is a pair of 2pc category tokens (see setCategories). 'any' = any set, i.e. off-piece-friendly.",
+    "mainStats": "Acceptable main stats per slot, ranked best first. Flower is always hp, plume always atk. '*' = any main stat acceptable.",
+    "avoidMainStats": "Main stats that look on-element but are useless for this build (e.g. elemental DMG goblets on Lunar/Stellar reaction scalers). Score these as unacceptable.",
+    "substats": "Resolved weights 0-1 (preset + overrides). Missing keys = 0.",
+    "confidence": "verified = researched from 2025-2026 sources; consensus = long-standing community builds, not re-checked; speculative = thin data, double-check",
+    "enabled": "false = exclude from leveling decisions by default"
+  },
+  "setCategories": {
+    "atk18": "ATK +18%",
+    "em80": "EM +80",
+    "er20": "Energy Recharge +20%",
+    "hp20": "HP +20%",
+    "def30": "DEF +30%",
+    "ele15:<element>": "Elemental DMG +15%",
+    "phys25": "Physical DMG +25%",
+    "heal15": "Healing Bonus +15%",
+    "burst20": "Burst DMG +20%",
+    "skill20": "Skill DMG +20%",
+    "naca15": "NA/CA DMG +15%",
+    "plunge25": "Plunge DMG +25%",
+    "shield35": "Shield Strength +35%",
+    "res40:<element>": "Elemental RES +40% (no generic value)",
+    "other": "Conditional/non-stat 2pc (no generic value)",
+    "any": "Any set"
+  },
+  "scoringDefaults": {
+    "levelThreshold4Line": 1.75,
+    "levelThreshold3Line": 1.5,
+    "alwaysLevelCritCircletWithOtherCritSub": true,
+    "rescoreAtLevels": [
+      4,
+      8,
+      12,
+      16
+    ],
+    "notes": "Score = sum of a matching build's substat weights over the piece's starting substats (include unactivatedSubstats for 3-liners). A build matches if the set is in sets4 or the set's 2pc category appears in sets2, and the main stat is acceptable for the slot."
+  },
+  "legacySets": [
+    "Thundersoother",
+    "Lavawalker",
+    "RetracingBolide",
+    "BloodstainedChivalry"
+  ],
+  "sets": {
+    "ADayCarvedFromRisingWinds": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "After NA/CA/Skill/Burst hits: ATK +25% for 6s (works off-field). Hexerei (Witch's Homework) characters also get +20% CRIT Rate.",
+      "twoPieceCategory": "atk18"
+    },
+    "ArchaicPetra": {
+      "twoPiece": "Geo DMG +15%",
+      "fourPiece": "Picking up a Crystallize shard or triggering Lunar-Crystallize: party +35% DMG of that element.",
+      "twoPieceCategory": "ele15:geo"
+    },
+    "AubadeOfMorningstarAndMoon": {
+      "twoPiece": "EM +80",
+      "fourPiece": "While off-field: Lunar Reaction DMG +20%, +40% more at Ascendant Gleam; lost 3s after going on-field.",
+      "twoPieceCategory": "em80"
+    },
+    "BlizzardStrayer": {
+      "twoPiece": "Cryo DMG +15%",
+      "fourPiece": "+20% CRIT Rate vs Cryo-affected enemies, +20% more vs Frozen.",
+      "twoPieceCategory": "ele15:cryo"
+    },
+    "BloodstainedChivalry": {
+      "twoPiece": "Physical DMG +25%",
+      "fourPiece": "After a kill: CA DMG +50%, CA costs 0 stamina.",
+      "twoPieceCategory": "phys25"
+    },
+    "CelestialGift": {
+      "twoPiece": "Energy Recharge +20%",
+      "fourPiece": "Hexerei only: after Skill, party +20% DMG of wearer's element; with Secret Rite, +40% for wearer's and active character's elements.",
+      "twoPieceCategory": "er20"
+    },
+    "CrimsonWitchOfFlames": {
+      "twoPiece": "Pyro DMG +15%",
+      "fourPiece": "Overloaded/Burning/Burgeon +40%, Vaporize/Melt +15%; Skill stacks the 2pc bonus.",
+      "twoPieceCategory": "ele15:pyro"
+    },
+    "DeepwoodMemories": {
+      "twoPiece": "Dendro DMG +15%",
+      "fourPiece": "Skill/Burst hits: enemy Dendro RES -30%.",
+      "twoPieceCategory": "ele15:dendro"
+    },
+    "DesertPavilionChronicle": {
+      "twoPiece": "Anemo DMG +15%",
+      "fourPiece": "CA hit: NA SPD +10%, NA/CA/Plunge DMG +40%.",
+      "twoPieceCategory": "ele15:anemo"
+    },
+    "DisenchantmentInDeepShadow": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Superconduct +80%, Stellar-Conduct +40%; +16% CRIT Rate vs affected enemies.",
+      "twoPieceCategory": "atk18"
+    },
+    "EchoesOfAnOffering": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Valley Rite: NA DMG increased by 70% of ATK (chance-based proc).",
+      "twoPieceCategory": "atk18"
+    },
+    "EmblemOfSeveredFate": {
+      "twoPiece": "Energy Recharge +20%",
+      "fourPiece": "Burst DMG + 25% of ER (max 75%).",
+      "twoPieceCategory": "er20"
+    },
+    "FinaleOfTheDeepGalleries": {
+      "twoPiece": "Cryo DMG +15%",
+      "fourPiece": "At 0 Energy: NA DMG +60% and Burst DMG +60% (mutually gated).",
+      "twoPieceCategory": "ele15:cryo"
+    },
+    "FlowerOfParadiseLost": {
+      "twoPiece": "EM +80",
+      "fourPiece": "Bloom/Hyperbloom/Burgeon +40%, Lunar-Bloom +10%; stacks +25% each.",
+      "twoPieceCategory": "em80"
+    },
+    "FragmentOfHarmonicWhimsy": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Bond of Life changes: DMG +18% per stack, 3 stacks.",
+      "twoPieceCategory": "atk18"
+    },
+    "GildedDreams": {
+      "twoPiece": "EM +80",
+      "fourPiece": "After a reaction: ATK +14% per same-element teammate, EM +50 per different-element teammate.",
+      "twoPieceCategory": "em80"
+    },
+    "GladiatorsFinale": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Sword/Claymore/Polearm NA DMG +35%.",
+      "twoPieceCategory": "atk18"
+    },
+    "GoldenTroupe": {
+      "twoPiece": "Elemental Skill DMG +20%",
+      "fourPiece": "Skill DMG +25%, +25% more while off-field.",
+      "twoPieceCategory": "skill20"
+    },
+    "HeartOfDepth": {
+      "twoPiece": "Hydro DMG +15%",
+      "fourPiece": "After Skill: NA/CA DMG +30%.",
+      "twoPieceCategory": "ele15:hydro"
+    },
+    "HeartOfTheFurnace": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Stellar Glimmer trigger: self ATK +12%; party Stellar Glimmer DMG +50% (works off-field, doesn't stack).",
+      "twoPieceCategory": "atk18"
+    },
+    "HuskOfOpulentDreams": {
+      "twoPiece": "DEF +30%",
+      "fourPiece": "Curiosity stacks: DEF +6% and Geo DMG +6% each, up to 4.",
+      "twoPieceCategory": "def30"
+    },
+    "Lavawalker": {
+      "twoPiece": "Pyro RES +40%",
+      "fourPiece": "DMG +35% vs Pyro-affected enemies.",
+      "twoPieceCategory": "res40:pyro"
+    },
+    "LongNightsOath": {
+      "twoPiece": "Plunging Attack DMG +25%",
+      "fourPiece": "Plunge/CA/Skill hits stack Plunge DMG +15% each, up to 5.",
+      "twoPieceCategory": "plunge25"
+    },
+    "MaidenBeloved": {
+      "twoPiece": "Healing Bonus +15%",
+      "fourPiece": "Skill/Burst: party incoming healing +20%.",
+      "twoPieceCategory": "heal15"
+    },
+    "MarechausseeHunter": {
+      "twoPiece": "NA/CA DMG +15%",
+      "fourPiece": "HP change: CRIT Rate +12% per stack, 3 stacks.",
+      "twoPieceCategory": "naca15"
+    },
+    "NightOfTheSkysUnveiling": {
+      "twoPiece": "EM +80",
+      "fourPiece": "On-field when party triggers Lunar reactions: CRIT Rate +15%/+30% (Nascent/Ascendant Gleam); party Lunar DMG +10% per Gleaming Moon effect.",
+      "twoPieceCategory": "em80"
+    },
+    "NighttimeWhispersInTheEchoingWoods": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "After Skill: Geo DMG +20%, x2.5 while shielded by Crystallize or near Lunar-Crystallize Moondrifts.",
+      "twoPieceCategory": "atk18"
+    },
+    "NoblesseOblige": {
+      "twoPiece": "Elemental Burst DMG +20%",
+      "fourPiece": "Burst: party ATK +20% for 12s.",
+      "twoPieceCategory": "burst20"
+    },
+    "NymphsDream": {
+      "twoPiece": "Hydro DMG +15%",
+      "fourPiece": "Mirrored Nymph stacks: up to ATK +25% and Hydro DMG +15%.",
+      "twoPieceCategory": "ele15:hydro"
+    },
+    "ObsidianCodex": {
+      "twoPiece": "DMG +15% while on-field in Nightsoul's Blessing",
+      "fourPiece": "Consuming Nightsoul points: CRIT Rate +40%.",
+      "twoPieceCategory": "other"
+    },
+    "OceanHuedClam": {
+      "twoPiece": "Healing Bonus +15%",
+      "fourPiece": "Healing builds a foam that bursts for 90% of the healing done.",
+      "twoPieceCategory": "heal15"
+    },
+    "PaleFlame": {
+      "twoPiece": "Physical DMG +25%",
+      "fourPiece": "Skill hit: ATK +9% x2 stacks; 2pc bonus doubled at max stacks.",
+      "twoPieceCategory": "phys25"
+    },
+    "RetracingBolide": {
+      "twoPiece": "Shield Strength +35%",
+      "fourPiece": "While shielded: NA/CA DMG +40%.",
+      "twoPieceCategory": "shield35"
+    },
+    "ScarletProof": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "After Stellar Swirl: CRIT Rate +16%, Stellar Swirl DMG +40% (self).",
+      "twoPieceCategory": "atk18"
+    },
+    "ScrollOfTheHeroOfCinderCity": {
+      "twoPiece": "+6 Energy when a party member triggers Nightsoul Burst",
+      "fourPiece": "Reaction: party DMG +12% for involved elements (+28% more if in Nightsoul's Blessing).",
+      "twoPieceCategory": "other"
+    },
+    "ShimenawasReminiscence": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Skill with >=15 Energy: lose 15 Energy, NA/CA/Plunge DMG +50%.",
+      "twoPieceCategory": "atk18"
+    },
+    "SilkenMoonsSerenade": {
+      "twoPiece": "Energy Recharge +20%",
+      "fourPiece": "Dealing Elemental DMG: party EM +60/+120 (Nascent/Ascendant Gleam); party Lunar DMG +10% per Gleaming Moon effect.",
+      "twoPieceCategory": "er20"
+    },
+    "SongOfDaysPast": {
+      "twoPiece": "Healing Bonus +15%",
+      "fourPiece": "Records healing; the active character's hits then gain +8% of recorded healing (cap 15,000).",
+      "twoPieceCategory": "heal15"
+    },
+    "TenacityOfTheMillelith": {
+      "twoPiece": "HP +20%",
+      "fourPiece": "Skill hit: party ATK +20%, Shield Strength +30%.",
+      "twoPieceCategory": "hp20"
+    },
+    "ThunderingFury": {
+      "twoPiece": "Electro DMG +15%",
+      "fourPiece": "Overloaded/Electro-Charged/Superconduct/Hyperbloom +40%, Aggravate +20%, Lunar-Charged and Stellar-Conduct +20%; Skill CD -1s on reaction.",
+      "twoPieceCategory": "ele15:electro"
+    },
+    "Thundersoother": {
+      "twoPiece": "Electro RES +40%",
+      "fourPiece": "DMG +35% vs Electro-affected enemies.",
+      "twoPieceCategory": "res40:electro"
+    },
+    "UnfinishedReverie": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "Up to +50% DMG while Burning enemies are nearby.",
+      "twoPieceCategory": "atk18"
+    },
+    "VermillionHereafter": {
+      "twoPiece": "ATK +18%",
+      "fourPiece": "After Burst: ATK +8%, +10% per HP drop (x4).",
+      "twoPieceCategory": "atk18"
+    },
+    "ViridescentVenerer": {
+      "twoPiece": "Anemo DMG +15%",
+      "fourPiece": "Swirl +60%, Stellar Swirl +20%; -40% RES to the swirled element (and Cryo on Stellar Swirl).",
+      "twoPieceCategory": "ele15:anemo"
+    },
+    "VourukashasGlow": {
+      "twoPiece": "HP +20%",
+      "fourPiece": "Skill/Burst DMG +10%, +8% per stack after taking DMG (x5).",
+      "twoPieceCategory": "hp20"
+    },
+    "WanderersTroupe": {
+      "twoPiece": "EM +80",
+      "fourPiece": "Catalyst/Bow CA DMG +35%.",
+      "twoPieceCategory": "em80"
+    }
+  },
+  "substatPresets": {
+    "ATK_CRIT": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "atk_": 0.75,
+      "atk": 0.3,
+      "enerRech_": 0.3,
+      "eleMas": 0.2
+    },
+    "ATK_CRIT_EM": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "atk_": 0.75,
+      "eleMas": 0.6,
+      "atk": 0.3,
+      "enerRech_": 0.3
+    },
+    "ATK_CRIT_ER": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "enerRech_": 0.8,
+      "atk_": 0.7,
+      "atk": 0.3,
+      "eleMas": 0.25
+    },
+    "HP_CRIT": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "hp_": 0.8,
+      "hp": 0.3,
+      "enerRech_": 0.4,
+      "eleMas": 0.3
+    },
+    "HP_CRIT_ER": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "enerRech_": 0.8,
+      "hp_": 0.75,
+      "hp": 0.3,
+      "eleMas": 0.2
+    },
+    "DEF_CRIT": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "def_": 0.8,
+      "def": 0.3,
+      "enerRech_": 0.35,
+      "eleMas": 0.25
+    },
+    "EM_CRIT": {
+      "critRate_": 1,
+      "critDMG_": 1,
+      "eleMas": 0.85,
+      "enerRech_": 0.4,
+      "atk_": 0.2
+    },
+    "EM_PURE": {
+      "eleMas": 1,
+      "enerRech_": 0.6,
+      "critRate_": 0.3,
+      "critDMG_": 0.15,
+      "atk_": 0.1
+    },
+    "ER_ATK_SUP": {
+      "enerRech_": 1,
+      "atk_": 0.8,
+      "atk": 0.35,
+      "critRate_": 0.4,
+      "critDMG_": 0.2
+    },
+    "ER_HP_SUP": {
+      "hp_": 1,
+      "enerRech_": 0.8,
+      "hp": 0.4,
+      "critRate_": 0.3,
+      "critDMG_": 0.15
+    },
+    "ER_DEF_SUP": {
+      "def_": 1,
+      "enerRech_": 0.8,
+      "def": 0.4,
+      "critRate_": 0.3
+    },
+    "HEAL_ATK": {
+      "atk_": 1,
+      "enerRech_": 0.8,
+      "atk": 0.4,
+      "critRate_": 0.2
+    },
+    "ER_UTIL": {
+      "enerRech_": 1,
+      "critRate_": 0.4,
+      "atk_": 0.3,
+      "hp_": 0.3,
+      "eleMas": 0.2
+    }
+  },
+  "characters": {
+    "Aino": {
+      "element": "hydro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar support/Hydro applier",
+          "sets4": [
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "AubadeOfMorningstarAndMoon",
+              "tier": 3
+            },
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "any"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_"
+            ],
+            "goblet": [
+              "*"
+            ],
+            "circlet": [
+              "critRate_",
+              "eleMas"
+            ]
+          },
+          "substatPreset": "ER_UTIL",
+          "substats": {
+            "enerRech_": 1,
+            "eleMas": 0.5,
+            "critRate_": 0.4,
+            "atk_": 0.3,
+            "hp_": 0.3
+          },
+          "erTarget": "~130-180%",
+          "notes": "Goblet: any (EM preferred). Icy Veins prefers 4* Instructor over Silken Moon's. CRIT Rate circlet with Favonius, EM circlet with Makhaira"
+        }
+      ]
+    },
+    "Albedo": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field DEF sub-DPS",
+          "sets4": [
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            },
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "ele15:geo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "enerRech_": 0.35,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "100-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Alhaitham": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Spread DPS",
+          "sets4": [
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:dendro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "atk_"
+            ],
+            "goblet": [
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.85,
+            "atk_": 0.5,
+            "enerRech_": 0.4
+          },
+          "erTarget": "120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Aloy": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "DPS (weak)",
+          "sets4": [
+            {
+              "set": "BlizzardStrayer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120%",
+          "notes": "Low priority"
+        }
+      ]
+    },
+    "Alyosha": {
+      "element": "electro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Stellar-Conduct support/healer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 2
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_",
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "atk_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.5,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "140-180%",
+          "notes": "Free 7.0 unit. Heart of the Furnace only if no Odette"
+        }
+      ]
+    },
+    "Amber": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst sub-DPS/Melt",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "120-140%",
+          "notes": "Low priority"
+        }
+      ]
+    },
+    "AratakiItto": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "def30"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "enerRech_": 0.35,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "130%",
+          "notes": ""
+        }
+      ]
+    },
+    "Arlecchino": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "FragmentOfHarmonicWhimsy",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            },
+            {
+              "set": "EchoesOfAnOffering",
+              "tier": 3
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ],
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100-110%",
+          "notes": "EM sands / EM substats (weight ~0.5) only in Vaporize teams; Crimson Witch for Vape"
+        }
+      ]
+    },
+    "Baizhu": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/buffer",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "OceanHuedClam",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "150%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Barbara": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer",
+          "sets4": [
+            {
+              "set": "OceanHuedClam",
+              "tier": 1
+            },
+            {
+              "set": "MaidenBeloved",
+              "tier": 2
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "heal15"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "130%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Beidou": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst sub-DPS",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "150-180%",
+          "notes": ""
+        }
+      ]
+    },
+    "Bennett": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Buffer/healer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "any",
+              "any"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "heal_",
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "200-250%",
+          "notes": "Burst buff scales on base ATK; artifact ATK is irrelevant"
+        }
+      ]
+    },
+    "Candace": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "HP support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "160-180%",
+          "notes": "CRIT Rate circlet with Favonius"
+        }
+      ]
+    },
+    "Charlotte": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer",
+          "sets4": [
+            {
+              "set": "OceanHuedClam",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "heal15"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "heal_"
+            ]
+          },
+          "substatPreset": "HEAL_ATK",
+          "substats": {
+            "atk_": 1,
+            "enerRech_": 0.8,
+            "atk": 0.4,
+            "critRate_": 0.2
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Chasca": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ObsidianCodex",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "anemo_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100-110%",
+          "notes": ""
+        }
+      ]
+    },
+    "Chevreuse": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "HP support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "140-180%",
+          "notes": "Overload teams"
+        }
+      ]
+    },
+    "Chiori": {
+      "element": "geo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field DPS",
+          "sets4": [
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            },
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "skill20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_",
+              "atk_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "atk_": 0.5,
+            "enerRech_": 0.35,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "100-120%",
+          "notes": "Mixed ATK/DEF scaling"
+        }
+      ]
+    },
+    "Chongyun": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support/sub-DPS",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Citlali": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/EM support",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "120-160%",
+          "notes": ""
+        }
+      ]
+    },
+    "Clorinde": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "FragmentOfHarmonicWhimsy",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            },
+            {
+              "set": "ThunderingFury",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.5,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-110%",
+          "notes": "Thundering Fury for Aggravate"
+        }
+      ]
+    },
+    "Collei": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "ele15:dendro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "eleMas": 0.5,
+            "atk": 0.3
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Columbina": {
+      "element": "hydro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field Lunar sub-DPS/buffer",
+          "sets4": [
+            {
+              "set": "AubadeOfMorningstarAndMoon",
+              "tier": 1
+            },
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "em80"
+            ],
+            [
+              "er20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "hp_"
+            ]
+          },
+          "substatPreset": "HP_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "hp_": 0.75,
+            "eleMas": 0.4,
+            "hp": 0.3
+          },
+          "erTarget": "160-180%",
+          "notes": "ER to requirement first (KQM). Silken only if nobody else holds it; Tenacity in ATK teams (Flins/Ineffa). Hydro goblet only in non-Lunar teams. HP target disputed: Icy Veins 32-36k vs ~35k cap",
+          "avoidMainStats": {
+            "goblet": [
+              "hydro_dmg_"
+            ]
+          }
+        },
+        {
+          "name": "On-field Lunar-Bloom",
+          "sets4": [
+            {
+              "set": "NightOfTheSkysUnveiling",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "hp_": 0.75,
+            "eleMas": 0.5,
+            "hp": 0.3
+          },
+          "erTarget": "150%+",
+          "notes": "Niche (game8)",
+          "avoidMainStats": {
+            "goblet": [
+              "hydro_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Cyno": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ThunderingFury",
+              "tier": 1
+            },
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.8,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "120-140%",
+          "notes": "Disenchantment in Stellar-Conduct teams"
+        }
+      ]
+    },
+    "Dahlia": {
+      "element": "hydro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/buff support",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "160%+",
+          "notes": "Not researched in depth"
+        }
+      ]
+    },
+    "Dehya": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS/burst",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "VourukashasGlow",
+              "tier": 2
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25,
+            "hp_": 0.2
+          },
+          "erTarget": "130-160%",
+          "notes": ""
+        }
+      ]
+    },
+    "Diluc": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "120-130%",
+          "notes": ""
+        }
+      ]
+    },
+    "Diona": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/healer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Dori": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Battery/healer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Durin": {
+      "element": "pyro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst DPS",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ],
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "100-150% (Icy Veins/GameWith; mobalytics says 120-180%)",
+          "notes": "A4 caps at 2,500 ATK; Rising Winds is best when Nicole holds Celestial Gift. EM sands for Melt/Vape; ATK% goblet only at C2/with heavy DMG% buffs"
+        },
+        {
+          "name": "Hexerei support",
+          "sets4": [
+            {
+              "set": "CelestialGift",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 1,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": "Only if no Nicole on the team"
+        }
+      ]
+    },
+    "Emilie": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burning sub-DPS",
+          "sets4": [
+            {
+              "set": "UnfinishedReverie",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "Escoffier": {
+      "element": "cryo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field sub-DPS/healer",
+          "sets4": [
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 2
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": "Not re-verified"
+        }
+      ]
+    },
+    "Eula": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Physical DPS",
+          "sets4": [
+            {
+              "set": "PaleFlame",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "phys25",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "physical_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Faruzan": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Buffer",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "ViridescentVenerer",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "any"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_"
+            ],
+            "goblet": [
+              "anemo_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_UTIL",
+          "substats": {
+            "enerRech_": 1,
+            "critRate_": 0.4,
+            "atk_": 0.3,
+            "hp_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "250%+ at C0 (~165% at C6)",
+          "notes": ""
+        }
+      ]
+    },
+    "Fischl": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field sub-DPS",
+          "sets4": [
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            },
+            {
+              "set": "ThunderingFury",
+              "tier": 2
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-120%",
+          "notes": "EM sands for Aggravate. Rising Winds (Hexerei) 'not necessarily best' per game8"
+        }
+      ]
+    },
+    "Flins": {
+      "element": "electro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar-Charged main DPS",
+          "sets4": [
+            {
+              "set": "NightOfTheSkysUnveiling",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "atk_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critDMG_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.5,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "To requirement (~120%)",
+          "notes": "KQM: avoid Electro DMG goblets (Lunar-Charged doesn't scale with Electro DMG). ATK% > EM on sands/goblet. CRIT 1:2",
+          "avoidMainStats": {
+            "goblet": [
+              "electro_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Freminet": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Physical DPS",
+          "sets4": [
+            {
+              "set": "PaleFlame",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "phys25",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "physical_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Furina": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "HP sub-DPS",
+          "sets4": [
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ],
+            [
+              "hp20",
+              "skill20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_",
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "hp_": 0.75,
+            "hp": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "180-200% (C0, solo Hydro)",
+          "notes": ""
+        },
+        {
+          "name": "Support",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 1,
+            "hp_": 0.75,
+            "hp": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "200%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Gaming": {
+      "element": "pyro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Plunge DPS",
+          "sets4": [
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 2
+            },
+            {
+              "set": "LongNightsOath",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "115-130%",
+          "notes": ""
+        }
+      ]
+    },
+    "Ganyu": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Melt/Freeze DPS",
+          "sets4": [
+            {
+              "set": "WanderersTroupe",
+              "tier": 1
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "110-130%",
+          "notes": "Wanderer's Troupe for Melt, Blizzard for Freeze"
+        }
+      ]
+    },
+    "Gorou": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Buffer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "def30"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "def_"
+            ],
+            "goblet": [
+              "def_",
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "def_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_DEF_SUP",
+          "substats": {
+            "def_": 1,
+            "enerRech_": 0.8,
+            "def": 0.4,
+            "critRate_": 0.3
+          },
+          "erTarget": "180%+",
+          "notes": ""
+        }
+      ]
+    },
+    "HuTao": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 1
+            },
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            },
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "hp_": 0.8,
+            "eleMas": 0.7,
+            "enerRech_": 0.4,
+            "hp": 0.3
+          },
+          "erTarget": "100%",
+          "notes": "Marechaussee is t1 with Furina"
+        }
+      ]
+    },
+    "Iansan": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Nightsoul ATK buffer",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "140%+",
+          "notes": "Not researched in depth"
+        }
+      ]
+    },
+    "Ifa": {
+      "element": "anemo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Nightsoul healer/Swirl buffer",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas",
+              "heal_"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "140%+",
+          "notes": "Not researched in depth"
+        }
+      ]
+    },
+    "Illuga": {
+      "element": "geo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar-Crystallize EM buffer",
+          "sets4": [
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "enerRech_"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.9,
+            "critRate_": 0.3
+          },
+          "erTarget": "Prioritize ER (mobalytics)",
+          "notes": "Silken Moon's needs C2; otherwise 2pc EM + 2pc EM. 800+ EM (GameWith)",
+          "avoidMainStats": {
+            "goblet": [
+              "geo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Ineffa": {
+      "element": "electro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field Lunar-Charged sub-DPS/shield",
+          "sets4": [
+            {
+              "set": "AubadeOfMorningstarAndMoon",
+              "tier": 1
+            },
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 2
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "atk_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.5,
+            "enerRech_": 0.4,
+            "atk": 0.3
+          },
+          "erTarget": "100-140%",
+          "notes": "Prydwen/Icy Veins prefer Aubade; game8 prefers Silken Moon's (only if no other holder). Gilded when no Ascendant Gleam",
+          "avoidMainStats": {
+            "goblet": [
+              "electro_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Jahoda": {
+      "element": "anemo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_",
+              "heal_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "150%+",
+          "notes": "VV in general teams, Silken Moon's in Lunar teams"
+        }
+      ]
+    },
+    "Jean": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "OceanHuedClam",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "anemo_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Kachina": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Nightsoul DEF sub-DPS",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "ele15:geo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_"
+            ],
+            "goblet": [
+              "geo_dmg_",
+              "def_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "enerRech_": 0.35,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "KaedeharaKazuha": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "EM support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "140-180%",
+          "notes": "~1000 EM ideal"
+        }
+      ]
+    },
+    "Kaeya": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS",
+          "sets4": [
+            {
+              "set": "BlizzardStrayer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "KamisatoAyaka": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Freeze DPS",
+          "sets4": [
+            {
+              "set": "BlizzardStrayer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critDMG_": 1,
+            "critRate_": 0.8,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "130-140%",
+          "notes": "Freeze + Blizzard supply CRIT Rate, so CRIT DMG circlet"
+        }
+      ]
+    },
+    "KamisatoAyato": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "HeartOfDepth",
+              "tier": 1
+            },
+            {
+              "set": "EchoesOfAnOffering",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:hydro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "hp_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "Kaveh": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Bloom DPS",
+          "sets4": [
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "130%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Keqing": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ThunderingFury",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "110-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Kinich": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ObsidianCodex",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:dendro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Kirara": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shielder",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Klee": {
+      "element": "pyro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 1
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "120-140%",
+          "notes": "Rising Winds listed by aggregator sites; Hexerei upgrade unverified"
+        }
+      ]
+    },
+    "KujouSara": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Buffer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "any"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critDMG_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 1,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "200%+",
+          "notes": "Buff scales on base ATK"
+        }
+      ]
+    },
+    "KukiShinobu": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Hyperbloom/healer",
+          "sets4": [
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "hp_": 0.2,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "LanYan": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shielder",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Lauma": {
+      "element": "dendro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Dendro/Lunar support",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas",
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.5,
+            "critDMG_": 0.4,
+            "atk_": 0.1
+          },
+          "erTarget": "140%+",
+          "notes": "Deepwood in solo-Dendro teams, Silken Moon's in Lunar teams",
+          "avoidMainStats": {
+            "goblet": [
+              "dendro_dmg_"
+            ]
+          }
+        },
+        {
+          "name": "Lunar-Bloom DPS",
+          "sets4": [
+            {
+              "set": "NightOfTheSkysUnveiling",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.85,
+            "enerRech_": 0.4,
+            "atk_": 0.2
+          },
+          "erTarget": "130%+",
+          "notes": "",
+          "avoidMainStats": {
+            "goblet": [
+              "dendro_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Layla": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shielder",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Linnea": {
+      "element": "geo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar-Crystallize sub-DPS/healer",
+          "sets4": [
+            {
+              "set": "AubadeOfMorningstarAndMoon",
+              "tier": 1
+            },
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            },
+            {
+              "set": "SilkenMoonsSerenade",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "def_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "def_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "enerRech_": 0.6,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "To requirement",
+          "notes": "KQM: ER > CRIT > DEF% > EM; >=2,000 DEF. Aubade per KQM, Husk general, Silken for team",
+          "avoidMainStats": {
+            "goblet": [
+              "geo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Lisa": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "ThunderingFury",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Lohen": {
+      "element": "cryo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Hexerei DPS/Melt",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            },
+            {
+              "set": "UnfinishedReverie",
+              "tier": 2
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 2
+            },
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 3
+            },
+            {
+              "set": "MarechausseeHunter",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "cryo_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.5,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "Low; mostly skippable (GameWith)",
+          "notes": "CRIT target ~80/160. Unfinished Reverie for Burnmelt, Blizzard for Freeze, Marechaussee with Furina. ATK% goblet only with heavy DMG% buffs"
+        }
+      ]
+    },
+    "Lynette": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS/support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Lyney": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            },
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Manekin": {
+      "element": "traveler-matched",
+      "confidence": "speculative",
+      "enabled": false,
+      "builds": [
+        {
+          "name": "Universal",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "130%+",
+          "notes": "Element matches your Traveler's. Icy Veins: avoid element/team-specific sets. Disabled by default for leveling decisions"
+        }
+      ]
+    },
+    "Manekina": {
+      "element": "traveler-matched",
+      "confidence": "speculative",
+      "enabled": false,
+      "builds": [
+        {
+          "name": "Universal",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "130%+",
+          "notes": "Element matches your Traveler's. Icy Veins: avoid element/team-specific sets. Disabled by default for leveling decisions"
+        }
+      ]
+    },
+    "Mavuika": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ObsidianCodex",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100%",
+          "notes": "Burst uses Fighting Spirit, not Energy"
+        }
+      ]
+    },
+    "Mika": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support/healer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Mitya": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "On-field Stellar-Conduct DPS",
+          "sets4": [
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "enerRech_"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.85,
+            "enerRech_": 0.4,
+            "atk_": 0.2
+          },
+          "erTarget": "Check Burst needs",
+          "notes": "Sources disagree; Prydwen-derived calc has 2pc EM + 2pc EM beating any 4pc (DiDS 2pc ATK is wasted). EM adds team Stellar-Conduct base DMG up to +14% at 500 EM",
+          "avoidMainStats": {
+            "goblet": [
+              "electro_dmg_"
+            ]
+          }
+        },
+        {
+          "name": "Off-field support",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas",
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.5,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "Low",
+          "notes": "Heart of the Furnace only if no other holder"
+        }
+      ]
+    },
+    "Mona": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "180%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Mualani": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ObsidianCodex",
+              "tier": 1
+            },
+            {
+              "set": "MarechausseeHunter",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "ele15:hydro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "eleMas"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "hp_": 0.8,
+            "eleMas": 0.6,
+            "enerRech_": 0.4,
+            "hp": 0.3
+          },
+          "erTarget": "100-110%",
+          "notes": "EM sands for Vaporize"
+        }
+      ]
+    },
+    "Nahida": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "EM/crit sub-DPS",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas",
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "eleMas",
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "EM_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.85,
+            "enerRech_": 0.4,
+            "atk_": 0.2
+          },
+          "erTarget": "110-130%",
+          "notes": ""
+        }
+      ]
+    },
+    "Navia": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "NighttimeWhispersInTheEchoingWoods",
+              "tier": 1
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "Nefer": {
+      "element": "dendro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar-Bloom DPS",
+          "sets4": [
+            {
+              "set": "NightOfTheSkysUnveiling",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "critDMG_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "EM_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "eleMas": 0.85,
+            "enerRech_": 0.4,
+            "atk_": 0.2
+          },
+          "erTarget": "110%+",
+          "notes": "game8",
+          "avoidMainStats": {
+            "goblet": [
+              "dendro_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Neuvillette": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfDepth",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "naca15"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "hp_": 0.8,
+            "enerRech_": 0.4,
+            "hp": 0.3,
+            "eleMas": 0.3
+          },
+          "erTarget": "110-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Nicole": {
+      "element": "pyro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Hexerei buffer",
+          "sets4": [
+            {
+              "set": "CelestialGift",
+              "tier": 1
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 2
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 3
+            },
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ],
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "~150-165% if bursting every rotation (KQM)",
+          "notes": "Buffs scale on her ATK. CRIT Rate circlet only with Favonius/signature"
+        }
+      ]
+    },
+    "Nilou": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Bloom enabler",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "VourukashasGlow",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "hp_": 1,
+            "hp": 0.4,
+            "enerRech_": 0.4,
+            "eleMas": 0.3
+          },
+          "erTarget": "100-120%",
+          "notes": "CRIT is useless"
+        }
+      ]
+    },
+    "Ningguang": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "NighttimeWhispersInTheEchoingWoods",
+              "tier": 1
+            },
+            {
+              "set": "ArchaicPetra",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:geo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "110%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Noelle": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "def30"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "enerRech_": 0.35,
+            "def": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "130%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Odette": {
+      "element": "cryo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Stellar sub-DPS/enabler",
+          "sets4": [
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 1
+            },
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 2
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.5,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "~100% (Prydwen samples)",
+          "notes": "Passive scales with ATK over 1,000. Disenchantment only if a better Furnace holder exists",
+          "avoidMainStats": {
+            "goblet": [
+              "cryo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Ororon": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Nightsoul sub-DPS",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Prune": {
+      "element": "anemo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Hexerei buffer",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "CelestialGift",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_",
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "atk_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "~150-165% (lower-quality sources)",
+          "notes": "VV or Celestial Gift, whichever the team isn't already holding. Buff scales on ATK; ATK threshold disputed (1,000 vs 2,000). CRIT Rate circlet with Favonius"
+        }
+      ]
+    },
+    "Qiqi": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/Stellar enabler",
+          "sets4": [
+            {
+              "set": "OceanHuedClam",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 1
+            },
+            {
+              "set": "MaidenBeloved",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "heal15"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "heal_"
+            ]
+          },
+          "substatPreset": "HEAL_ATK",
+          "substats": {
+            "atk_": 1,
+            "enerRech_": 0.8,
+            "atk": 0.4,
+            "critRate_": 0.2
+          },
+          "erTarget": "130%+",
+          "notes": "Heart of the Furnace in Stellar teams"
+        }
+      ]
+    },
+    "RaidenShogun": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst DPS/battery",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "er20"
+            ],
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_",
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.9,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "250%+ (national)",
+          "notes": ""
+        },
+        {
+          "name": "Hyperbloom driver",
+          "sets4": [
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            },
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "200%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Razor": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Physical DPS",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            },
+            {
+              "set": "PaleFlame",
+              "tier": 2
+            },
+            {
+              "set": "GladiatorsFinale",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "phys25"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "physical_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120-130%",
+          "notes": "Hexerei status per aggregators, unverified"
+        }
+      ]
+    },
+    "Rosaria": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support/sub-DPS",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 2
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": "Shares CRIT Rate with the team"
+        }
+      ]
+    },
+    "Sandrone": {
+      "element": "cryo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Stellar-Conduct DPS",
+          "sets4": [
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ],
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.4,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-140%",
+          "notes": "Prydwen relative values: DiDS 100%, Gilded 89%, Rising Winds 86%, 2pc EM+EM 84%. Stellar-Conduct ignores Cryo DMG%",
+          "avoidMainStats": {
+            "goblet": [
+              "cryo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "SangonomiyaKokomi": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/DPS",
+          "sets4": [
+            {
+              "set": "OceanHuedClam",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfDepth",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "heal15"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hydro_dmg_",
+              "hp_"
+            ],
+            "circlet": [
+              "heal_"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.7,
+            "hp": 0.4,
+            "atk_": 0.2
+          },
+          "erTarget": "130-160%",
+          "notes": "-100% CRIT Rate: CRIT substats worthless. Heart of Depth for DPS build"
+        }
+      ]
+    },
+    "Sayu": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/Swirl",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "enerRech_"
+            ],
+            "goblet": [
+              "eleMas",
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "eleMas",
+              "heal_"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Sethos": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Charged-shot DPS",
+          "sets4": [
+            {
+              "set": "WanderersTroupe",
+              "tier": 1
+            },
+            {
+              "set": "ThunderingFury",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.7,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "110%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Shenhe": {
+      "element": "cryo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Quill support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "atk_": 1,
+            "enerRech_": 0.8,
+            "atk": 0.5
+          },
+          "erTarget": "160%+",
+          "notes": "GameWith: Rising Winds is the highest-ATK 4pc even without its CRIT upgrade"
+        }
+      ]
+    },
+    "ShikanoinHeizou": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "DPS",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "DesertPavilionChronicle",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "Sigewinne": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field HP sub-DPS/healer",
+          "sets4": [
+            {
+              "set": "SongOfDaysPast",
+              "tier": 1
+            },
+            {
+              "set": "GoldenTroupe",
+              "tier": 2
+            },
+            {
+              "set": "OceanHuedClam",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_",
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "HP_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "hp_": 0.8,
+            "enerRech_": 0.4,
+            "hp": 0.3,
+            "eleMas": 0.3
+          },
+          "erTarget": "120-150%",
+          "notes": ""
+        }
+      ]
+    },
+    "Skirk": {
+      "element": "cryo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "FinaleOfTheDeepGalleries",
+              "tier": 1
+            },
+            {
+              "set": "BlizzardStrayer",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:cryo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100%",
+          "notes": "Burst doesn't use Energy (not re-verified)"
+        }
+      ]
+    },
+    "Sucrose": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "EM support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "140-160%",
+          "notes": ""
+        }
+      ]
+    },
+    "Tartaglia": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "NymphsDream",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfDepth",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:hydro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "110-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Thoma": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/battery",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "200%+",
+          "notes": ""
+        },
+        {
+          "name": "Burgeon",
+          "sets4": [
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas"
+            ],
+            "circlet": [
+              "eleMas"
+            ]
+          },
+          "substatPreset": "EM_PURE",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.6,
+            "critRate_": 0.3,
+            "critDMG_": 0.15,
+            "atk_": 0.1
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Tighnari": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Spread DPS",
+          "sets4": [
+            {
+              "set": "WanderersTroupe",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 1
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:dendro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "atk_"
+            ],
+            "goblet": [
+              "dendro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "110%+",
+          "notes": ""
+        }
+      ]
+    },
+    "TravelerAnemo": {
+      "element": "anemo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "eleMas"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "TravelerCryo": {
+      "element": "cryo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Stellar support/sub-DPS",
+          "sets4": [
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "120-140% (2 Cryo), 100-110% (3 Cryo)",
+          "notes": "Disenchantment on-field, Furnace off-field Stellar-Swirl. A minority of guides use Cryo DMG goblets; treated as avoid per the Stellar-scaling rule. ER figures from lower-quality sources",
+          "avoidMainStats": {
+            "goblet": [
+              "cryo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "TravelerDendro": {
+      "element": "dendro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Support",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "ele15:dendro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "dendro_dmg_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "eleMas"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "eleMas": 0.5,
+            "atk": 0.3
+          },
+          "erTarget": "180%+",
+          "notes": ""
+        }
+      ]
+    },
+    "TravelerElectro": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Battery",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_"
+            ]
+          },
+          "substatPreset": "ER_UTIL",
+          "substats": {
+            "enerRech_": 1,
+            "critRate_": 0.4,
+            "atk_": 0.3,
+            "hp_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "200%+",
+          "notes": ""
+        }
+      ]
+    },
+    "TravelerGeo": {
+      "element": "geo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:geo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "TravelerHydro": {
+      "element": "hydro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Sub-DPS",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "GoldenTroupe",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:hydro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "hp_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "hp_": 0.4,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140%+",
+          "notes": "Low priority"
+        }
+      ]
+    },
+    "TravelerPyro": {
+      "element": "pyro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Nightsoul sub-DPS",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "ObsidianCodex",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140-160%",
+          "notes": "Thin coverage; Obsidian only for on-field"
+        }
+      ]
+    },
+    "Valeriy": {
+      "element": "electro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/Stellar-Conduct buffer",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "140%+",
+          "notes": "~1 week old at time of research; data thin. Furnace if no holder"
+        }
+      ]
+    },
+    "Varesa": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Plunge DPS",
+          "sets4": [
+            {
+              "set": "ObsidianCodex",
+              "tier": 1
+            },
+            {
+              "set": "LongNightsOath",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100-120%",
+          "notes": ""
+        }
+      ]
+    },
+    "Varka": {
+      "element": "anemo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Hexerei main DPS",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            },
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 2
+            },
+            {
+              "set": "DesertPavilionChronicle",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ],
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_",
+              "pyro_dmg_",
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "110-130%",
+          "notes": "Goblet disputed: ATK% generally, Pyro DMG in C0 Pyro teams (~3%), Anemo DMG at C2+. Goal 2,500-2,600 ATK, 80% CR (Icy Veins)"
+        }
+      ]
+    },
+    "Venti": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Swirl support",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "enerRech_"
+            ],
+            "goblet": [
+              "anemo_dmg_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_",
+              "eleMas"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "eleMas": 0.9,
+            "enerRech_": 0.8,
+            "critRate_": 0.6,
+            "critDMG_": 0.6,
+            "atk_": 0.4
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        },
+        {
+          "name": "Hexerei DPS",
+          "sets4": [
+            {
+              "set": "ADayCarvedFromRisingWinds",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "130%+",
+          "notes": "game8: new BiS when Hexerei buff active"
+        }
+      ]
+    },
+    "Vesna": {
+      "element": "anemo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Stellar-Swirl main DPS",
+          "sets4": [
+            {
+              "set": "ScarletProof",
+              "tier": 1
+            },
+            {
+              "set": "ViridescentVenerer",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "atk_",
+              "eleMas"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "Modest",
+          "notes": "Passive wants ~2,000 ATK. Stellar Swirl ignores Anemo DMG%",
+          "avoidMainStats": {
+            "goblet": [
+              "anemo_dmg_"
+            ]
+          }
+        }
+      ]
+    },
+    "Vodyanitsa": {
+      "element": "hydro",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "HP healer/buffer",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_",
+              "heal_"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "hp_": 1,
+            "hp": 0.5,
+            "enerRech_": 0.4
+          },
+          "erTarget": "Optional (Burst not core)",
+          "notes": "Pure HP stacker: nothing works below 40k HP; aim 60k, then 65k (Icy Veins, game8)"
+        }
+      ]
+    },
+    "Wanderer": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "DesertPavilionChronicle",
+              "tier": 1
+            },
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100%",
+          "notes": ""
+        }
+      ]
+    },
+    "Wriothesley": {
+      "element": "cryo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            },
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "naca15",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "cryo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "100-110%",
+          "notes": "Disenchantment for Stellar-Conduct teams (unverified)"
+        }
+      ]
+    },
+    "Xiangling": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst sub-DPS",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ],
+            [
+              "er20",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "eleMas": 0.6,
+            "atk": 0.3
+          },
+          "erTarget": "160-200%",
+          "notes": ""
+        }
+      ]
+    },
+    "Xianyun": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Plunge buffer/healer",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "SongOfDaysPast",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_",
+              "heal_"
+            ]
+          },
+          "substatPreset": "ER_ATK_SUP",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "critRate_": 0.4,
+            "atk": 0.35,
+            "critDMG_": 0.2
+          },
+          "erTarget": "160-200%",
+          "notes": ""
+        }
+      ]
+    },
+    "Xiao": {
+      "element": "anemo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Plunge DPS",
+          "sets4": [
+            {
+              "set": "VermillionHereafter",
+              "tier": 1
+            },
+            {
+              "set": "LongNightsOath",
+              "tier": 2
+            },
+            {
+              "set": "DesertPavilionChronicle",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:anemo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120-140%",
+          "notes": ""
+        }
+      ]
+    },
+    "Xilonen": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer/shredder",
+          "sets4": [
+            {
+              "set": "ScrollOfTheHeroOfCinderCity",
+              "tier": 1
+            },
+            {
+              "set": "ArchaicPetra",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "def_"
+            ],
+            "circlet": [
+              "def_"
+            ]
+          },
+          "substatPreset": "ER_DEF_SUP",
+          "substats": {
+            "def_": 1,
+            "enerRech_": 0.8,
+            "def": 0.4,
+            "critRate_": 0.3
+          },
+          "erTarget": "140%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Xingqiu": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst sub-DPS",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "er20",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "160-200%",
+          "notes": ""
+        }
+      ]
+    },
+    "Xinyan": {
+      "element": "pyro",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shield/Physical (niche)",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            },
+            {
+              "set": "PaleFlame",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "phys25"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "physical_dmg_",
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "atk_": 0.7,
+            "atk": 0.3,
+            "eleMas": 0.25
+          },
+          "erTarget": "140-160%",
+          "notes": "Low priority"
+        }
+      ]
+    },
+    "YaeMiko": {
+      "element": "electro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Off-field sub-DPS",
+          "sets4": [
+            {
+              "set": "GoldenTroupe",
+              "tier": 1
+            },
+            {
+              "set": "ThunderingFury",
+              "tier": 2
+            },
+            {
+              "set": "DisenchantmentInDeepShadow",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:electro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "electro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-120%",
+          "notes": "Disenchantment for Stellar-Conduct teams (unverified)"
+        }
+      ]
+    },
+    "Yanfei": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 1
+            },
+            {
+              "set": "WanderersTroupe",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "ele15:pyro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "110-130%",
+          "notes": ""
+        }
+      ]
+    },
+    "Yaoyao": {
+      "element": "dendro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Healer",
+          "sets4": [
+            {
+              "set": "DeepwoodMemories",
+              "tier": 1
+            },
+            {
+              "set": "OceanHuedClam",
+              "tier": 2
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "heal_",
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "150%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Yelan": {
+      "element": "hydro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Burst sub-DPS",
+          "sets4": [
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "HP_CRIT_ER",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "enerRech_": 0.8,
+            "hp_": 0.75,
+            "hp": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "160-200%",
+          "notes": ""
+        }
+      ]
+    },
+    "Yoimiya": {
+      "element": "pyro",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Main DPS",
+          "sets4": [
+            {
+              "set": "ShimenawasReminiscence",
+              "tier": 1
+            },
+            {
+              "set": "EchoesOfAnOffering",
+              "tier": 1
+            },
+            {
+              "set": "MarechausseeHunter",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "atk18"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "eleMas"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT_EM",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "eleMas": 0.6,
+            "atk": 0.3,
+            "enerRech_": 0.3
+          },
+          "erTarget": "100-120%",
+          "notes": "Marechaussee with Furina"
+        }
+      ]
+    },
+    "YumemizukiMizuki": {
+      "element": "anemo",
+      "confidence": "speculative",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Swirl/Stellar-Swirl DPS",
+          "sets4": [
+            {
+              "set": "ViridescentVenerer",
+              "tier": 1
+            },
+            {
+              "set": "ScarletProof",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas"
+            ],
+            "goblet": [
+              "eleMas",
+              "anemo_dmg_"
+            ],
+            "circlet": [
+              "eleMas",
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": null,
+          "substats": {
+            "eleMas": 1,
+            "critRate_": 0.5,
+            "critDMG_": 0.5,
+            "enerRech_": 0.4
+          },
+          "erTarget": "120%+",
+          "notes": "Scarlet Proof for Stellar Swirl teams; main-stat optimum under Stellar unverified"
+        }
+      ]
+    },
+    "YunJin": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Buffer",
+          "sets4": [
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "def30",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "def_"
+            ],
+            "circlet": [
+              "def_"
+            ]
+          },
+          "substatPreset": "ER_DEF_SUP",
+          "substats": {
+            "def_": 1,
+            "enerRech_": 0.8,
+            "def": 0.4,
+            "critRate_": 0.3
+          },
+          "erTarget": "160%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Zhongli": {
+      "element": "geo",
+      "confidence": "consensus",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Shielder",
+          "sets4": [
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_"
+            ],
+            "circlet": [
+              "hp_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "100%",
+          "notes": ""
+        },
+        {
+          "name": "Damage support",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "ArchaicPetra",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "atk18",
+              "ele15:geo"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_"
+            ],
+            "goblet": [
+              "geo_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ATK_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "atk_": 0.75,
+            "atk": 0.3,
+            "enerRech_": 0.3,
+            "hp_": 0.3,
+            "eleMas": 0.2
+          },
+          "erTarget": "120%+",
+          "notes": ""
+        }
+      ]
+    },
+    "Zibai": {
+      "element": "geo",
+      "confidence": "verified",
+      "enabled": true,
+      "builds": [
+        {
+          "name": "Lunar-Crystallize DPS",
+          "sets4": [
+            {
+              "set": "NightOfTheSkysUnveiling",
+              "tier": 1
+            },
+            {
+              "set": "HuskOfOpulentDreams",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "def30"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "def_"
+            ],
+            "goblet": [
+              "def_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "DEF_CRIT",
+          "substats": {
+            "critRate_": 1,
+            "critDMG_": 1,
+            "def_": 0.8,
+            "eleMas": 0.4,
+            "enerRech_": 0.35,
+            "def": 0.3
+          },
+          "erTarget": "110%+",
+          "notes": "Geo DMG goblet doesn't boost Lunar-Crystallize. >=2,000 DEF. Husk is a temporary option",
+          "avoidMainStats": {
+            "goblet": [
+              "geo_dmg_"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

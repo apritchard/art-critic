@@ -1,0 +1,26 @@
+{
+  "version": "7.2",
+  "domains": [
+    { "domain": "Valley of Remembrance", "region": "Mondstadt", "sets": ["ViridescentVenerer", "MaidenBeloved"] },
+    { "domain": "Midsummer Courtyard", "region": "Mondstadt", "sets": ["ThunderingFury", "Thundersoother"] },
+    { "domain": "Peak of Vindagnyr", "region": "Mondstadt", "sets": ["BlizzardStrayer", "HeartOfDepth"] },
+    { "domain": "Domain of Guyun", "region": "Liyue", "sets": ["ArchaicPetra", "RetracingBolide"] },
+    { "domain": "Hidden Palace of Zhou Formula", "region": "Liyue", "sets": ["Lavawalker", "CrimsonWitchOfFlames"] },
+    { "domain": "Clear Pool and Mountain Cavern", "region": "Liyue", "sets": ["BloodstainedChivalry", "NoblesseOblige"] },
+    { "domain": "Ridge Watch", "region": "Liyue", "sets": ["TenacityOfTheMillelith", "PaleFlame"] },
+    { "domain": "The Lost Valley", "region": "Liyue", "sets": ["VermillionHereafter", "EchoesOfAnOffering"] },
+    { "domain": "Momiji-Dyed Court", "region": "Inazuma", "sets": ["ShimenawasReminiscence", "EmblemOfSeveredFate"] },
+    { "domain": "Slumbering Court", "region": "Inazuma", "sets": ["OceanHuedClam", "HuskOfOpulentDreams"] },
+    { "domain": "Spire of Solitary Enlightenment", "region": "Sumeru", "sets": ["DeepwoodMemories", "GildedDreams"] },
+    { "domain": "City of Gold", "region": "Sumeru", "sets": ["DesertPavilionChronicle", "FlowerOfParadiseLost"] },
+    { "domain": "Molten Iron Fortress", "region": "Sumeru", "sets": ["NymphsDream", "VourukashasGlow"] },
+    { "domain": "Denouement of Sin", "region": "Fontaine", "sets": ["MarechausseeHunter", "GoldenTroupe"] },
+    { "domain": "Waterfall Wen", "region": "Fontaine", "sets": ["SongOfDaysPast", "NighttimeWhispersInTheEchoingWoods"] },
+    { "domain": "Faded Theater", "region": "Fontaine", "sets": ["FragmentOfHarmonicWhimsy", "UnfinishedReverie"] },
+    { "domain": "Sanctum of Rainbow Spirits", "region": "Natlan", "sets": ["ScrollOfTheHeroOfCinderCity", "ObsidianCodex"] },
+    { "domain": "Derelict Masonry Dock", "region": "Natlan", "sets": ["LongNightsOath", "FinaleOfTheDeepGalleries"] },
+    { "domain": "Frostladen Machinery", "region": "Nod-Krai", "sets": ["NightOfTheSkysUnveiling", "SilkenMoonsSerenade"] },
+    { "domain": "Moochild's Treasures", "region": "Nod-Krai", "sets": ["AubadeOfMorningstarAndMoon", "ADayCarvedFromRisingWinds"] },
+    { "domain": "Inverted Glacier", "region": "Snezhnaya", "sets": ["ScarletProof", "HeartOfTheFurnace"] }
+  ]
+}
