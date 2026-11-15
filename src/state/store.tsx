@@ -5,6 +5,7 @@ import { defaultSettings } from '../engine/evaluate'
 import { STRONGBOX_SETS, type DomainsFile } from '../engine/farm'
 import { addEquip, applyEquips, loadPieces, parseExport, type Equip, type Piece } from '../engine/load'
 import type { ArtifactConfig, BuildConfig, GoodExport, Roster, RosterEntry, Settings } from '../engine/types'
+import { LoadExportButton } from '../ui/LoadExportButton'
 
 export type SortMode = 'newest' | 'oldest' | 'level' | 'slot' | 'verdict' | 'chance'
 
@@ -69,6 +70,7 @@ interface Store {
   roster: Roster
   done: Set<string>
   sort: SortMode
+  /** An export that appeared in imports/ (or changed there) since this one was loaded; null once it's loaded. */
   newExport: string | null
   updateSettings: (patch: Partial<Settings>) => void
   resetSettings: () => void
@@ -78,6 +80,8 @@ interface Store {
   setSort: (sort: SortMode) => void
   selectExport: (name: string) => Promise<void>
   refreshExports: () => Promise<void>
+  /** Copies an export from anywhere on this machine into imports/, then loads it. Throws if it can't be copied. */
+  loadExportFile: (file: File) => Promise<void>
 }
 
 const StoreContext = createContext<Store | null>(null)
@@ -94,6 +98,15 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+/** Copies an export file the user picked into imports/ and returns the name it has there (see saveExport). */
+export async function uploadExport(file: File): Promise<string> {
+  const url = `/api/exports/${encodeURIComponent(file.name)}?modified=${file.lastModified}`
+  const res = await fetch(url, { method: 'POST', body: file })
+  const body = (await res.json().catch(() => ({}))) as { name?: string; error?: string }
+  if (!res.ok || !body.name) throw new Error(body.error ?? `Couldn't copy ${file.name} into imports/: the server answered ${res.status}.`)
+  return body.name
+}
+
 type Loaded = {
   config: ArtifactConfig
   domains: DomainsFile | null
@@ -104,7 +117,8 @@ type Loaded = {
   persisted: PersistedState
 }
 
-async function loadAll(): Promise<Loaded> {
+/** Everything the page needs, or null when imports/ has no export yet. */
+async function loadAll(): Promise<Loaded | null> {
   const [config, domains, gameData, exports, persisted] = await Promise.all([
     getJson<ArtifactConfig>('/api/config'),
     getJson<DomainsFile>('/api/domains').catch(() => null),
@@ -112,7 +126,7 @@ async function loadAll(): Promise<Loaded> {
     getJson<ExportInfo[]>('/api/exports'),
     getJson<PersistedState>('/api/state'),
   ])
-  if (!exports.length) throw new Error('No exports found. Put an Irminsul GOOD export (.json) in the imports/ folder.')
+  if (!exports.length) return null
   const exportName = exports[0].name
   const data = parseExport(await getJson<unknown>(`/api/exports/${encodeURIComponent(exportName)}`), exportName)
   return { config, domains, gameData, exports, exportName, data, persisted }
@@ -121,17 +135,27 @@ async function loadAll(): Promise<Loaded> {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** True while imports/ has no export, so there's nothing to show but the Load export button. */
+  const [empty, setEmpty] = useState(false)
   const [persisted, setPersisted] = useState<PersistedState>({})
-  const [newExport, setNewExport] = useState<string | null>(null)
+  // With its modified time, so the copy just loaded doesn't announce itself as new (see `newExport` below).
+  const [newExport, setNewExport] = useState<{ name: string; mtime?: number } | null>(null)
 
+  const start = useCallback(
+    () =>
+      loadAll()
+        .then((l) => {
+          setEmpty(!l)
+          if (!l) return
+          setLoaded(l)
+          setPersisted(l.persisted)
+        })
+        .catch((e) => setError(String(e.message ?? e))),
+    [],
+  )
   useEffect(() => {
-    loadAll()
-      .then((l) => {
-        setLoaded(l)
-        setPersisted(l.persisted)
-      })
-      .catch((e) => setError(String(e.message ?? e)))
-  }, [])
+    start()
+  }, [start])
 
   // Persist edits, debounced. A failed save is retried and shown in the header; leaving the page saves at once.
   const lastSaved = useRef<string | null>(null)
@@ -177,7 +201,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!import.meta.hot) return
-    const onChange = (payload: { name: string }) => setNewExport(payload.name)
+    const onChange = (payload: { name: string; mtime?: number }) => setNewExport(payload)
     import.meta.hot.on('art-critic:exports-changed', onChange)
     // The dev server refreshed the weapon/ascension data in the background.
     const onGameData = () =>
@@ -228,6 +252,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const exports = await getJson<ExportInfo[]>('/api/exports')
     if (exports.length) await selectExport(exports[0].name)
   }, [selectExport])
+
+  const loadExportFile = useCallback(async (file: File) => selectExport(await uploadExport(file)), [selectExport])
+  // The watcher reports the copy a moment after it's loaded; it's only new if it differs from what's on screen.
+  const unseenExport =
+    newExport && !(loaded && newExport.name === loaded.exportName && newExport.mtime === exportMtime) ? newExport.name : null
 
   // Kept separate so marking pieces done doesn't re-run the evaluation.
   const exportPieces = useMemo(() => (loaded ? loadPieces(loaded.data) : []), [loaded?.data])
@@ -295,7 +324,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       roster,
       done,
       sort: persisted.sort ?? 'newest',
-      newExport,
+      newExport: unseenExport,
       updateSettings: (patch) => update((p) => ({ ...p, settings: { ...p.settings, ...patch } })),
       resetSettings: () => update((p) => ({ ...p, settings: {} })),
       setRosterEntry: (char, patch, fallback) =>
@@ -312,10 +341,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSort: (sort) => update((p) => ({ ...p, sort })),
       selectExport,
       refreshExports,
+      loadExportFile,
     }
-  }, [loaded, config, er, strongboxSets, persisted.strongbox, overrides, pieces, exportPieces, equips, saveError, settings, roster, persisted.done, persisted.sort, newExport, selectExport, refreshExports])
+  }, [loaded, config, er, strongboxSets, persisted.strongbox, overrides, pieces, exportPieces, equips, saveError, settings, roster, persisted.done, persisted.sort, unseenExport, selectExport, refreshExports, loadExportFile])
 
   if (error) return <div className="fatal">{error}</div>
+  if (empty) {
+    return (
+      <div className="fatal">
+        <p>No exports yet. Export your account with Irminsul, then load the .json it writes. It's copied into imports/.</p>
+        <LoadExportButton
+          onFile={async (file) => {
+            await uploadExport(file)
+            await start()
+          }}
+        />
+      </div>
+    )
+  }
   if (!store) return <div className="fatal">Loading…</div>
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 }

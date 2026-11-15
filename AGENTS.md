@@ -13,11 +13,12 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
 
 - **`server/artCriticPlugin.ts`** is a Vite plugin. Its `configureServer` serves:
   - `/api/exports` and `/api/exports/:name`: Irminsul GOOD exports in `imports/`, newest first;
+  - `POST /api/exports/:name?modified=<ms>`: the header's Load export button. `saveExport` checks the body is a GOOD export and copies it into `imports/` with the original's modified time. It never overwrites: the same bytes reuse the existing file, and a different file with a taken name gets ` (2)`. It answers `{ name }`, the name it saved under;
   - `/api/config` and `/api/domains`: the two JSON files at the repo root;
   - `/api/game-data`;
   - `GET` and `PUT /api/state`: `state/user-state.json`, written atomically.
 
-  It answers only local Host headers (`isLocalHost`), because its middleware runs before Vite's own host check. It pushes the HMR custom events `art-critic:exports-changed` and `art-critic:game-data-changed`. Server files import each other with the `.ts` extension, which Vite's native config loader needs.
+  It answers only local Host headers (`isLocalHost`), because its middleware runs before Vite's own host check. Requests that change files also need a local `Origin` when there is one (`isLocalOrigin`), since a website can POST to localhost without a preflight. It pushes the HMR custom events `art-critic:exports-changed` (with the file's name and `mtime`, so the page can ignore the copy it just loaded) and `art-critic:game-data-changed`. Server files import each other with the `.ts` extension, which Vite's native config loader needs.
 - **`server/gameData.ts`** downloads Genshin Optimizer's `allStat_gen.json` and trims it to the `GameData` shape in `src/engine/er.ts`. It keeps `data/game-data.json` (gitignored) under a week old. Without that file the ER model is null and ER features switch off rather than break.
 - **`src/state/store.tsx`** is the only stateful layer. It:
   - fetches everything and validates the export (`parseExport`);

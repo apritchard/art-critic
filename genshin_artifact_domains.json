@@ -4,6 +4,7 @@
     { "domain": "Valley of Remembrance", "region": "Mondstadt", "sets": ["ViridescentVenerer", "MaidenBeloved"] },
     { "domain": "Midsummer Courtyard", "region": "Mondstadt", "sets": ["ThunderingFury", "Thundersoother"] },
     { "domain": "Peak of Vindagnyr", "region": "Mondstadt", "sets": ["BlizzardStrayer", "HeartOfDepth"] },
+    { "domain": "Thorny Crown of the Mountain Wind", "region": "Mondstadt", "sets": ["CelestialGift", "DisenchantmentInDeepShadow"] },
     { "domain": "Domain of Guyun", "region": "Liyue", "sets": ["ArchaicPetra", "RetracingBolide"] },
     { "domain": "Hidden Palace of Zhou Formula", "region": "Liyue", "sets": ["Lavawalker", "CrimsonWitchOfFlames"] },
     { "domain": "Clear Pool and Mountain Cavern", "region": "Liyue", "sets": ["BloodstainedChivalry", "NoblesseOblige"] },

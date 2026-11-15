@@ -5,6 +5,7 @@ import { BuildsPage } from './BuildsPage'
 import { FarmPage } from './FarmPage'
 import { ImprovePage } from './ImprovePage'
 import { doneKey, ListView, type ListTab } from './ListView'
+import { LoadExportButton } from './LoadExportButton'
 import { useLocal } from './local'
 import { RerollPage } from './RerollPage'
 import { RosterPage } from './RosterPage'
@@ -89,6 +90,7 @@ export function App() {
         <button className="ghost" onClick={() => store.refreshExports()} title="Reload the newest export">
           ↻
         </button>
+        <LoadExportButton onFile={store.loadExportFile} />
         <div className="summary">
           <span className="chip lock">Lock {lockCount}</span>
           <span className="chip unlock">Unlock {unlockCount}</span>

@@ -154,3 +154,21 @@ describe('Strongbox sets', () => {
     expect(STRONGBOX_SETS.filter((s) => !real.sets[s])).toEqual([])
   })
 })
+
+describe('Domains file', () => {
+  const root = join(import.meta.dirname, '..', '..')
+  const real: ArtifactConfig = JSON.parse(readFileSync(join(root, 'genshin_artifact_config.json'), 'utf8'))
+  const file: DomainsFile = JSON.parse(readFileSync(join(root, 'genshin_artifact_domains.json'), 'utf8'))
+  const dropped = file.domains.flatMap((d) => d.sets)
+
+  it('has a domain for every set in the config, except the ones bosses drop', () => {
+    // Gladiator's Finale and Wanderer's Troupe come from bosses, so the Farm tab rightly says "no domain" for them.
+    const BOSS_DROPS = ['GladiatorsFinale', 'WanderersTroupe']
+    expect(Object.keys(real.sets).filter((s) => !dropped.includes(s) && !BOSS_DROPS.includes(s))).toEqual([])
+  })
+
+  it('names only sets the config knows, each in one domain', () => {
+    expect(dropped.filter((s) => !real.sets[s])).toEqual([])
+    expect(new Set(dropped).size).toBe(dropped.length)
+  })
+})

@@ -8,10 +8,13 @@ It reads an [Irminsul](https://github.com/konkers/irminsul) GOOD export plus `ge
 ## Setup
 
 1. Install [Node.js](https://nodejs.org/) 22.12 or newer.
-2. Export your account with Irminsul and drop the `.json` into `imports/`. The newest file is loaded automatically, and the page shows a banner when a new one appears.
-3. Double-click `start.bat` (or run `npm install` once, then `npm run dev`). The page opens at http://localhost:5317.
+2. Double-click `start.bat` (or run `npm install` once, then `npm run dev`). The page opens at http://localhost:5317.
    - The first start needs internet: it installs packages and downloads the game data used for Energy Recharge.
    - After pulling changes that add packages, run `npm install` again.
+3. Export your account with Irminsul, press **Load export…** at the top of the page and choose the `.json` it wrote, wherever it is. The file is copied into `imports/` and loaded.
+   - Exports in `imports/` are listed newest first in the menu beside the button, and the newest is loaded when the page opens. A copy keeps the original's modified time, so loading an old export doesn't make it the newest.
+   - Loading the same file again just selects it. A different file with a name that's already in `imports/` is saved as `name (2).json`, so nothing there is overwritten.
+   - You can also drop the `.json` into `imports/` yourself. The page shows a banner when a new one appears there.
 
 ## Configure
 
@@ -167,7 +170,7 @@ There's no production build: the API runs inside the Vite dev server, so `npm ru
   - `load.ts` reads the export and applies equips made since it; `match.ts` and `evaluate.ts` judge each piece; `projection.ts` has the roll odds; `stats.ts` has stat and set names.
   - `farm.ts` is the farming planner, `reroll.ts` the reroll odds, `improve.ts` the Improve tab, `er.ts` Energy Recharge totals, and `builds.ts` the Builds tab's edits.
 - `src/state/store.tsx` loads everything and saves your state. `src/ui/` holds the React views.
-- `server/artCriticPlugin.ts` is the dev-server API that serves exports, config, game data and saved state. `server/gameData.ts` downloads and refreshes `data/game-data.json`.
+- `server/artCriticPlugin.ts` is the dev-server API that serves exports, config, game data and saved state, and copies exports loaded with the button into `imports/`. `server/gameData.ts` downloads and refreshes `data/game-data.json`.
 
 ## License
 

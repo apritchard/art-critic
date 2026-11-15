@@ -109,6 +109,15 @@ input:not([type]) {
   border-color: var(--accent);
 }
 
+.ghost:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.fatal p {
+  margin: 0 0 16px;
+}
+
 kbd {
   border: 1px solid var(--border);
   border-bottom-width: 2px;
