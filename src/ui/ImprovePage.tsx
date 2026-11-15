@@ -17,6 +17,13 @@ const shortSubs = (p: Piece) =>
 
 const GUARANTEE: Record<Guarantee, string> = { 2: 'Normal (2)', 3: 'Advanced (3)', 4: 'Decreed (4)' }
 
+/** What the character rail ranks by: the weakest equipped piece's rating, or the average of all five. */
+type RailSort = 'min' | 'avg'
+const RAIL_SORT: Record<RailSort, { label: string; title: string }> = {
+  min: { label: 'Min', title: 'Weakest equipped piece' },
+  avg: { label: 'Avg', title: 'Average of the five equipped pieces (an empty or unusable slot counts as 0%)' },
+}
+
 /** Every build of a character as something the planners can judge, active or not. */
 function useRefs(result: EvaluationResult, char: string): ActiveBuild[] {
   const { config, roster, settings, data } = useStore()
@@ -44,13 +51,15 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
   const { pieces, config } = useStore()
   const [query, setQuery] = useState('')
   const [showInactive, setShowInactive] = useLocal('improve:inactive', false)
+  const [sortPick, setSortBy] = useLocal<RailSort>('improve:sort', 'min')
+  const sortBy: RailSort = sortPick === 'avg' ? 'avg' : 'min'
   const [selected, setSelected] = useLocal<string>('improve:char', '')
   useEffect(() => {
     if (initial && config.characters[initial]) setSelected(initial)
   }, [initial, config.characters, setSelected])
 
-  // Weakest slot of the build each character wears: where help is most needed.
-  const weakest = useMemo(() => {
+  // Ratings of the build each character wears: the weakest slot (where help is most needed) and the average.
+  const ratings = useMemo(() => {
     const { worn } = wearing(result, pieces)
     return new Map(
       result.characters.map((c) => {
@@ -59,13 +68,19 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
           const qs = Object.values(b.slots).map((s) => s.quality ?? 0)
           const sets = worn.get(c.char) ?? {}
           const onSet = config.characters[c.char]?.builds[b.idx]?.sets4.some((s) => (sets[s.set] ?? 0) >= 4)
-          return { onSet: Number(!!onSet), filled: qs.filter((q) => q > 0).length, min: Math.min(...qs) }
+          return {
+            onSet: Number(!!onSet),
+            filled: qs.filter((q) => q > 0).length,
+            min: Math.min(...qs),
+            avg: qs.reduce((sum, q) => sum + q, 0) / qs.length,
+          }
         })
         scored.sort((a, b) => b.onSet - a.onSet || b.filled - a.filled)
-        return [c.char, scored[0]?.min ?? 0] as const
+        return [c.char, { min: scored[0]?.min ?? 0, avg: scored[0]?.avg ?? 0 }] as const
       }),
     )
   }, [result, pieces, config.characters])
+  const rating = (char: string) => ratings.get(char)?.[sortBy] ?? 0
 
   const chars = useMemo(
     () =>
@@ -75,9 +90,9 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
         .sort(
           (a, b) =>
             Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
-            (weakest.get(a.char) ?? 0) - (weakest.get(b.char) ?? 0),
+            (ratings.get(a.char)?.[sortBy] ?? 0) - (ratings.get(b.char)?.[sortBy] ?? 0),
         ),
-    [result.characters, showInactive, query, weakest],
+    [result.characters, showInactive, query, ratings, sortBy],
   )
   const char = config.characters[selected] && result.characters.some((c) => c.char === selected) ? selected : chars[0]?.char
 
@@ -88,20 +103,30 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
 
   return (
     <div className="builds-page">
-      <aside className="rail">
+      <aside className="rail improve-rail">
         <input className="rail-search" placeholder="Search characters…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <label className="check rail-check">
           <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Include ignored
         </label>
+        <div className="rail-sort">
+          <span className="muted">Sort by</span>
+          <div className="seg small">
+            {(Object.keys(RAIL_SORT) as RailSort[]).map((k) => (
+              <button key={k} className={sortBy === k ? 'on' : ''} title={RAIL_SORT[k].title} onClick={() => setSortBy(k)}>
+                {RAIL_SORT[k].label}
+              </button>
+            ))}
+          </div>
+        </div>
         {chars.map((c) => {
-          const q = weakest.get(c.char) ?? 0
+          const q = rating(c.char)
           return (
             <button key={c.char} className={c.char === char ? 'rail-item active' : 'rail-item'} onClick={() => pick(c.char)}>
               <span className={`rail-name${c.active ? '' : ' muted'}`}>
                 {characterName(c.char)}
                 {c.priority === 'priority' && ' ★'}
               </span>
-              <span className={`counts ${qualityClass(q)}`} title="Weakest slot">
+              <span className={`counts ${qualityClass(q)}`} title={RAIL_SORT[sortBy].title}>
                 {Math.round(q * 100)}%
               </span>
             </button>

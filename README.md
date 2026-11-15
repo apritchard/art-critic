@@ -75,7 +75,7 @@ Every character comes with a researched build, so you can start right away. It's
   - Click a name to open it in **Improve**.
 
   ![The Roster tab: each character's priority, builds and ER, and how good each equipped piece is](docs/screenshots/roster.png)
-- **Improve** puts every way to improve one character's pieces side by side, weakest slot first. The rail lists active characters, ★ Priority first and then by weakest slot.
+- **Improve** puts every way to improve one character's pieces side by side, weakest slot first. The rail lists active characters, ★ Priority first and then lowest-rated first. "Sort by" switches the rating between Min, their weakest equipped piece, and Avg, the average of their five (an empty or unusable slot counts as 0%).
   - **Spare +20:** unequipped pieces that beat what they wear, flagged when Free upgrades already gives one to someone else. ER is judged by what the piece does to the character's total, against their ER target (see [Energy Recharge](#energy-recharge)).
   - **From another character:** pieces others wear, showing what the current wearer loses. Ignored characters' pieces come first, since they cost nothing.
   - **Level:** unequipped pieces still to level, with the chance they beat the worn piece at +20. Pieces Triage marks to unlock are flagged, so you can lock them first.
