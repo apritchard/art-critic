@@ -53,7 +53,7 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
 - **Piece ids are content fingerprints:** set, slot, main stat, level and substats, plus `#n` for exact duplicates. They don't use position or location. The user's saved done marks and equips refer to these ids, so changing `fingerprint()`, or what `loadPieces` passes it, silently orphans them.
 - **Equips are an ordered log** that `applyEquips` replays. Equipping a piece that someone else wears swaps the two, as in-game. Add entries with `addEquip`, and don't dedupe by piece.
 - **The JSON files at the root are data, edited by hand:**
-  - `genshin_artifact_config.json`: research-generated builds, keyed by GOOD keys;
+  - `genshin_artifact_config.json`: research-generated builds, keyed by GOOD keys. Leave a build's `sets2` empty unless 2pc + 2pc is a common way to run it (Nilou, say), not just a transitional fallback: a pair lets free swaps give up 2pc bonuses, and widens the "Config rule" set match;
   - `genshin_artifact_domains.json`: which sets drop together.
 
   Edits made in the Builds tab are saved as overrides in `state/user-state.json`, never in the config file.

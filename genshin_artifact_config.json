@@ -5,7 +5,7 @@
   "keyFormat": "GOOD (Genshin Open Object Description), matching Irminsul exports",
   "conventions": {
     "sets4.tier": "1 = best in slot, 2 = good alternative, 3 = fallback",
-    "sets2": "Each entry is a pair of 2pc category tokens (see setCategories). 'any' = any set, i.e. off-piece-friendly.",
+    "sets2": "Each entry is a pair of 2pc category tokens (see setCategories). 'any' = any set, i.e. off-piece-friendly. Listed only where 2pc+2pc is a common build (Nilou, Vodyanitsa, Illuga before C2, Shenhe, Mona, Zhongli shielder); empty means the build wants a 4pc.",
     "mainStats": "Acceptable main stats per slot, ranked best first. Flower is always hp, plume always atk. '*' = any main stat acceptable.",
     "avoidMainStats": "Main stats that look on-element but are useless for this build (e.g. elemental DMG goblets on Lunar/Stellar reaction scalers). Score these as unacceptable.",
     "substats": "Resolved weights 0-1 (preset + overrides). Missing keys = 0.",
@@ -403,12 +403,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "any"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_"
@@ -451,12 +446,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "ele15:geo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_"
@@ -500,12 +490,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:dendro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -549,12 +534,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -602,12 +582,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -652,12 +627,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -698,12 +668,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "def30"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_"
@@ -755,16 +720,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ],
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -813,12 +769,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -866,12 +817,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "heal15"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_"
@@ -913,12 +859,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -959,12 +900,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "any",
-              "any"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -1023,12 +959,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1076,12 +1007,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "heal15"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -1119,12 +1045,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -1173,12 +1094,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1223,12 +1139,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -1272,12 +1183,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "skill20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_",
@@ -1323,12 +1229,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -1373,12 +1274,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -1427,12 +1323,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -1476,12 +1367,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "ele15:dendro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -1531,16 +1417,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "em80"
-            ],
-            [
-              "er20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1580,12 +1457,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1639,12 +1511,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -1689,12 +1556,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1741,12 +1603,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -1799,24 +1656,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "ele15:pyro",
-              "burst20"
-            ],
-            [
-              "ele15:pyro",
-              "atk18"
-            ],
-            [
-              "atk18",
-              "burst20"
-            ],
-            [
-              "ele15:pyro",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -1865,12 +1705,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -1915,12 +1750,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -1964,12 +1794,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -2021,16 +1846,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ],
-            [
-              "er20",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2069,12 +1885,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2119,12 +1930,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -2172,12 +1978,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2218,12 +2019,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "phys25",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -2271,12 +2067,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "any"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -2324,12 +2115,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2370,12 +2156,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2422,12 +2203,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "phys25",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -2471,16 +2247,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ],
-            [
-              "hp20",
-              "skill20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -2519,12 +2286,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -2573,12 +2335,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2623,12 +2380,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2669,12 +2421,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "def30"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -2722,12 +2469,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -2772,12 +2514,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2816,12 +2553,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -2919,12 +2651,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -2975,12 +2702,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -3029,12 +2751,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3077,12 +2794,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "ele15:geo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_"
@@ -3123,12 +2835,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -3174,12 +2881,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -3219,12 +2921,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -3271,12 +2968,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:hydro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3326,12 +3018,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -3373,12 +3060,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3423,12 +3105,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:dendro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3473,12 +3150,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -3521,12 +3193,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -3570,12 +3237,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "any"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -3621,12 +3283,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -3669,12 +3326,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3717,12 +3369,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -3760,12 +3407,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -3813,12 +3455,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -3865,12 +3502,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_",
@@ -3921,12 +3553,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -3983,12 +3610,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -4034,12 +3656,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -4084,12 +3701,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -4133,12 +3745,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -4182,12 +3789,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -4231,12 +3833,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -4281,12 +3878,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -4330,12 +3922,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -4377,12 +3964,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -4415,11 +3997,15 @@
       "enabled": true,
       "builds": [
         {
-          "name": "Burst support",
+          "name": "Hex Support",
           "sets4": [
             {
-              "set": "NoblesseOblige",
+              "set": "CelestialGift",
               "tier": 1
+            },
+            {
+              "set": "NoblesseOblige",
+              "tier": 2
             },
             {
               "set": "EmblemOfSeveredFate",
@@ -4441,21 +4027,20 @@
               "hydro_dmg_"
             ],
             "circlet": [
-              "critRate_",
-              "critDMG_"
+              "critRate_"
             ]
           },
-          "substatPreset": "ATK_CRIT_ER",
+          "substatPreset": "custom",
           "substats": {
             "critRate_": 1,
-            "critDMG_": 1,
+            "critDMG_": 0.8,
             "enerRech_": 0.8,
             "atk_": 0.7,
             "atk": 0.3,
-            "eleMas": 0.25
+            "eleMas": 0.5
           },
           "erTarget": "180%+",
-          "notes": ""
+          "notes": "Hexerei support: 4pc Celestial Gift (Hexerei only) gives the party +20% DMG of her element after her Skill. Noblesse or Emblem if someone else holds it. ER + ATK pair: a Celestial Gift 2pc with an ATK 2pc"
         }
       ]
     },
@@ -4476,12 +4061,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "ele15:hydro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -4526,12 +4106,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -4576,12 +4151,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -4629,12 +4199,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -4682,12 +4247,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "naca15"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_"
@@ -4739,16 +4299,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "atk18"
-            ],
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -4898,12 +4449,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:geo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -4943,12 +4489,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "def30"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_"
@@ -4996,12 +4537,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5050,12 +4586,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -5108,12 +4639,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -5162,12 +4688,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "heal15"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5204,16 +4725,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "er20"
-            ],
-            [
-              "er20",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -5252,12 +4764,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -5303,12 +4810,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "phys25"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5356,12 +4858,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -5409,16 +4906,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ],
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5471,12 +4959,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "heal15"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -5520,24 +5003,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ],
-            [
-              "em80",
-              "heal15"
-            ],
-            [
-              "em80",
-              "hp20"
-            ],
-            [
-              "em80",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -5587,12 +5053,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -5637,12 +5098,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -5685,12 +5141,20 @@
             {
               "set": "ADayCarvedFromRisingWinds",
               "tier": 1
+            },
+            {
+              "set": "CelestialGift",
+              "tier": 1
             }
           ],
           "sets2": [
             [
               "atk18",
               "atk18"
+            ],
+            [
+              "atk18",
+              "er20"
             ]
           ],
           "mainStats": {
@@ -5705,14 +5169,14 @@
               "atk_"
             ]
           },
-          "substatPreset": null,
+          "substatPreset": "custom",
           "substats": {
             "atk_": 1,
             "enerRech_": 0.8,
-            "atk": 0.5
+            "atk": 0.25
           },
-          "erTarget": "160%+",
-          "notes": "GameWith: Rising Winds is the highest-ATK 4pc even without its CRIT upgrade"
+          "erTarget": "220%+",
+          "notes": "GameWith: Rising Winds is the highest-ATK 4pc even without its CRIT upgrade. 2pc ATK + 2pc ATK when someone else holds Noblesse (KQM). ATK + ER pair: a Celestial Gift 2pc with an ATK 2pc toward her 220% ER target"
         }
       ]
     },
@@ -5733,12 +5197,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -5787,12 +5246,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_"
@@ -5838,12 +5292,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:cryo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5882,12 +5331,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -5929,12 +5373,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:hydro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -5982,12 +5421,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -6027,12 +5461,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -6078,12 +5507,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:dendro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas",
@@ -6128,12 +5552,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -6187,12 +5606,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -6243,12 +5657,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "ele15:dendro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -6296,12 +5705,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -6340,12 +5744,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:geo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -6390,12 +5789,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:hydro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -6445,12 +5839,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6498,12 +5887,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -6546,12 +5930,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6599,16 +5978,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ],
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6650,12 +6020,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -6692,12 +6057,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6741,12 +6101,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6821,7 +6176,7 @@
             "enerRech_": 0.4
           },
           "erTarget": "Optional (Burst not core)",
-          "notes": "Pure HP stacker: nothing works below 40k HP; aim 60k, then 65k (Icy Veins, game8)"
+          "notes": "Pure HP stacker: nothing works below 40k HP; aim 60k, then 65k (Icy Veins, game8). 2pc Tenacity + 2pc Vourukasha when a teammate holds 4pc Tenacity (GenshinBuilds, allthings.how)"
         }
       ]
     },
@@ -6842,12 +6197,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6891,12 +6241,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "naca15",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -6944,16 +6289,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "atk18"
-            ],
-            [
-              "er20",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "enerRech_",
@@ -7003,12 +6339,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7056,12 +6387,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:anemo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -7105,12 +6431,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_",
@@ -7154,12 +6475,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "er20",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7208,12 +6524,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "phys25"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7263,12 +6574,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:electro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7313,12 +6619,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "ele15:pyro"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7367,12 +6668,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "hp20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -7416,12 +6712,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "hp20",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "hp_",
@@ -7470,12 +6761,7 @@
               "tier": 1
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "atk18"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_",
@@ -7524,12 +6810,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "em80"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "eleMas"
@@ -7573,12 +6854,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "def30",
-              "er20"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_",
@@ -7642,7 +6918,7 @@
             "critDMG_": 0.15
           },
           "erTarget": "100%",
-          "notes": ""
+          "notes": "Shield scales on HP alone: 2pc HP + 2pc HP when someone else holds Tenacity (GenshinBuilds)"
         },
         {
           "name": "Damage support",
@@ -7656,12 +6932,7 @@
               "tier": 2
             }
           ],
-          "sets2": [
-            [
-              "atk18",
-              "ele15:geo"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "atk_"
@@ -7706,12 +6977,7 @@
               "tier": 3
             }
           ],
-          "sets2": [
-            [
-              "em80",
-              "def30"
-            ]
-          ],
+          "sets2": [],
           "mainStats": {
             "sands": [
               "def_"

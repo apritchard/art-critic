@@ -10,7 +10,7 @@ const SET_MATCH: Record<SetMatchMode, { label: string; help: string }> = {
   '4pc-all': { label: '4pc sets, all tiers', help: 'Also counts tier-3 fallback sets.' },
   config: {
     label: 'Config rule (4pc + 2pc)',
-    help: "Also counts 2pc+2pc categories such as ATK +18%, which most sets share. Very loose with a big roster.",
+    help: "Also counts sets whose 2pc fits one of the build's 2-piece pairs, such as any HP +20% set for Nilou. Only a few builds list pairs by default.",
   },
 }
 

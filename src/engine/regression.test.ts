@@ -47,9 +47,12 @@ describe.skipIf(!exportFile)('real export', () => {
     const plusZero = evaluations.filter((e) => e.piece.level === 0)
     // Count for the export the tool was built against; a newer export gives its own. The prototype got 1,131 with the
     // research config; the build tuning of 2026-11-14 accepts more main stats, so more pieces pass (1,201),
-    // Kokomi's EM bloom-healer build adds 9 more, Nilou's C6 hybrid build 2 more, and Dehya's C6 burst build 1 more.
+    // Kokomi's EM bloom-healer build adds 9 more, Nilou's C6 hybrid build 2 more, and Dehya's C6 burst build 1 more
+    // (1,213). On 2026-11-15 the config dropped 2pc pairs from every build not commonly run 2pc + 2pc, so far fewer
+    // off-set pieces match a pair's category (878). Mona's Hexerei support and Shenhe's Celestial Gift edits, with their
+    // ATK + ER pairs, add 25 more (903).
     if (exportFile === PROTOTYPE_EXPORT) {
-      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(1213)
+      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(903)
     }
     const unequippedPassing = plusZero.filter((e) => !e.piece.owner && e.candidates.some((c) => c.passChance))
     expect(plusZero.filter((e) => e.grade === 'keep').length).toBe(unequippedPassing.length)
