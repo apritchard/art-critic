@@ -186,8 +186,9 @@ export function InventoryView({ result }: { result: EvaluationResult }) {
               tab.
             </p>
             <p className="sub-note">
-              The order is level, then flower → circlet, then locked first, then 4-line before 3-line, then newest
-              first. The export only has 5★ pieces, so 4★ pieces of this set in your inventory will shift the grid.
+              The order is level, then flower → circlet, then locked first, then pieces that started with 4 lines,
+              then newest first. The export only has 5★ pieces, so 4★ pieces of this set in your inventory will shift
+              the grid.
             </p>
           </>
         ) : (

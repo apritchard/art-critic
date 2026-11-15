@@ -58,6 +58,15 @@ describe('inventory order', () => {
     ])
   })
 
+  it('still puts pieces that started with 4 lines first at +20', () => {
+    // Song of Days Past: an older ER sands that started with 4 lines (9 rolls) shows before a newer HP% one that
+    // started with 3 (8 rolls), though both have 4 lines now.
+    const plus20 = (mainStatKey: string, totalRolls: number) =>
+      art({ slotKey: 'sands', mainStatKey, level: 20, lock: true, totalRolls, substats: four })
+    const [older4, newer3] = loadPieces({ format: 'GOOD', version: 3, characters: [], artifacts: [plus20('enerRech_', 9), plus20('hp_', 8)] })
+    expect([newer3, older4].sort((a, b) => inventoryOrder(a, b))).toEqual([older4, newer3])
+  })
+
   it("can order by lock states other than the export's (as after reopening)", () => {
     const unlocked = pieces.find((p) => tag.get(p) === 'unlocked 3-line')!
     const locked = (p: (typeof pieces)[number]) => p.lock || p === unlocked
