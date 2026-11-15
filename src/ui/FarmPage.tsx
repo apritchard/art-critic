@@ -16,6 +16,7 @@ import {
   type SetTrade,
   type SourceScore,
   type Swap,
+  type ToLevel,
 } from '../engine/farm'
 import { applyEquips, type Piece } from '../engine/load'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
@@ -114,7 +115,7 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
 
       <Section
         title="Where to spend resin"
-        note={`Expected gain from ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, about ${resinDrops.toFixed(1)} five-star drops), summed over ${scopeLabel}. A domain splits its drops between its two sets. It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first.`}
+        note={`Expected gain from ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, about ${resinDrops.toFixed(1)} five-star drops), summed over ${scopeLabel}. A domain splits its drops between its two sets. It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first. Gains assume what each character wears now, so "Level first" flags pieces of those sets you already have to level for them.`}
       >
         {domains ? (
           <>
@@ -138,7 +139,7 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
 
       <Section
         title="Strongbox"
-        note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%).`}
+        note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%). "Level first" flags pieces of the set you already have to level for those characters.`}
       >
         <SourceTable
           rows={plan.strongbox}
@@ -330,6 +331,7 @@ function SourceTable({
               <td>
                 {name(s.key)}
                 <div className="sub-note">{describe(s)}</div>
+                <ToLevelNote list={s.toLevel} named={s.sets.length > 1} />
               </td>
               <td className="num">{num(s.value * per)}</td>
               <td>
@@ -341,6 +343,39 @@ function SourceTable({
       </table>
       {more}
     </>
+  )
+}
+
+/**
+ * Pieces of a source's sets already on hand and still to level for the characters it helps. The gain assumes what
+ * they wear now, so these come first. Pieces marked leveled count once a new export shows them at +20.
+ */
+function ToLevelNote({ list, named }: { list: ToLevel[]; named: boolean }) {
+  const { done } = useStore()
+  if (!list.length) return null
+  const pending = list.filter((t) => !done.has(`lvl:${t.piece.id}`))
+  const marked = list.length - pending.length
+  const bySet = new Map<string, number>()
+  for (const t of pending) bySet.set(t.piece.setKey, (bySet.get(t.piece.setKey) ?? 0) + 1)
+  const pieces = (n: number) => `${n} piece${n === 1 ? '' : 's'}`
+  // A domain row names the set, since it drops two.
+  const what = named ? [...bySet].map(([set, n]) => `${n} ${setName(set)}`).join(' and ') : pieces(pending.length)
+  const title = pending
+    .map(
+      (t) =>
+        `${setName(t.piece.setKey)} ${SLOT_LABEL[t.piece.slotKey].toLowerCase()} · ${statShort(t.piece.mainStatKey)} +${t.piece.level} · for ${t.chars.map(characterName).join(', ')}`,
+    )
+    .join('\n')
+  return (
+    <div className="sub-note warn" title={title}>
+      {pending.length > 0 && (
+        <>
+          Level first: {what} on hand for them (<a href="#level">Level up</a>)
+        </>
+      )}
+      {pending.length > 0 && marked > 0 && ' · '}
+      {marked > 0 && `${pieces(marked)} marked leveled: re-export so they count`}
+    </div>
   )
 }
 

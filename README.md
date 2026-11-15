@@ -136,9 +136,10 @@ The Farm tab simulates leveled-up 5★ pieces using the game's slot, main stat a
 - **Where to spend resin:** domains ranked by expected gain from 200 resin (10 runs, about 10.7 five-star drops). It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first.
   - Each character farms the tier 1–2 set they already wear, or else their build's best-tier sets.
   - Sets that no domain drops are listed separately.
+  - **Level first:** gains are measured against what each character wears now, so pieces you've crafted or farmed but not leveled don't lower them yet. A row flags pieces of its sets in the Level up queue that triage keeps for the characters it helps (hover for the list), so you can level those before spending more. Pieces marked leveled there count once a new export shows them at +20.
 
   ![Where to spend resin: domains ranked by expected gain per 200 resin, with who each one helps](docs/screenshots/resin.png)
-- **Strongbox:** the same ranking per set, for one full batch: 39 five-star pieces in, 13 of the chosen set out.
+- **Strongbox:** the same ranking per set, for one full batch: 39 five-star pieces in, 13 of the chosen set out. Rows flag pieces to level first the same way.
   - Only sets the Strongbox offers count. The built-in list (`STRONGBOX_SETS` in `src/engine/farm.ts`) is the in-game one as of 7.2: 40 sets, leaving out A Day Carved From Rising Winds, Aubade of Morningstar and Moon, Celestial Gift, Disenchantment in Deep Shadow, Heart of the Furnace and Scarlet Proof. When the game adds sets, tick them under the Strongbox ranking; your list is saved and replaces the built-in one.
 - **Sanctifying Elixir:** each character's best craft (slot, main stat, and the two highest-weighted substats).
   - Crafts are ranked per Elixir by the gain they add beyond what ~50 domain runs would likely bring that slot anyway. Easy slots like the plume, which always rolls the right main stat, rarely win.

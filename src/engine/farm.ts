@@ -413,6 +413,17 @@ export interface SourceScore {
   /** Summed expected gain per 5★ piece from this source, over the characters in scope. */
   value: number
   contributors: Contribution[]
+  /**
+   * Pieces of these sets already on hand and still to level (the Level up queue) that triage keeps for a character
+   * this source helps. `value` counts none of them, since it's measured against what characters wear now.
+   */
+  toLevel: ToLevel[]
+}
+
+/** A piece still to level, and the characters (of those a source helps) it's kept for. */
+export interface ToLevel {
+  piece: Piece
+  chars: string[]
 }
 
 export interface Swap {
@@ -555,6 +566,14 @@ export function planFarming(
   const used: FarmScope = scope === 'priority' && anyPriority ? 'priority' : 'all'
   const inScope = characters.filter((c) => used === 'all' || c.ref.priority === 'priority')
 
+  // The Level up queue by set, with who each piece is kept for (its wearer, if equipped).
+  const queued = new Map<string, ToLevel[]>()
+  for (const e of result.evaluations) {
+    if (e.piece.rarity !== 5 || e.piece.level >= 20 || e.nextStop === null) continue
+    const chars = e.piece.owner ? [e.piece.owner] : [...new Set(e.candidates.filter((c) => c.inCap).map((c) => c.ref.char))]
+    queued.set(e.piece.setKey, [...(queued.get(e.piece.setKey) ?? []), { piece: e.piece, chars }])
+  }
+
   const score = (key: string, sets: string[], per: (c: CharacterFarm) => number, region?: string): SourceScore => {
     const contributors: Contribution[] = []
     for (const c of inScope) {
@@ -565,7 +584,14 @@ export function planFarming(
       }
     }
     contributors.sort((a, b) => b.value - a.value)
-    return { key, region, sets, value: contributors.reduce((s, x) => s + x.value, 0), contributors }
+    const toLevel = sets.flatMap((set) => {
+      const helped = new Set(contributors.filter((x) => x.set === set).map((x) => x.char))
+      return (queued.get(set) ?? []).flatMap((t) => {
+        const chars = t.chars.filter((c) => helped.has(c))
+        return chars.length ? [{ piece: t.piece, chars }] : []
+      })
+    })
+    return { key, region, sets, value: contributors.reduce((s, x) => s + x.value, 0), contributors, toLevel }
   }
   const byValue = (a: SourceScore, b: SourceScore) => b.value - a.value
 

@@ -453,6 +453,21 @@ describe('planFarming', () => {
     expect(all.noDomain).toEqual([])
   })
 
+  it("flags pieces of a source's sets still to level for the characters it helps", () => {
+    // A fresh Crimson Witch sands with strong lines: triage keeps it for Hu Tao, who farms Crimson Witch.
+    const fresh = art({ slotKey: 'sands', level: 0, substats: strong })
+    const withFresh = { ...data, artifacts: [...data.artifacts, fresh] }
+    const ps = loadPieces(withFresh)
+    const res = evaluate(ps, withFresh.characters, config, defaultSettings(config), roster)
+    const piece = ps.find((p) => p.setKey === 'CrimsonWitchOfFlames' && p.slotKey === 'sands' && !p.owner)!
+    expect(res.evaluations.find((e) => e.piece === piece)?.verdict).toBe('level')
+    const plan = planFarming(res, ps, config, domains, 'priority')
+    expect(plan.domains.find((d) => d.key === 'Hidden Palace')?.toLevel).toEqual([{ piece, chars: ['HuTao'] }])
+    expect(plan.strongbox.find((s) => s.key === 'CrimsonWitchOfFlames')?.toLevel).toEqual([{ piece, chars: ['HuTao'] }])
+    // Bennett's domain doesn't help Hu Tao, so it doesn't flag her piece.
+    expect(plan.domains.find((d) => d.key === 'Clear Pool')?.toLevel).toEqual([])
+  })
+
   it('falls back to every active character when nobody is Priority', () => {
     const plain = evaluate(pieces, data.characters, config, defaultSettings(config), {})
     expect(planFarming(plain, pieces, config, domains, 'priority').scope).toBe('all')
