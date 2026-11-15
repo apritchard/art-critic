@@ -1,8 +1,11 @@
 import type { Candidate, Evaluation } from '../engine/evaluate'
 import { describeSetMatch } from '../engine/match'
 import { AVG_TIER, characterName, formatStat, MAX_ROLL, SLOT_LABEL, setName, statLabel } from '../engine/stats'
+import type { LevelPriority } from '../engine/inventory'
+import type { Piece } from '../engine/load'
 import type { GoodSubstat, SlotKey } from '../engine/types'
 import { useStore } from '../state/store'
+import { buildsHref, inventoryHref } from './routes'
 
 export const SLOT_ICON: Record<SlotKey, string> = {
   flower: '🌸',
@@ -12,7 +15,7 @@ export const SLOT_ICON: Record<SlotKey, string> = {
   circlet: '👑',
 }
 
-function verdictLabel(ev: Evaluation): string {
+export function verdictLabel(ev: Evaluation): string {
   if (ev.grade === 'marginal') return ev.piece.level === 20 ? 'Backup' : 'Marginal'
   switch (ev.verdict) {
     case 'level':
@@ -47,6 +50,8 @@ interface Props {
   ev: Evaluation
   /** Level-up queue: the button marks the piece leveled, and every build's upgrade chance is shown. */
   leveling?: boolean
+  /** Level-up queue: what it's worth leveling, shown as the Inventory's ⬆ badge shows it. */
+  priority?: LevelPriority | null
   focused: boolean
   done: boolean
   expanded: boolean
@@ -55,7 +60,7 @@ interface Props {
   onToggleExpand: () => void
 }
 
-export function ArtifactCard({ ev, leveling, focused, done, expanded, onFocus, onDone, onToggleExpand }: Props) {
+export function ArtifactCard({ ev, leveling, priority, focused, done, expanded, onFocus, onDone, onToggleExpand }: Props) {
   const { piece } = ev
   const weights = ev.best?.ref.build.substats ?? {}
   const cls = ['card', `g-${ev.grade}`, focused && 'focused', done && 'done'].filter(Boolean).join(' ')
@@ -81,7 +86,7 @@ export function ArtifactCard({ ev, leveling, focused, done, expanded, onFocus, o
         )}
       </div>
       <div className="card-set">{setName(piece.setKey)}</div>
-      {leveling && <ChanceRow ev={ev} />}
+      {leveling && <ChanceRow ev={ev} priority={priority ?? null} />}
 
       <div className="subs">
         {piece.substats.map((s) => {
@@ -113,9 +118,29 @@ export function ArtifactCard({ ev, leveling, focused, done, expanded, onFocus, o
             {expanded ? 'hide builds' : `${ev.candidates.length} build${ev.candidates.length > 1 ? 's' : ''}`}
           </button>
         )}
+        {piece.rarity === 5 && !piece.owner && (
+          <a
+            className="link"
+            href={buildsHref({ piece: piece.id })}
+            onClick={(e) => e.stopPropagation()}
+            title="Open the build nearest to keeping this piece in the Builds tab, with what stands in the way"
+          >
+            closest build
+          </a>
+        )}
+        {piece.rarity === 5 && (
+          <a
+            className="link"
+            href={inventoryHref(piece.id)}
+            onClick={(e) => e.stopPropagation()}
+            title="Show this piece in the Inventory tab's grid, outlined, at its row and place in the row"
+          >
+            find in inventory
+          </a>
+        )}
       </div>
 
-      {expanded && <BuildTable candidates={ev.candidates} />}
+      {expanded && <BuildTable piece={piece} candidates={ev.candidates} />}
     </div>
   )
 }
@@ -151,8 +176,11 @@ const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%
 
 const MAX_CHIPS = 5
 
-/** Each character this piece could go to, with the chance it ends up beating what they wear now. */
-function ChanceRow({ ev }: { ev: Evaluation }) {
+/**
+ * What leveling it is worth (the Inventory's ⬆ badge: expected gain once finished, which the Level up tab sorts by),
+ * then each character it could go to, with the chance it ends up beating what they wear now.
+ */
+function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority | null }) {
   const { config } = useStore()
   const shown = ev.candidates
     .filter((c) => c.gate !== 'fail' && (c.chance > 0 || c.ref.char === ev.piece.owner))
@@ -162,9 +190,19 @@ function ChanceRow({ ev }: { ev: Evaluation }) {
         b.chance - a.chance ||
         b.expected - a.expected,
     )
-  if (!shown.length) return null
+  const gain = priority?.char ? priority : null
+  if (!shown.length && !gain) return null
   return (
     <div className="chances">
+      {gain && (
+        <span
+          className={`inv-up card-gain t${gain.tier}`}
+          title={`Expected gain once finished: +${gain.gain.toFixed(2)} rolls over what ${characterName(gain.char)} wears now, counting a miss as 0 (${pct(gain.chance)} to beat it). The same number as the Inventory's ⬆ badge; "Expected gain" sorts by it.`}
+        >
+          ⬆ +{gain.gain.toFixed(2)} {characterName(gain.char)}
+          {gain.star && ' ★'}
+        </span>
+      )}
       {shown.slice(0, MAX_CHIPS).map((c) => {
         const worn = c.ref.char === ev.piece.owner
         const title = [
@@ -189,7 +227,7 @@ function ChanceRow({ ev }: { ev: Evaluation }) {
   )
 }
 
-function BuildTable({ candidates }: { candidates: Candidate[] }) {
+function BuildTable({ piece, candidates }: { piece: Piece; candidates: Candidate[] }) {
   return (
     <table className="builds" onClick={(e) => e.stopPropagation()}>
       <thead>
@@ -207,7 +245,13 @@ function BuildTable({ candidates }: { candidates: Candidate[] }) {
         {candidates.slice(0, 12).map((c) => (
           <tr key={`${c.ref.char}|${c.ref.buildIdx}`} className={c.inCap ? 'in' : c.passChance ? 'cut' : 'out'}>
             <td>
-              {characterName(c.ref.char)}
+              <a
+                className="char-link"
+                href={buildsHref({ char: c.ref.char, idx: c.ref.buildIdx, piece: piece.owner ? undefined : piece.id })}
+                title="Open this build in the Builds tab"
+              >
+                {characterName(c.ref.char)}
+              </a>
               {c.ref.priority === 'priority' && ' ★'}
               <div className="sub-note">
                 {c.ref.build.name}

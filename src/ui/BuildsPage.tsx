@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import {
   allowedMains,
   categoryLabel,
@@ -19,11 +19,20 @@ import { characterName, SLOT_LABEL, setName, statLabel, statShort } from '../eng
 import { SLOTS, type BuildConfig } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
+import { FitPanel, useFitting, type Fitting } from './FitPanel'
 import { useLocal } from './local'
+import type { BuildsFocus } from './routes'
 
 const qualityClass = (q: number | null) => (q === null ? 'q-none' : q >= 0.85 ? 'q-good' : q >= 0.6 ? 'q-ok' : 'q-weak')
 
-export function BuildsPage({ result }: { result: EvaluationResult }) {
+/** A build to show, picked by a link or from Closest build; `n` makes picking the same one twice count. */
+interface Pick {
+  char: string
+  idx: number
+  n: number
+}
+
+export function BuildsPage({ result, focus }: { result: EvaluationResult; focus?: BuildsFocus }) {
   const { config, overrides, data } = useStore()
   const [query, setQuery] = useState('')
   const [showUnowned, setShowUnowned] = useLocal('builds:unowned', false)
@@ -44,6 +53,21 @@ export function BuildsPage({ result }: { result: EvaluationResult }) {
   )
   const [selected, setSelected] = useLocal<string>('builds:char', '')
   const char = config.characters[selected] ? selected : chars[0]
+  const [pick, setPick] = useState<Pick | null>(null)
+  const select = useCallback(
+    (c: string, idx: number) => {
+      setSelected(c)
+      setPick((p) => ({ char: c, idx, n: (p?.n ?? 0) + 1 }))
+    },
+    [setSelected],
+  )
+  const fitting = useFitting(result, focus?.piece)
+  // Following a link: its character and build, or else the build closest to keeping its piece. Only when a link is
+  // followed; the selection is the user's after that.
+  useEffect(() => {
+    if (focus?.char && config.characters[focus.char]) select(focus.char, focus.idx ?? 0)
+    else if (fitting?.fits[0]) select(fitting.fits[0].ref.char, fitting.fits[0].ref.buildIdx)
+  }, [focus?.key])
 
   return (
     <div className="builds-page">
@@ -53,22 +77,37 @@ export function BuildsPage({ result }: { result: EvaluationResult }) {
           <input type="checkbox" checked={showUnowned} onChange={(e) => setShowUnowned(e.target.checked)} /> Include unowned
         </label>
         {chars.map((k) => (
-          <button key={k} className={k === char ? 'rail-item active' : 'rail-item'} onClick={() => setSelected(k)}>
+          <button key={k} className={k === char ? 'rail-item active' : 'rail-item'} onClick={() => (setSelected(k), setPick(null))}>
             <span className={`rail-name${active.has(k) ? '' : ' muted'}`}>{characterName(k)}</span>
             <span className="counts">{overrides[k] && <span className="c-level" title="Edited">✎ edited</span>}</span>
           </button>
         ))}
       </aside>
-      {char ? <Editor key={char} char={char} result={result} /> : <div className="empty">No characters match.</div>}
+      {char ? (
+        <Editor key={char} char={char} result={result} fitting={fitting} pick={pick?.char === char ? pick : null} onPick={select} />
+      ) : (
+        <div className="empty">No characters match.</div>
+      )}
     </div>
   )
 }
 
-function Editor({ char, result }: { char: string; result: EvaluationResult }) {
+function Editor(props: {
+  char: string
+  result: EvaluationResult
+  fitting: Fitting | null
+  pick: Pick | null
+  onPick: (char: string, idx: number) => void
+}) {
+  const { char, result, fitting, pick, onPick } = props
   const { config, baseConfig, overrides, setCharacterBuilds, data, pieces, er, roster, setRosterEntry, settings } = useStore()
   const cc = config.characters[char]
   const builds = cc.builds
   const [idx, setIdx] = useLocal(`builds:${char}:idx`, 0)
+  // Before paint, so a picked build doesn't flash the last one viewed first.
+  useLayoutEffect(() => {
+    if (pick) setIdx(pick.idx)
+  }, [pick?.n])
   const i = Math.min(idx, builds.length - 1)
   const build = builds[i]
   const owned = data.characters.find((c) => c.key === char)
@@ -106,6 +145,7 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
 
   return (
     <div className="editor">
+      {fitting && <FitPanel fitting={fitting} char={char} idx={i} build={build} save={save} onPick={onPick} />}
       <div className="editor-head">
         <h2>{characterName(char)}</h2>
         <span className="sub-note">

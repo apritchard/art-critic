@@ -7,7 +7,8 @@ import { addEquip, applyEquips, loadPieces, parseExport, type Equip, type Piece 
 import type { ArtifactConfig, BuildConfig, GoodExport, Roster, RosterEntry, Settings } from '../engine/types'
 import { LoadExportButton } from '../ui/LoadExportButton'
 
-export type SortMode = 'newest' | 'oldest' | 'level' | 'slot' | 'verdict' | 'chance'
+/** 'gain' is the Level up tab's only: it needs a piece worth leveling. */
+export type SortMode = 'newest' | 'oldest' | 'level' | 'slot' | 'verdict' | 'chance' | 'gain'
 
 interface PersistedState {
   settings?: Partial<Settings>

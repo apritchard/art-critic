@@ -83,6 +83,9 @@ export const SLOT_LABEL: Record<SlotKey, string> = {
   circlet: 'Circlet',
 }
 
+/** "flowers", "sands": a slot's pieces in running text. */
+export const slotPlural = (slot: SlotKey) => (slot === 'sands' ? 'sands' : `${SLOT_LABEL[slot].toLowerCase()}s`)
+
 const SET_NAMES: Record<string, string> = {
   ADayCarvedFromRisingWinds: 'A Day Carved From Rising Winds',
   AubadeOfMorningstarAndMoon: 'Aubade of Morningstar and Moon',

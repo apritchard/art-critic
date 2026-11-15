@@ -12,7 +12,7 @@ import {
   thresholdScale,
   TYPICAL_CEILING,
 } from './projection'
-import { characterName, SLOT_LABEL, setName, statShort } from './stats'
+import { characterName, SLOT_LABEL, setName, slotPlural, statShort } from './stats'
 import type {
   ArtifactConfig,
   BuildConfig,
@@ -224,7 +224,104 @@ export function evaluate(
     characters.push(summary)
   }
 
-  // 2. What each character wears now.
+  // 2–5. What each character wears, and every piece judged against every active build.
+  const { perPiece, usable, barFor, setFor } = judge(pieces, activeBuilds, config, settings)
+  for (const summary of characters) {
+    for (const b of summary.builds) {
+      const build = config.characters[summary.char].builds[b.idx]
+      for (const slot of SLOTS) {
+        const eq = usable(summary.char, build, slot)
+        const value = eq ? expectedFinal(eq, build.substats) : null
+        b.slots[slot] = { value, quality: eq && value !== null ? value / referenceValue(build, eq.mainStatKey) : null }
+      }
+    }
+  }
+
+  // 6. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
+  const spares = pieces.filter((p) => !p.owner && p.rarity === 5)
+  const gainFor = (ref: ActiveBuild, p: Piece): number | null =>
+    mainStatOk(ref.build, p) ? expectedFinal(p, ref.build.substats) - (barFor(ref.char, ref.build, p.slotKey) ?? 0) : null
+  const spareGains = new Map<ActiveBuild, number[]>()
+  const offStanding = (piece: Piece): OffStanding | null => {
+    let best: { ref: ActiveBuild; gain: number } | null = null
+    for (const ref of activeBuilds) {
+      const gain = gainFor(ref, piece)
+      if (gain !== null && (!best || gain > best.gain)) best = { ref, gain }
+    }
+    if (!best) return null
+    const { ref, gain } = best
+    let gains = spareGains.get(ref)
+    if (!gains) spareGains.set(ref, (gains = spares.flatMap((p) => gainFor(ref, p) ?? [])))
+    return {
+      char: ref.char,
+      gain,
+      bar: barFor(ref.char, ref.build, piece.slotKey),
+      better: gains.filter((g) => g > gain + 1e-9).length,
+    }
+  }
+
+  const keptBy = new Map<string, number>()
+  const evaluations = pieces.map((piece, i): Evaluation => {
+    const candidates = perPiece[i].sort(compareCandidates)
+    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding)
+    if (ev.grade === 'keep' && ev.best) keptBy.set(ev.best.ref.char, (keptBy.get(ev.best.ref.char) ?? 0) + 1)
+    return ev
+  })
+  for (const c of characters) c.kept = keptBy.get(c.char) ?? 0
+
+  // Per character, the best tier any of their builds gives a set, and whether all of them keep it for 2pc pairs only.
+  const setUsers: EvaluationResult['setUsers'] = {}
+  for (const ref of activeBuilds) {
+    for (const s of ref.build.sets4) {
+      const list = (setUsers[s.set] ??= [])
+      const user = list.find((u) => u.char === ref.char)
+      if (!user) list.push(s.twoPieceOnly ? { char: ref.char, tier: s.tier, twoPieceOnly: true } : { char: ref.char, tier: s.tier })
+      else {
+        user.tier = Math.min(user.tier, s.tier)
+        if (!s.twoPieceOnly) delete user.twoPieceOnly
+      }
+    }
+  }
+
+  return { evaluations, setUsers, characters, activeBuilds }
+}
+
+/** How many pieces of each set every character wears. */
+export function wornSets(pieces: Piece[]): Map<string, Record<string, number>> {
+  const worn = new Map<string, Record<string, number>>()
+  for (const p of pieces) {
+    if (!p.owner) continue
+    const sets = worn.get(p.owner) ?? {}
+    sets[p.setKey] = (sets[p.setKey] ?? 0) + 1
+    worn.set(p.owner, sets)
+  }
+  return worn
+}
+
+/** The build's 4pc set the character wears (`sets` as `wornSets` counts them), which the build sticks to. */
+export function commitmentOf(build: BuildConfig, sets: Record<string, number>): { set: string; tier: number } | null {
+  const listed = fourPieceSets(build).filter((s) => (sets[s.set] ?? 0) >= 4)
+  return listed.length ? { set: listed[0].set, tier: Math.min(...listed.map((s) => s.tier)) } : null
+}
+
+/** Every piece's candidates for a list of builds, and the helpers the verdicts need. */
+export interface Judgement {
+  /** Each piece's candidates, in `pieces` order: one per build whose set (or off-set lane) and main stat it fits. */
+  perPiece: Candidate[][]
+  /** The character's equipped 5★ piece in a slot, if its main stat suits the build. */
+  usable: (char: string, build: BuildConfig, slot: SlotKey) => Piece | null
+  /** Value of what the character wears in a slot for a build; null when nothing usable. */
+  barFor: (char: string, build: BuildConfig, slot: SlotKey) => number | null
+  /** How a piece's set counts for a build, after sticking to the worn set. */
+  setFor: (ref: ActiveBuild, piece: Piece) => SetMatch
+}
+
+/**
+ * Layers 1–4 and the cap for the given builds. Each build is judged on its own (its worn set, off-set lane and cap
+ * pools are its own), so a what-if run can pass edited copies of builds and read their candidates directly.
+ */
+export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: ArtifactConfig, settings: Settings): Judgement {
+  // What each character wears now.
   const equipped = new Map<string, Piece>()
   for (const p of pieces) if (p.owner) equipped.set(`${p.owner}|${p.slotKey}`, p)
   const usable = (char: string, build: BuildConfig, slot: SlotKey): Piece | null => {
@@ -243,33 +340,16 @@ export function evaluate(
     }
     return byBuild.get(key)!
   }
-  for (const summary of characters) {
-    for (const b of summary.builds) {
-      const build = config.characters[summary.char].builds[b.idx]
-      for (const slot of SLOTS) {
-        const eq = usable(summary.char, build, slot)
-        const value = eq ? expectedFinal(eq, build.substats) : null
-        b.slots[slot] = { value, quality: eq && value !== null ? value / referenceValue(build, eq.mainStatKey) : null }
-      }
-    }
-  }
 
   // A build whose character already wears one of its 4pc sets is committed to it: another set's pieces only
   // count if that set is ranked a better tier (worth switching to). Pieces they're wearing always count. A 4pc of
   // a set the build keeps for 2pc pairs only commits it to nothing, so its partner sets keep counting.
   const commitment = new Map<ActiveBuild, { set: string; tier: number }>()
   if (settings.commitToWornSet) {
-    const worn = new Map<string, Record<string, number>>()
-    for (const p of pieces) {
-      if (!p.owner) continue
-      const sets = worn.get(p.owner) ?? {}
-      sets[p.setKey] = (sets[p.setKey] ?? 0) + 1
-      worn.set(p.owner, sets)
-    }
+    const worn = wornSets(pieces)
     for (const ref of activeBuilds) {
-      const sets = worn.get(ref.char) ?? {}
-      const listed = fourPieceSets(ref.build).filter((s) => (sets[s.set] ?? 0) >= 4)
-      if (listed.length) commitment.set(ref, { set: listed[0].set, tier: Math.min(...listed.map((s) => s.tier)) })
+      const committed = commitmentOf(ref.build, worn.get(ref.char) ?? {})
+      if (committed) commitment.set(ref, committed)
     }
   }
   const setFor = (ref: ActiveBuild, piece: Piece): SetMatch => {
@@ -374,53 +454,7 @@ export function evaluate(
     })
   }
 
-  // 6. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
-  const spares = pieces.filter((p) => !p.owner && p.rarity === 5)
-  const gainFor = (ref: ActiveBuild, p: Piece): number | null =>
-    mainStatOk(ref.build, p) ? expectedFinal(p, ref.build.substats) - (barFor(ref.char, ref.build, p.slotKey) ?? 0) : null
-  const spareGains = new Map<ActiveBuild, number[]>()
-  const offStanding = (piece: Piece): OffStanding | null => {
-    let best: { ref: ActiveBuild; gain: number } | null = null
-    for (const ref of activeBuilds) {
-      const gain = gainFor(ref, piece)
-      if (gain !== null && (!best || gain > best.gain)) best = { ref, gain }
-    }
-    if (!best) return null
-    const { ref, gain } = best
-    let gains = spareGains.get(ref)
-    if (!gains) spareGains.set(ref, (gains = spares.flatMap((p) => gainFor(ref, p) ?? [])))
-    return {
-      char: ref.char,
-      gain,
-      bar: barFor(ref.char, ref.build, piece.slotKey),
-      better: gains.filter((g) => g > gain + 1e-9).length,
-    }
-  }
-
-  const keptBy = new Map<string, number>()
-  const evaluations = pieces.map((piece, i): Evaluation => {
-    const candidates = perPiece[i].sort(compareCandidates)
-    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding)
-    if (ev.grade === 'keep' && ev.best) keptBy.set(ev.best.ref.char, (keptBy.get(ev.best.ref.char) ?? 0) + 1)
-    return ev
-  })
-  for (const c of characters) c.kept = keptBy.get(c.char) ?? 0
-
-  // Per character, the best tier any of their builds gives a set, and whether all of them keep it for 2pc pairs only.
-  const setUsers: EvaluationResult['setUsers'] = {}
-  for (const ref of activeBuilds) {
-    for (const s of ref.build.sets4) {
-      const list = (setUsers[s.set] ??= [])
-      const user = list.find((u) => u.char === ref.char)
-      if (!user) list.push(s.twoPieceOnly ? { char: ref.char, tier: s.tier, twoPieceOnly: true } : { char: ref.char, tier: s.tier })
-      else {
-        user.tier = Math.min(user.tier, s.tier)
-        if (!s.twoPieceOnly) delete user.twoPieceOnly
-      }
-    }
-  }
-
-  return { evaluations, setUsers, characters, activeBuilds }
+  return { perPiece, usable, barFor, setFor }
 }
 
 /** Best first: in-cap, then surviving, then passing the gate, then by projected value. */
@@ -535,7 +569,7 @@ function noFitReason(
   const set = setName(piece.setKey)
   const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
   // An off-set candidate only needs the main stat, so its absence means nobody wants that main stat at all.
-  if (offSetAllowed(settings.offSet, piece)) return `No active character wants ${statShort(piece.mainStatKey)} ${slot}s`
+  if (offSetAllowed(settings.offSet, piece)) return `No active character wants ${statShort(piece.mainStatKey)} ${slotPlural(piece.slotKey)}`
   const standing = describeOffStanding(offStanding(piece), slot)
   const users = activeBuilds.filter((ref) => matchSet(ref.build, piece.setKey, config, settings.setMatch))
   if (users.length && users.every((ref) => !setFor(ref, piece))) {
@@ -545,7 +579,7 @@ function noFitReason(
   if (!usesSet || piece.slotKey === 'flower' || piece.slotKey === 'plume') {
     return `${settings.setMatch === 'config' ? `No active character uses ${set}` : `No active character uses 4pc ${set}`}${standing}`
   }
-  return `${set} users don't want ${statShort(piece.mainStatKey)} ${slot}s${standing}`
+  return `${set} users don't want ${statShort(piece.mainStatKey)} ${slotPlural(piece.slotKey)}${standing}`
 }
 
 /**

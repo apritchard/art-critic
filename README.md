@@ -45,17 +45,20 @@ Every character comes with a researched build, so you can start right away. It's
 
 "Reset to research config" undoes all edits for that character.
 
+To find which build a particular piece is missing from, open it with [Closest build](#closest-build).
+
 ## Using it
 
 - **Triage +0**, **In progress** (+1 to +19) and **+20 review** list pieces whose lock state should change.
   - **LOCK** means keep: level it to the next stop (+4, +8, …), then re-export and check again.
   - **UNLOCK** means feed or salvage it.
 - Pick a set in the left rail and apply the same set filter in-game. Use the sort menu to match the in-game order; "Newest first" follows acquisition order. The slot and main-stat filters help find a specific piece.
-- Click the action button (or press <kbd>Space</kbd>) once you've done it in-game, and the list moves to the next piece. Use <kbd>↑</kbd>/<kbd>↓</kbd> to move and <kbd>Z</kbd> to undo. Click a card's "builds" link to see why it got its verdict.
+- Click the action button (or press <kbd>Space</kbd>) once you've done it in-game, and the list moves to the next piece. Use <kbd>↑</kbd>/<kbd>↓</kbd> to move and <kbd>Z</kbd> to undo. Click a card's "builds" link to see why it got its verdict, "closest build" to see which build it's nearest to being kept for (see [Closest build](#closest-build)), or "find in inventory" to see it outlined in the Inventory grid, with its row and place in the row.
 - **Level up** is the leveling queue: every piece worth leveling, already locked or not, plus equipped pieces worth finishing.
   - Level each piece only to its next stop (+4, +8, …). Every 4 levels adds one roll, and the early stops are cheap: +0 → +4 costs about 6% of the EXP to +20. Then re-export, and the piece is re-scored with what it actually rolled: it either continues or drops to "Stop & feed".
-  - Each card lists the characters it could go to, with the chance it ends up beating what they wear once it reaches +20. Sorted by that chance by default.
-  - With "★ Priority first" on (the default), pieces that could go to a ★ Priority character come first, and their chips lead each card.
+  - Each card leads with its **expected gain** (⬆): the average improvement once finished over what the character it's kept for wears now, a miss counting as 0. It's the same number and color as the Inventory's [⬆ badge](#using-it), for a ★ Priority character when it's kept for one. The tab sorts by it by default, so it lists the pieces in the same order the Inventory rates them.
+  - Then come the characters it could go to, with the chance it ends up beating what they wear once it reaches +20. "Upgrade chance" sorts by that instead. Many pieces are sure upgrades, so pieces tied on chance go by expected gain.
+  - With "★ Priority first" on (the default), pieces kept for a ★ Priority character come first (by chance: pieces that could beat what one wears), and their chips lead each card.
   - The button marks it leveled (separately from lock marks).
 - **Inventory** is the fastest way through a whole set: it lays out the set's pieces in the same order and grid as the game's inventory, every level and lock state at once, so you can lock and unlock in one pass without filtering further.
   - **In-game:** open the inventory, set Filter → Set to the set picked in the left rail, and add Not Equipped (or tick "Include equipped" here if you don't). Leave "Show 5-star Artifacts in the order of when they were obtained" off. Then work along both grids together.
@@ -64,6 +67,7 @@ Every character comes with a researched build, so you can start right away. It's
   - **⬆+4** in the corner marks a piece in the Level up queue, with the stop to level it to. It gets hotter with the piece's expected gain once finished: the average improvement over what the character wears now, a miss counting as 0, for a ★ Priority character (or anyone, when nobody is ★). The steps are fixed, so a hot badge means the same in every set: grey below 0.5 rolls, cyan outline from 0.5, blue from 1 (**high priority**), violet from 2, and glowing magenta from 3. From blue up, the cell gets a stripe of the same color across its top. Hover for the character, the gain and the chance. The rail counts each set's high-priority pieces (⬆), and pieces marked leveled on the Level up tab show ✓.
   - **The order** is level high to low, then flower → circlet, then locked before unlocked, then pieces that started with 4 lines before those that started with 3 (even at +20, when both have 4), then newest first. It was worked out from in-game screenshots and confirmed against more of the same grids.
   - **Per row** sets the grid width: 8 matches the game on PC. Row numbers help keep your place.
+  - Hovering an unequipped cell shows **↗** in its corner, which opens [Closest build](#closest-build) for that piece.
   - Click a cell once you've changed it in-game (the same marks as the Triage, In progress and +20 review tabs), or use "Mark all done" at the end. The grid doesn't move when you do, since the game only re-sorts when the inventory is opened again. After reopening it, tick "Reopened since marking" to order by the new lock states.
   - The export only has 5★ pieces, so any 4★ pieces of the set in your inventory will shift the grid.
 
@@ -101,6 +105,25 @@ Every character comes with a researched build, so you can start right away. It's
 **Equips since the export.** Tick a free upgrade on the Farm tab, or press Equip on a spare or another character's piece in Improve, once you've done it in-game. Every tab then treats the piece as worn until your next export: the character's ratings, farming odds and rerolls update, and the piece it replaced is judged as a spare (taking a piece from another character swaps the two, as the game does). The header counts them, and the Farm tab lists them with undo. They belong to the export they were made on, so a new export starts clean, even one saved over the old file.
 
 Settings, roster choices, build edits, the Strongbox list, done marks and equips are saved to `state/user-state.json`. Git ignores `state/` and your exports in `imports/`, so your account data stays on this machine.
+
+### Closest build
+
+For a piece marked UNLOCK that you'd rather keep, Closest build finds the build it's nearest to being kept for, and shows what in that build stands in the way. Open it from a card's "closest build" link, an Inventory cell's ↗, or a character's name in a card's builds table (that one opens their build rather than the nearest). It opens the Builds tab at that build, with the piece pinned above the editor:
+
+- **Now** is the piece's verdict. It updates as you edit the build below, so you can see the moment it turns into a keep.
+- **Nearest to keeping it** lists the active builds, each as if it counted the piece:
+  - **Main stat:** a main stat the build doesn't accept is allowed.
+  - **Set:** only for a piece that can't be the build's [off-set piece](#how-a-piece-is-judged) (by default, a piece without a rare main stat), since an off-set piece can be of any set. A set the build doesn't list is added at the lowest tier that counts (tier 2, or tier 3 once Settings counts every tier), and a tier-3 set is raised to tier 2. When the character wears one of the build's 4pc sets, the piece's set has to [outrank it](#how-a-piece-is-judged), and a tier-1 worn set drops to tier 2 to make room.
+  - These are the only edits it suggests. A build that already counts the piece, as one of its sets or as its off-set piece, is shown as it is. Substat weights are your call.
+  - The edited build is judged by the real rules, cap included, so other pieces the edit lets in compete for the slot too.
+
+  Builds that already take its main stat come first. Builds that would need it allowed are listed last, under a label of their own: allowing an Anemo DMG goblet for Nilou makes a different build rather than a tweak, though it can show up a main stat left out by mistake. Within each group, builds that would keep it come first, fewest edits first. After them come builds where the cap cuts it (nearest the cap first), then builds it's unlikely to upgrade (likeliest first), then builds whose substat bar it misses (nearest first). Pick one to edit it.
+- **For the build on screen**, each layer gets a ✓ or ✗: set, main stat, substats, upgrade chance and cap.
+  - Each set or main-stat edit has a button that makes it.
+  - When the substats fall short, it lists the weight of each of the piece's lines, so you know which sliders to move.
+  - When the cap cuts it, it lists the pieces ranked above it. In the off-set lane, that's every slot's off-set candidates, ranked by gain over what the character wears. Otherwise it's the slot's candidates, ranked by projected value. The unfinished ones are links: level those first, since one that rolls badly drops back and lets this piece move up. Each opens the Inventory tab at that piece's set, scrolled to it and outlined, with its row and place in the row, so you can find it in-game. When everything ahead is a finished +20, the piece only moves up once one of them is equipped or fed, or the cap is raised.
+  - A build that doesn't count yet (Ignored, switched off, or not owned) says so, and still shows what it would take.
+- ✕ closes it. Edits made here are saved like any other build edit, and "Reset to research config" undoes them.
 
 ## How a piece is judged
 
@@ -193,7 +216,7 @@ There's no production build: the API runs inside the Vite dev server, so `npm ru
 
 - `src/engine/` is the scoring engine (pure TypeScript, unit-tested):
   - `load.ts` reads the export and applies equips made since it; `match.ts` and `evaluate.ts` judge each piece; `projection.ts` has the roll odds; `stats.ts` has stat and set names.
-  - `farm.ts` is the farming planner, `reroll.ts` the reroll odds, `improve.ts` the Improve tab, `er.ts` Energy Recharge totals, `builds.ts` the Builds tab's edits, and `inventory.ts` the game's inventory order.
+  - `farm.ts` is the farming planner, `reroll.ts` the reroll odds, `improve.ts` the Improve tab, `fit.ts` Closest build, `er.ts` Energy Recharge totals, `builds.ts` the Builds tab's edits, and `inventory.ts` the game's inventory order.
 - `src/state/store.tsx` loads everything and saves your state. `src/ui/` holds the React views.
 - `server/artCriticPlugin.ts` is the dev-server API that serves exports, config, game data and saved state, and copies exports loaded with the button into `imports/`. `server/gameData.ts` downloads and refreshes `data/game-data.json`.
 

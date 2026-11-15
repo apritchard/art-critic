@@ -9,6 +9,7 @@ import { doneKey, ListView, type ListTab } from './ListView'
 import { LoadExportButton } from './LoadExportButton'
 import { useLocal } from './local'
 import { RerollPage } from './RerollPage'
+import { buildsFocus, inventoryFocus, parseHash } from './routes'
 import { RosterPage } from './RosterPage'
 import { SettingsPanel } from './SettingsPanel'
 
@@ -47,7 +48,7 @@ export function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-  const [hashTab, hashArg] = hash.slice(1).split('/') as [Tab, string | undefined]
+  const { tab: hashTab, args: hashArgs } = parseHash(hash) as { tab: Tab; args: string[] }
   const tab = hashTab in TAB_LABEL ? hashTab : savedTab
   const setTab = (t: Tab) => {
     history.replaceState(null, '', `#${t}`)
@@ -141,11 +142,11 @@ export function App() {
         ) : tab === 'farm' ? (
           <FarmPage result={result} />
         ) : tab === 'inventory' ? (
-          <InventoryView result={result} />
+          <InventoryView result={result} focus={hashTab === 'inventory' ? inventoryFocus(hash) : undefined} />
         ) : tab === 'improve' ? (
-          <ImprovePage result={result} initial={hashArg && decodeURIComponent(hashArg)} />
+          <ImprovePage result={result} initial={hashArgs[0]} />
         ) : tab === 'builds' ? (
-          <BuildsPage result={result} />
+          <BuildsPage result={result} focus={hashTab === 'builds' ? buildsFocus(hash) : undefined} />
         ) : (
           <ListView key={tab} tab={tab} result={result} scope={SCOPES[tab]} />
         )}

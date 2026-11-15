@@ -446,6 +446,61 @@ kbd {
   cursor: default;
 }
 
+/* The grid item: a cell, plus its Closest build link in the corner (a link can't sit inside the cell's button). */
+.inv-slot {
+  position: relative;
+  display: flex;
+}
+
+.inv-slot > .inv-cell {
+  flex: 1;
+  min-width: 0;
+}
+
+.inv-fit {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: 0;
+}
+
+.inv-slot:hover .inv-fit,
+.inv-fit:focus-visible {
+  opacity: 1;
+}
+
+.inv-fit:hover {
+  background: var(--panel-2);
+}
+
+/* The piece an #inventory?piece= link points at (from Closest build): outlined, with a short pulse on arrival. */
+.inv-slot.spot > .inv-cell {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  animation: inv-spot 0.6s ease-in-out 3;
+}
+
+@keyframes inv-spot {
+  50% {
+    outline-offset: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-slot.spot > .inv-cell {
+    animation: none;
+  }
+}
+
+.inv-spot-note {
+  color: var(--accent);
+}
+
 /* Nothing to change about its lock: faded, but a leveling badge and the substats stay readable. */
 .inv-cell.idle > :not(.inv-up):not(.inv-subs) {
   opacity: 0.55;
@@ -832,6 +887,13 @@ kbd {
 .chance.in {
   color: var(--keep);
   background: var(--keep-bg);
+}
+
+/* A Level up card's expected gain, colored like the Inventory's ⬆ badge but shaped like the chips beside it. */
+.inv-up.card-gain {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
 .chance.cut {
@@ -1293,6 +1355,194 @@ kbd {
 
 .editor .slider {
   grid-template-columns: 140px minmax(120px, 320px) 48px;
+}
+
+/* Closest build, at the top of the Builds editor */
+
+.fit-panel {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.fit-panel h4 {
+  margin: 12px 0 2px;
+  font-size: 14px;
+}
+
+.fit-panel .hint {
+  margin: 0 0 6px;
+}
+
+.fit-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fit-head .ghost {
+  margin-left: auto;
+}
+
+.fit-piece {
+  font-weight: 600;
+}
+
+.fit-subs {
+  margin: 6px 0 2px;
+  font-size: 14px;
+  max-width: 420px;
+}
+
+.fit-now {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.fit-now .verdict {
+  margin-left: 0;
+}
+
+.fit-now .reason {
+  margin-top: 0;
+  flex-basis: 100%;
+}
+
+.fit-act {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fit-act.lock {
+  color: var(--keep);
+}
+
+.fit-act.unlock {
+  color: var(--toss);
+}
+
+.fit-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.fit-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  text-align: left;
+  font-size: 13px;
+}
+
+.fit-row:hover {
+  border-color: var(--accent);
+}
+
+a.fit-row {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Builds that would need the piece's main stat allowed: listed last, and quieter. */
+.fit-group {
+  flex-basis: 100%;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.fit-row.needs-main:not(.on) {
+  opacity: 0.7;
+}
+
+.fit-ahead {
+  margin-top: 8px;
+}
+
+.fit-ahead .hint {
+  margin: 4px 0;
+}
+
+.fit-row.on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.fit-who small {
+  color: var(--muted);
+}
+
+.fit-what {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.o-keep .fit-what,
+.fit-sum.o-keep {
+  color: var(--keep);
+}
+
+.o-cut .fit-what,
+.o-chance .fit-what,
+.fit-sum.o-cut,
+.fit-sum.o-chance {
+  color: var(--marginal);
+}
+
+.fit-sum.o-substats {
+  color: var(--toss);
+}
+
+.fit-layers {
+  display: grid;
+  grid-template-columns: 1.2em 6.5em 1fr;
+  gap: 3px 6px;
+  font-size: 14px;
+}
+
+.fit-layer {
+  display: contents;
+}
+
+.fit-mark {
+  font-weight: 700;
+  text-align: center;
+}
+
+.fit-mark.ok {
+  color: var(--keep);
+}
+
+.fit-mark.bad {
+  color: var(--toss);
+}
+
+.fit-mark.na,
+.fit-label {
+  color: var(--faint);
+}
+
+.fit-text .ghost,
+.fit-sum .ghost {
+  margin-left: 8px;
+}
+
+.fit-sum {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 @media (max-width: 760px) {

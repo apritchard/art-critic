@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Evaluation, EvaluationResult } from '../engine/evaluate'
+import { levelPriority, type LevelPriority } from '../engine/inventory'
 import { characterName, SLOT_LABEL, setName, statLabel } from '../engine/stats'
 import { SLOTS, type SlotKey } from '../engine/types'
 import { useStore, type SortMode } from '../state/store'
@@ -13,7 +14,14 @@ const SORT_LABEL: Record<SortMode, string> = {
   slot: 'Slot, then main stat',
   verdict: 'Verdict',
   chance: 'Upgrade chance',
+  gain: 'Expected gain',
 }
+
+/** Sorts only the Level up tab offers. */
+const LEVEL_ONLY: SortMode[] = ['gain']
+
+/** A piece's expected gain once finished from its leveling priority, 0 when it isn't worth leveling. */
+const gainOf = (priorities: Map<string, LevelPriority | null>) => (e: Evaluation) => priorities.get(e.piece.id)?.gain ?? 0
 
 const GRADE_ORDER = { keep: 0, equipped: 1, marginal: 2, toss: 3, skip: 4 }
 
@@ -30,11 +38,22 @@ const priorityChance = (e: Evaluation) =>
       .map((c) => c.chance),
   )
 
-function sorter(mode: SortMode): (a: Evaluation, b: Evaluation) => number {
+/**
+ * `gainOf` is a piece's expected gain once finished, as the Inventory's ⬆ badge rates it (levelPriority), or 0 when
+ * it isn't worth leveling.
+ */
+function sorter(mode: SortMode, gainOf: (e: Evaluation) => number): (a: Evaluation, b: Evaluation) => number {
   switch (mode) {
+    case 'gain':
+      return (a, b) => gainOf(b) - gainOf(a) || topChance(b) - topChance(a) || b.piece.idx - a.piece.idx
     case 'chance':
+      // Many pieces are sure upgrades (100%), so ties go to the bigger gain. Projected value comes last: it's
+      // measured against different builds, so it doesn't compare well across pieces.
       return (a, b) =>
-        topChance(b) - topChance(a) || (b.best?.expected ?? 0) - (a.best?.expected ?? 0) || b.piece.idx - a.piece.idx
+        topChance(b) - topChance(a) ||
+        gainOf(b) - gainOf(a) ||
+        (b.best?.expected ?? 0) - (a.best?.expected ?? 0) ||
+        b.piece.idx - a.piece.idx
     case 'newest':
       return (a, b) => b.piece.idx - a.piece.idx
     case 'oldest':
@@ -65,9 +84,18 @@ export const doneKey = (tab: ListTab, e: Evaluation) => (tab === 'level' ? `lvl:
 
 type LevelFilter = 'all' | 'fresh' | 'started'
 
-/** Pieces headed to a ★ Priority character first (by their chance, when sorting by chance), then the rest. */
-function priorityThen(mode: SortMode): (a: Evaluation, b: Evaluation) => number {
-  const base = sorter(mode)
+/**
+ * Pieces headed to a ★ Priority character first, then the rest. By expected gain, that's pieces whose gain is for a ★
+ * character (`starOf`, as the Inventory badge counts it); by chance, any ★ character it could beat, ranked by that
+ * chance.
+ */
+function priorityThen(
+  mode: SortMode,
+  gainOf: (e: Evaluation) => number,
+  starOf: (e: Evaluation) => boolean,
+): (a: Evaluation, b: Evaluation) => number {
+  const base = sorter(mode, gainOf)
+  if (mode === 'gain') return (a, b) => Number(starOf(b)) - Number(starOf(a)) || base(a, b)
   return (a, b) => {
     const pa = priorityChance(a)
     const pb = priorityChance(b)
@@ -91,10 +119,11 @@ export function ListView({ tab, result, scope }: Props) {
   const [show, setShow] = useLocal<'actions' | 'all'>(`${tab}:show`, 'actions')
   const [levels, setLevels] = useLocal<LevelFilter>('level:levels', 'all')
   const [hideDone, setHideDone] = useLocal<boolean>('hideDone', false)
-  // The level queue keeps its own sort (upgrade chance by default); the lock tabs share one.
-  const [levelSort, setLevelSort] = useLocal<SortMode>('level:sort', 'chance')
+  // The level queue keeps its own sort (expected gain by default); the lock tabs share one. Stored under a new key
+  // since expected gain became the default, so browsers that saved the old default ('chance') pick it up too.
+  const [levelSort, setLevelSort] = useLocal<SortMode>('level:sortBy', 'gain')
   const [priorityFirst, setPriorityFirst] = useLocal('level:priorityFirst', true)
-  const sort = leveling ? levelSort : store.sort
+  const sort = leveling ? levelSort : store.sort === 'gain' ? 'newest' : store.sort
   const setSort = leveling ? setLevelSort : store.setSort
   const [focus, setFocus] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -113,6 +142,13 @@ export function ListView({ tab, result, scope }: Props) {
           (!leveling || levels === 'all' || (levels === 'fresh' ? e.piece.level === 0 : e.piece.level > 0)),
       ),
     [result, scope, leveling, levels],
+  )
+
+  // What each piece is worth leveling, as the Inventory's ⬆ badge rates it: sorts by expected gain, and breaks ties.
+  const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
+  const priorities = useMemo(
+    () => new Map(inScope.map((e) => [e.piece.id, levelPriority(e, anyStar)] as const)),
+    [inScope, anyStar],
   )
 
   const sets = useMemo(() => {
@@ -156,8 +192,12 @@ export function ListView({ tab, result, scope }: Props) {
             (leveling || show === 'all' || e.action !== null) &&
             !(hideDone && done.has(doneKey(tab, e))),
         )
-        .sort(leveling && priorityFirst ? priorityThen(sort) : sorter(sort)),
-    [inSet, slot, main, show, hideDone, done, sort, leveling, tab, priorityFirst],
+        .sort(
+          leveling && priorityFirst
+            ? priorityThen(sort, gainOf(priorities), (e) => !!priorities.get(e.piece.id)?.star)
+            : sorter(sort, gainOf(priorities)),
+        ),
+    [inSet, slot, main, show, hideDone, done, sort, leveling, tab, priorityFirst, priorities],
   )
 
   const focusIdx = Math.min(focus, Math.max(0, list.length - 1))
@@ -283,7 +323,7 @@ export function ListView({ tab, result, scope }: Props) {
             ))}
           </select>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)} title="Match the in-game order">
-            {(Object.keys(SORT_LABEL) as SortMode[]).map((m) => (
+            {(Object.keys(SORT_LABEL) as SortMode[]).filter((m) => leveling || !LEVEL_ONLY.includes(m)).map((m) => (
               <option key={m} value={m}>
                 {SORT_LABEL[m]}
               </option>
@@ -353,6 +393,7 @@ export function ListView({ tab, result, scope }: Props) {
               key={e.piece.id}
               ev={e}
               leveling={leveling}
+              priority={leveling ? priorities.get(e.piece.id) : undefined}
               focused={i === focusIdx}
               done={isDone(e)}
               expanded={expanded === e.piece.id}

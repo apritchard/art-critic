@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { Evaluation, EvaluationResult } from '../engine/evaluate'
 import { HIGH_PRIORITY_GAIN, inventoryOrder, levelPriority, PRIORITY_STEPS, type LevelPriority } from '../engine/inventory'
 import type { Piece } from '../engine/load'
@@ -7,6 +7,7 @@ import type { GoodSubstat } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON, weightClass } from './ArtifactCard'
 import { useLocal } from './local'
+import { buildsHref } from './routes'
 
 /** The game's inventory shows 8 pieces per row on PC. */
 const DEFAULT_COLS = 8
@@ -16,6 +17,9 @@ const MAX_COLS = 16
 /** Level up queue marks are kept apart from lock marks on the same piece (see doneKey in ListView). */
 const levelKey = (id: string) => `lvl:${id}`
 
+/** The suffix of an ordinal: 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st. */
+const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'))
+
 /** "CD 7.8" or "HP 299": short enough for a grid cell. */
 const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s.value.toFixed(1) : Math.round(s.value)}`
 
@@ -24,7 +28,7 @@ const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s
  * pieces are included), each marked with its lock change and whether it's worth leveling, so they can be worked
  * through in-game in one pass.
  */
-export function InventoryView({ result }: { result: EvaluationResult }) {
+export function InventoryView({ result, focus }: { result: EvaluationResult; focus?: { piece?: string; key: string } }) {
   const { done, toggleDone } = useStore()
   const [setPick, setSet] = useLocal<string>('inventory:set', '')
   const [colsPick, setCols] = useLocal<number>('inventory:cols', DEFAULT_COLS)
@@ -32,6 +36,24 @@ export function InventoryView({ result }: { result: EvaluationResult }) {
   const [reopened, setReopened] = useLocal('inventory:reopened', false)
   const [showSubs, setShowSubs] = useLocal('inventory:subs', true)
   const cols = Math.min(MAX_COLS, Math.max(MIN_COLS, Math.round(Number(colsPick) || DEFAULT_COLS)))
+
+  // A link to one piece (#inventory?piece=…, from Closest build): open its set, showing equipped pieces if it's worn,
+  // scroll to it once, and outline it until another tab or link.
+  const spot = focus?.piece
+  const spotEv = useMemo(() => (spot ? result.evaluations.find((e) => e.piece.id === spot) : undefined), [spot, result.evaluations])
+  useEffect(() => {
+    if (!spotEv) return
+    setSet(spotEv.piece.setKey)
+    if (spotEv.piece.owner) setWithEquipped(true)
+  }, [focus?.key])
+  const scrolledFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!focus || scrolledFor.current === focus.key) return
+    const cell = document.querySelector('.inv-slot.spot')
+    if (!cell) return
+    scrolledFor.current = focus.key
+    cell.scrollIntoView({ block: 'center', inline: 'center' })
+  })
 
   const shown = useMemo(
     () => result.evaluations.filter((e) => e.piece.rarity === 5 && (withEquipped || !e.piece.owner)),
@@ -82,6 +104,7 @@ export function InventoryView({ result }: { result: EvaluationResult }) {
 
   const rows: Evaluation[][] = []
   for (let i = 0; i < ordered.length; i += cols) rows.push(ordered.slice(i, i + cols))
+  const spotAt = spot ? ordered.findIndex((e) => e.piece.id === spot) : -1
 
   return (
     <div className="listview">
@@ -151,7 +174,14 @@ export function InventoryView({ result }: { result: EvaluationResult }) {
                 ⬆ level {toLevel.length}
                 {high.length > 0 && `, ${high.length} high priority`}
               </span>
-              . Click a piece once you&apos;ve changed its lock.{' '}
+              . Click a piece once you&apos;ve changed its lock; its ↗ (on hover) opens the build closest to keeping it.{' '}
+              {spotAt >= 0 && (
+                <b className="inv-spot-note">
+                  Outlined: the piece you followed, row {Math.floor(spotAt / cols) + 1}, {(spotAt % cols) + 1}
+                  {ordinal((spotAt % cols) + 1)} from the left.{' '}
+                </b>
+              )}
+              {spot && !spotEv && <b className="inv-spot-note">The piece you followed isn&apos;t in this export. </b>}
               {left.length > 0 ? (
                 <button className="link" onClick={() => markAll(true)}>
                   Mark all done
@@ -169,7 +199,7 @@ export function InventoryView({ result }: { result: EvaluationResult }) {
               style={{ gridTemplateColumns: `2.5em repeat(${cols}, var(--inv-cell))` }}
             >
               {rows.map((row, r) => (
-                <Row key={r} n={r + 1} row={row} done={done} toggle={toggleDone} priorities={priorities} showSubs={showSubs} />
+                <Row key={r} n={r + 1} row={row} done={done} toggle={toggleDone} priorities={priorities} showSubs={showSubs} spot={spot} />
               ))}
             </div>
             <p className="sub-note inv-key">
@@ -206,6 +236,7 @@ function Row({
   toggle,
   priorities,
   showSubs,
+  spot,
 }: {
   n: number
   row: Evaluation[]
@@ -213,6 +244,7 @@ function Row({
   toggle: (id: string) => void
   priorities: Map<string, LevelPriority | null>
   showSubs: boolean
+  spot: string | undefined
 }) {
   return (
     <>
@@ -226,6 +258,7 @@ function Row({
           level={priorities.get(e.piece.id) ?? null}
           leveled={done.has(levelKey(e.piece.id))}
           showSubs={showSubs}
+          spot={e.piece.id === spot}
         />
       ))}
     </>
@@ -239,6 +272,7 @@ function Cell({
   level,
   leveled,
   showSubs,
+  spot,
 }: {
   e: Evaluation
   isDone: boolean
@@ -246,6 +280,8 @@ function Cell({
   level: LevelPriority | null
   leveled: boolean
   showSubs: boolean
+  /** The piece a link pointed at: outlined. */
+  spot: boolean
 }) {
   const p = e.piece
   const weights = e.best?.ref.build.substats ?? {}
@@ -266,34 +302,41 @@ function Cell({
     .filter(Boolean)
     .join(' ')
   return (
-    <button className={cls} title={title} onClick={() => e.action && toggle(p.id)} disabled={!e.action}>
-      {p.lock && <span className="inv-lock">🔒</span>}
-      {level && (
-        <span className={`inv-up t${level.tier}${leveled ? ' leveled' : ''}`}>
-          {leveled ? '✓' : '⬆'}+{level.next}
+    <div className={spot ? "inv-slot spot" : "inv-slot"}>
+      <button className={cls} title={title} onClick={() => e.action && toggle(p.id)} disabled={!e.action}>
+        {p.lock && <span className="inv-lock">🔒</span>}
+        {level && (
+          <span className={`inv-up t${level.tier}${leveled ? ' leveled' : ''}`}>
+            {leveled ? '✓' : '⬆'}+{level.next}
+          </span>
+        )}
+        <span className="inv-icon">{SLOT_ICON[p.slotKey]}</span>
+        <span className="inv-main">{statShort(p.mainStatKey)}</span>
+        <span className="inv-level">
+          +{p.level}
+          {p.owner && <span className="inv-owner"> · {characterName(p.owner).slice(0, 3)}</span>}
         </span>
+        {showSubs && (
+          <span className="inv-subs">
+            {p.substats.map((s) => (
+              <span key={s.key} className={`inv-sub ${weightClass(weights[s.key] ?? 0)}`}>
+                {shortSub(s)}
+              </span>
+            ))}
+            {(p.unactivatedSubstats ?? []).map((s) => (
+              <span key={s.key} className={`inv-sub hidden-line ${weightClass(weights[s.key] ?? 0)}`}>
+                {shortSub(s)}
+              </span>
+            ))}
+          </span>
+        )}
+        {e.action && <span className="inv-act">{isDone ? '✓ done' : e.action === 'lock' ? 'LOCK' : 'UNLOCK'}</span>}
+      </button>
+      {!p.owner && (
+        <a className="inv-fit" href={buildsHref({ piece: p.id })} title="Closest build: the build nearest to keeping this piece, and what stands in the way">
+          ↗
+        </a>
       )}
-      <span className="inv-icon">{SLOT_ICON[p.slotKey]}</span>
-      <span className="inv-main">{statShort(p.mainStatKey)}</span>
-      <span className="inv-level">
-        +{p.level}
-        {p.owner && <span className="inv-owner"> · {characterName(p.owner).slice(0, 3)}</span>}
-      </span>
-      {showSubs && (
-        <span className="inv-subs">
-          {p.substats.map((s) => (
-            <span key={s.key} className={`inv-sub ${weightClass(weights[s.key] ?? 0)}`}>
-              {shortSub(s)}
-            </span>
-          ))}
-          {(p.unactivatedSubstats ?? []).map((s) => (
-            <span key={s.key} className={`inv-sub hidden-line ${weightClass(weights[s.key] ?? 0)}`}>
-              {shortSub(s)}
-            </span>
-          ))}
-        </span>
-      )}
-      {e.action &&<span className="inv-act">{isDone ? '✓ done' : e.action === 'lock' ? 'LOCK' : 'UNLOCK'}</span>}
-    </button>
+    </div>
   )
 }

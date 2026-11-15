@@ -70,6 +70,24 @@ export function withTwoPieceOnly(build: BuildConfig, set: string, on: boolean): 
   }
 }
 
+/**
+ * One change to a build, as Closest build suggests it: rank a set at a tier (`from` null adds it), or accept a main
+ * stat in a slot.
+ */
+export type BuildEdit =
+  | { kind: 'tier'; set: string; from: number | null; to: number }
+  | { kind: 'main'; slot: MainSlot; main: string }
+
+export function applyEdits(build: BuildConfig, edits: BuildEdit[]): BuildConfig {
+  let b = build
+  for (const e of edits) {
+    if (e.kind === 'main') b = withMainStats(b, e.slot, [...new Set([...allowedMains(b, e.slot), e.main])])
+    else if (b.sets4.some((s) => s.set === e.set)) b = { ...b, sets4: b.sets4.map((s) => (s.set === e.set ? { ...s, tier: e.to } : s)) }
+    else b = { ...b, sets4: [...b.sets4, { set: e.set, tier: e.to }] }
+  }
+  return b
+}
+
 /** Adds a 2pc pair unless the build already has it (in either order). */
 export function withPair(build: BuildConfig, pair: [string, string]): BuildConfig {
   const key = (p: string[]) => [...p].sort().join('+')
