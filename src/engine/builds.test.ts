@@ -8,6 +8,7 @@ import {
   shiftDisabled,
   withMainStats,
   withPair,
+  withTwoPieceOnly,
   withWeight,
 } from './builds'
 import { mainStatOk } from './match'
@@ -85,5 +86,14 @@ describe('build edits', () => {
     const withEr = withPair(build, ['atk18', 'er20'])
     expect(withEr.sets2).toEqual([['atk18', 'er20']])
     expect(withPair(withEr, ['er20', 'atk18'])).toBe(withEr)
+  })
+
+  it('marks a set 2pc only, and clears the flag rather than storing false', () => {
+    const on = withTwoPieceOnly(build, 'CrimsonWitchOfFlames', true)
+    expect(on.sets4).toEqual([{ set: 'CrimsonWitchOfFlames', tier: 1, twoPieceOnly: true }])
+    expect(build.sets4[0].twoPieceOnly).toBeUndefined()
+    const off = withTwoPieceOnly(on, 'CrimsonWitchOfFlames', false)
+    expect(off.sets4[0]).toEqual({ set: 'CrimsonWitchOfFlames', tier: 1 })
+    expect('twoPieceOnly' in off.sets4[0]).toBe(false)
   })
 })

@@ -1,5 +1,5 @@
 import type { Piece } from './load'
-import { describeSetMatch, mainStatOk, matchSet, offSetAllowed, type SetMatch } from './match'
+import { describeSetMatch, fourPieceSets, mainStatOk, matchSet, offSetAllowed, type SetMatch } from './match'
 import {
   chanceToBeat,
   currentValue,
@@ -129,7 +129,8 @@ export interface CharacterSummary {
 
 export interface EvaluationResult {
   evaluations: Evaluation[]
-  setUsers: Record<string, { char: string; tier: number }[]>
+  /** Who lists each set, at their best tier; `twoPieceOnly` when every build of theirs keeps it for 2pc pairs only. */
+  setUsers: Record<string, { char: string; tier: number; twoPieceOnly?: true }[]>
   characters: CharacterSummary[]
   activeBuilds: ActiveBuild[]
 }
@@ -254,7 +255,8 @@ export function evaluate(
   }
 
   // A build whose character already wears one of its 4pc sets is committed to it: another set's pieces only
-  // count if that set is ranked a better tier (worth switching to). Pieces they're wearing always count.
+  // count if that set is ranked a better tier (worth switching to). Pieces they're wearing always count. A 4pc of
+  // a set the build keeps for 2pc pairs only commits it to nothing, so its partner sets keep counting.
   const commitment = new Map<ActiveBuild, { set: string; tier: number }>()
   if (settings.commitToWornSet) {
     const worn = new Map<string, Record<string, number>>()
@@ -266,7 +268,7 @@ export function evaluate(
     }
     for (const ref of activeBuilds) {
       const sets = worn.get(ref.char) ?? {}
-      const listed = ref.build.sets4.filter((s) => (sets[s.set] ?? 0) >= 4)
+      const listed = fourPieceSets(ref.build).filter((s) => (sets[s.set] ?? 0) >= 4)
       if (listed.length) commitment.set(ref, { set: listed[0].set, tier: Math.min(...listed.map((s) => s.tier)) })
     }
   }
@@ -404,11 +406,17 @@ export function evaluate(
   })
   for (const c of characters) c.kept = keptBy.get(c.char) ?? 0
 
+  // Per character, the best tier any of their builds gives a set, and whether all of them keep it for 2pc pairs only.
   const setUsers: EvaluationResult['setUsers'] = {}
   for (const ref of activeBuilds) {
     for (const s of ref.build.sets4) {
       const list = (setUsers[s.set] ??= [])
-      if (!list.some((u) => u.char === ref.char)) list.push({ char: ref.char, tier: s.tier })
+      const user = list.find((u) => u.char === ref.char)
+      if (!user) list.push(s.twoPieceOnly ? { char: ref.char, tier: s.tier, twoPieceOnly: true } : { char: ref.char, tier: s.tier })
+      else {
+        user.tier = Math.min(user.tier, s.tier)
+        if (!s.twoPieceOnly) delete user.twoPieceOnly
+      }
     }
   }
 

@@ -123,6 +123,19 @@ describe('improveCharacter', () => {
     expect(flower.spares[0].fit).toEqual({ kind: 'switch', tier: 2 })
   })
 
+  it("doesn't suggest switching to the 4pc of a set kept for 2pc pairs only", () => {
+    const sets4 = build.sets4.map((s) => (s.set === 'ShimenawasReminiscence' ? { ...s, twoPieceOnly: true } : s))
+    const pairs: ArtifactConfig = {
+      ...config,
+      characters: { ...config.characters, HuTao: { ...config.characters.HuTao, builds: [{ ...build, sets4 }] } },
+    }
+    const res = evaluate(pieces, data.characters, pairs, defaultSettings(pairs), roster)
+    const hutao = res.activeBuilds.find((r) => r.char === 'HuTao')!
+    const p = improveCharacter({ result: res, pieces, config: pairs, domains, er: null, ref: hutao, guarantee: 2, claimed: new Map(), strongboxSets: null })
+    const flower = p.slots.find((s) => s.slot === 'flower')!
+    expect(flower.spares[0].fit).toEqual({ kind: 'breaks', set: 'CrimsonWitchOfFlames' })
+  })
+
   it("doesn't count Strongbox crafts of sets it can't make", () => {
     const circlet = plan(new Set(['Lavawalker'])).slots[0]
     expect(circlet.strongbox).toMatchObject({ chance: 0, sets: [], missing: ['CrimsonWitchOfFlames'] })

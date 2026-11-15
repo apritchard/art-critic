@@ -9,6 +9,7 @@ import {
   SUBSTAT_KEYS,
   withMainStats,
   withPair,
+  withTwoPieceOnly,
   withWeight,
 } from '../engine/builds'
 import { erCap, erNeed, totalER } from '../engine/er'
@@ -172,6 +173,9 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
         <p className="hint">
           Tier 1 is best. Tiers 1–2 count when keeping pieces; tier 3 is a fallback that only counts with the loosest
           set matching. Once a character wears one of these sets, only it and better-ranked sets count for them.
+          "2pc only" keeps a set's pieces for the 2-piece pairs below without preferring its 4pc over them, as with
+          Nilou's two HP sets: free upgrades won't give up a 2pc to complete its 4pc, and wearing its 4pc doesn't stop
+          its partner sets counting.
         </p>
         {sets.map((s) => (
           <div key={s.set} className="set-row">
@@ -187,6 +191,13 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
                 </button>
               ))}
             </div>
+            <button
+              className={s.twoPieceOnly ? 'toggle on' : 'toggle'}
+              onClick={() => save(withTwoPieceOnly(build, s.set, !s.twoPieceOnly))}
+              title="Keep this set's pieces for the 2-piece pairs below, without preferring its 4pc over them"
+            >
+              2pc only
+            </button>
             <button
               className="ghost small"
               onClick={() => save({ ...build, sets4: build.sets4.filter((x) => x.set !== s.set) })}

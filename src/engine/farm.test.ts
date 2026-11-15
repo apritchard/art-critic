@@ -10,6 +10,7 @@ import {
   keepsSetBonuses,
   packPool,
   planFarming,
+  setsFit,
   setStatus,
   simulatePieces,
   swapSetFit,
@@ -209,10 +210,35 @@ describe('set bonuses', () => {
       r.build === dps
         ? { flower: 1, plume: 1, sands: null, goblet: null, circlet: null }
         : { flower: 1, plume: 1, sands: 1, goblet: 1, circlet: 1 }
-    expect(currentBuilds(refs, worn, bars).map((r) => r.build.name)).toEqual(['Support'])
+    expect(currentBuilds(refs, worn, bars, bars).map((r) => r.build.name)).toEqual(['Support'])
     // Nothing worn: the first build.
     const none = () => ({ flower: null, plume: null, sands: null, goblet: null, circlet: null })
-    expect(currentBuilds(refs, new Map(), none).map((r) => r.buildIdx)).toEqual([0])
+    expect(currentBuilds(refs, new Map(), none, none).map((r) => r.buildIdx)).toEqual([0])
+  })
+
+  it('compares builds that fit equally by their ratings, not their raw values', () => {
+    // Like Nilou in 2pc + 2pc: both builds fit every slot. The pieces add up to more for the build that weighs more
+    // stats, but they're nearer what the other build wants.
+    const bloom = build({ name: 'Bloom' })
+    const hybrid = build({ name: 'Hybrid' })
+    const ref = (b: BuildConfig, buildIdx: number) => ({
+      char: 'Nilou',
+      buildIdx,
+      build: b,
+      priority: 'normal' as const,
+      confidence: 'consensus' as const,
+      cap: 3,
+      owned: true,
+    })
+    const refs = [ref(hybrid, 0), ref(bloom, 1)]
+    const worn = new Map([['Nilou', { GildedDreams: 1, VourukashasGlow: 2, TenacityOfTheMillelith: 2 }]])
+    const slots = (bloomV: number, hybridV: number) => (r: { build: BuildConfig }) => {
+      const v = r.build === bloom ? bloomV : hybridV
+      return { flower: v, plume: v, sands: v, goblet: v, circlet: v }
+    }
+    const values = slots(2.2, 2.8)
+    const ratings = slots(0.79, 0.58)
+    expect(currentBuilds(refs, worn, values, ratings).map((r) => r.build.name)).toEqual(['Bloom'])
   })
 
   it('only allows swaps that keep every active bonus', () => {
@@ -265,6 +291,90 @@ describe('set bonuses', () => {
     // Even with "any + any" still met afterwards, a 4pc stays: listed or not.
     expect(swapSetFit({ CrimsonWitchOfFlames: 4, GladiatorsFinale: 1 }, 'CrimsonWitchOfFlames', 'GladiatorsFinale', dps, cats)).toBeNull()
     expect(swapSetFit({ NoblesseOblige: 4, GladiatorsFinale: 1 }, 'NoblesseOblige', 'GladiatorsFinale', dps, cats)).toBeNull()
+  })
+
+  describe('a set kept for 2pc pairs only', () => {
+    // Nilou: Tenacity 2pc + Vourukasha 2pc (HP + HP), neither 4pc wanted over them; Gilded Dreams is a real 4pc.
+    const hp = cat('hp20')
+    const nilouCats: ArtifactConfig = {
+      ...cats,
+      sets: { ...cats.sets, TenacityOfTheMillelith: hp, VourukashasGlow: hp, GildedDreams: cat('em80') },
+    }
+    const bloom = build({
+      name: 'Bloom',
+      sets4: [
+        { set: 'TenacityOfTheMillelith', tier: 1, twoPieceOnly: true },
+        { set: 'VourukashasGlow', tier: 1, twoPieceOnly: true },
+        { set: 'GildedDreams', tier: 2 },
+      ],
+      sets2: [['hp20', 'hp20']],
+    })
+    // The same sets with Vourukasha as a real 4pc, for a build that wants its Skill/Burst DMG.
+    const burst = build({
+      ...bloom,
+      name: 'Burst',
+      sets4: [
+        { set: 'VourukashasGlow', tier: 1 },
+        { set: 'TenacityOfTheMillelith', tier: 1, twoPieceOnly: true },
+      ],
+    })
+
+    it("isn't a listed 4pc when worn, and farming keeps to the pair", () => {
+      expect(setStatus({ VourukashasGlow: 4, TenacityOfTheMillelith: 1 }, bloom)).toEqual({ kind: 'twoPiece', set: 'VourukashasGlow' })
+      expect(setStatus({ VourukashasGlow: 4, TenacityOfTheMillelith: 1 }, burst)).toEqual({
+        kind: 'listed',
+        set: 'VourukashasGlow',
+        tier: 1,
+      })
+      const status = setStatus({ VourukashasGlow: 4, TenacityOfTheMillelith: 1 }, bloom)
+      expect(farmTargets(bloom, status)).toEqual(['TenacityOfTheMillelith', 'VourukashasGlow'])
+    })
+
+    it("won't give up a 2pc to complete its 4pc", () => {
+      const threeTwo = { VourukashasGlow: 3, TenacityOfTheMillelith: 2 }
+      expect(swapSetFit(threeTwo, 'TenacityOfTheMillelith', 'VourukashasGlow', bloom, nilouCats)).toBeNull()
+      // Where its 4pc is a real one, completing it is fine.
+      expect(swapSetFit(threeTwo, 'TenacityOfTheMillelith', 'VourukashasGlow', burst, nilouCats)).toEqual({
+        lost: [{ set: 'TenacityOfTheMillelith', pieces: 2 }],
+        gained: [{ set: 'VourukashasGlow', pieces: 4 }],
+      })
+      // Completing a real 4pc listed below it still ranks above the pair.
+      expect(swapSetFit({ GildedDreams: 3, VourukashasGlow: 2 }, 'VourukashasGlow', 'GildedDreams', bloom, nilouCats)).not.toBeNull()
+    })
+
+    it('can go back from its 4pc to its 2pc', () => {
+      const fourOne = { VourukashasGlow: 4, TenacityOfTheMillelith: 1 }
+      expect(swapSetFit(fourOne, 'VourukashasGlow', 'TenacityOfTheMillelith', bloom, nilouCats)).toEqual({
+        lost: [{ set: 'VourukashasGlow', pieces: 4 }],
+        gained: [{ set: 'TenacityOfTheMillelith', pieces: 2 }],
+      })
+      // Its 2pc stays, so even a piece of another set only gives up what the build doesn't want.
+      expect(swapSetFit(fourOne, 'VourukashasGlow', 'X', bloom, nilouCats)?.lost).toEqual([{ set: 'VourukashasGlow', pieces: 4 }])
+      // A real 4pc is never traded away.
+      expect(swapSetFit(fourOne, 'VourukashasGlow', 'TenacityOfTheMillelith', burst, nilouCats)).toBeNull()
+    })
+
+    it('still counts its 2pc', () => {
+      // Losing Vourukasha's 2pc breaks the pair, and a 4pc Tenacity doesn't make up for it.
+      expect(setsFit({ VourukashasGlow: 2, TenacityOfTheMillelith: 3 }, { VourukashasGlow: 1, TenacityOfTheMillelith: 4 }, bloom, nilouCats)).toBeNull()
+      expect(swapSetFit({ VourukashasGlow: 2, TenacityOfTheMillelith: 2, GildedDreams: 1 }, 'VourukashasGlow', 'X', bloom, nilouCats)).toBeNull()
+    })
+
+    it("doesn't mark the build being worn", () => {
+      const ref = (b: BuildConfig, buildIdx: number) => ({
+        char: 'Nilou',
+        buildIdx,
+        build: b,
+        priority: 'normal' as const,
+        confidence: 'consensus' as const,
+        cap: 3,
+        owned: true,
+      })
+      const worn = new Map([['Nilou', { VourukashasGlow: 4, TenacityOfTheMillelith: 1 }]])
+      const full = () => ({ flower: 1, plume: 1, sands: 1, goblet: 1, circlet: 1 })
+      // Both fit every slot; the Burst build runs 4pc Vourukasha, the Bloom build doesn't.
+      expect(currentBuilds([ref(bloom, 0), ref(burst, 1)], worn, full, full).map((r) => r.build.name)).toEqual(['Burst'])
+    })
   })
 })
 

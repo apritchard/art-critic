@@ -54,9 +54,20 @@ export interface GoodExport {
 
 export type Confidence = 'verified' | 'consensus' | 'speculative'
 
+/** One of a build's sets: kept by tier, and run as a 4pc unless `twoPieceOnly`. */
+export interface SetEntry {
+  set: string
+  tier: number
+  /**
+   * Listed so its pieces are kept for the build's 2pc pairs; its 4pc isn't preferred over them (Nilou's HP + HP).
+   * Free upgrades won't trade a 2pc to complete it, and wearing it doesn't commit the build to it.
+   */
+  twoPieceOnly?: boolean
+}
+
 export interface BuildConfig {
   name: string
-  sets4: { set: string; tier: number }[]
+  sets4: SetEntry[]
   sets2: string[][]
   mainStats: Partial<Record<'sands' | 'goblet' | 'circlet', string[]>>
   avoidMainStats?: Partial<Record<'sands' | 'goblet' | 'circlet', string[]>>

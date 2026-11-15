@@ -335,7 +335,7 @@ export function ListView({ tab, result, scope }: Props) {
           <div className="set-info">
             <b>{setName(set)}</b>: filter by this set in-game.{' '}
             {users.length ? (
-              <>4pc users: {users.map((u) => `${characterName(u.char)}${u.tier > 1 ? ` (t${u.tier})` : ''}`).join(', ')}</>
+              <>4pc users: {users.map(userLabel).join(', ')}</>
             ) : (
               <>No active character uses it as a 4pc set.</>
             )}
@@ -381,9 +381,15 @@ function Counts({ lock, unlock, level }: { lock: number; unlock: number; level: 
   )
 }
 
+/** "Nilou (t2, 2pc)": a set's user, with its tier past 1 and whether they keep it for 2pc pairs only. */
+function userLabel(u: EvaluationResult['setUsers'][string][number]): string {
+  const notes = [u.tier > 1 && `t${u.tier}`, u.twoPieceOnly && '2pc'].filter(Boolean)
+  return `${characterName(u.char)}${notes.length ? ` (${notes.join(', ')})` : ''}`
+}
+
 function railTitle(set: string, result: EvaluationResult): string {
   const users = result.setUsers[set] ?? []
   return users.length
-    ? `4pc users: ${users.map((u) => characterName(u.char)).join(', ')}`
+    ? `4pc users: ${users.map((u) => `${characterName(u.char)}${u.twoPieceOnly ? ' (2pc)' : ''}`).join(', ')}`
     : 'No active character uses this as a 4pc set'
 }

@@ -55,6 +55,21 @@ export function pairCategories(config: ArtifactConfig): string[] {
   return [...used.sort((a, b) => categoryLabel(config, a).localeCompare(categoryLabel(config, b))), 'any']
 }
 
+/**
+ * Marks a set as kept for the build's 2pc pairs only (its 4pc not preferred over them), or back to a 4pc set. The
+ * flag is left out rather than stored as false, so unflagged sets save as they always have.
+ */
+export function withTwoPieceOnly(build: BuildConfig, set: string, on: boolean): BuildConfig {
+  return {
+    ...build,
+    sets4: build.sets4.map((s) => {
+      if (s.set !== set) return s
+      const { twoPieceOnly: _, ...rest } = s
+      return on ? { ...rest, twoPieceOnly: true } : rest
+    }),
+  }
+}
+
 /** Adds a 2pc pair unless the build already has it (in either order). */
 export function withPair(build: BuildConfig, pair: [string, string]): BuildConfig {
   const key = (p: string[]) => [...p].sort().join('+')

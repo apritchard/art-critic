@@ -2,7 +2,7 @@
 import { erCap, erChangeValue, erNeed, totalER, withoutER, type ErChange, type ErModel } from './er'
 import type { ActiveBuild, EvaluationResult } from './evaluate'
 import type { Piece } from './load'
-import { mainStatOk } from './match'
+import { fourPieceSets, mainStatOk } from './match'
 import { currentValue, expectedFinal } from './projection'
 import { ROLL_TIERS } from './stats'
 import type { ArtifactConfig, BuildConfig, SlotKey } from './types'
@@ -244,17 +244,25 @@ export function upgradeOdds(build: BuildConfig, bars: Record<SlotKey, number | n
 
 export type SetStatus =
   | { kind: 'listed'; set: string; tier: number }
+  /** A 4pc of a set the build lists for its 2pc pairs only (see SetEntry.twoPieceOnly). */
+  | { kind: 'twoPiece'; set: string }
   | { kind: 'unlisted'; set: string }
   | { kind: 'none' }
 
 export function setStatus(worn: Record<string, number>, build: BuildConfig): SetStatus {
   const four = Object.keys(worn).find((s) => worn[s] >= 4)
   if (!four) return { kind: 'none' }
-  const tiers = build.sets4.filter((s) => s.set === four).map((s) => s.tier)
-  return tiers.length ? { kind: 'listed', set: four, tier: Math.min(...tiers) } : { kind: 'unlisted', set: four }
+  const tiers = fourPieceSets(build)
+    .filter((s) => s.set === four)
+    .map((s) => s.tier)
+  if (tiers.length) return { kind: 'listed', set: four, tier: Math.min(...tiers) }
+  return build.sets4.some((s) => s.set === four) ? { kind: 'twoPiece', set: four } : { kind: 'unlisted', set: four }
 }
 
-/** Sets worth farming for a build: the tier 1–2 set it already wears, else its best-tier sets. */
+/**
+ * Sets worth farming for a build: the tier 1–2 set it already wears, else its best-tier sets (a set it keeps for
+ * 2pc pairs only counts here, since those pairs need its pieces too).
+ */
 export function farmTargets(build: BuildConfig, status: SetStatus): string[] {
   if (status.kind === 'listed' && status.tier <= 2) return [status.set]
   const best = Math.min(...build.sets4.map((s) => s.tier))
@@ -325,9 +333,14 @@ function pairMet(pair: string[], counts: Record<string, number>, config: Artifac
   return true
 }
 
-/** How well set counts meet a build: a listed 4pc (lower tier ranks higher), else one of its 2pc pairs, else 0. */
+/**
+ * How well set counts meet a build: a listed 4pc (lower tier ranks higher), else one of its 2pc pairs, else 0. A 4pc
+ * of a set it keeps for 2pc pairs only isn't a listed 4pc: it ranks by the pairs its 2pc makes.
+ */
 function setRank(counts: Record<string, number>, build: BuildConfig, config: ArtifactConfig | null): number {
-  const tiers = build.sets4.filter((s) => (counts[s.set] ?? 0) >= 4).map((s) => s.tier)
+  const tiers = fourPieceSets(build)
+    .filter((s) => (counts[s.set] ?? 0) >= 4)
+    .map((s) => s.tier)
   if (tiers.length) return 10 - Math.min(...tiers)
   return build.sets2.some((pair) => pairMet(pair, counts, config)) ? 1 : 0
 }
@@ -337,7 +350,8 @@ function setRank(counts: Record<string, number>, build: BuildConfig, config: Art
  * trades. It does when every 2pc and 4pc bonus stays. It also does when only 2pc bonuses are lost and they'd still
  * meet the build at least as well as before (a listed 4pc, else one of its 2pc pairs): so trading one 2pc for
  * another is fine when the pair it makes is listed, and so is giving up a 2pc to complete a listed 4pc. A 4pc
- * bonus is never traded away, even one the build doesn't list. Null when it doesn't fit.
+ * bonus is never traded away, even one the build doesn't list, except one of a set the build keeps for 2pc pairs
+ * only: going from its 4pc to its 2pc loses the build nothing. Null when it doesn't fit.
  * Without the config (`null`), only 4pc sets and "any" pairs can be checked.
  */
 export function setsFit(
@@ -348,7 +362,12 @@ export function setsFit(
 ): SetTrade | null {
   const trade = bonusChanges(before, after)
   if (!trade.lost.length) return trade
-  if (trade.lost.some((b) => b.pieces === 4)) return null
+  // What each lost bonus was worth to the build, and what's left of it: no more than the 2pc of a 2pc-only set.
+  const twoOnly = new Set(build.sets4.filter((s) => s.twoPieceOnly).map((s) => s.set))
+  const worth = (set: string, n: number | undefined) => (twoOnly.has(set) ? Math.min(bonusAt(n), 2) : bonusAt(n))
+  const lost = trade.lost.filter((b) => worth(b.set, after[b.set]) < worth(b.set, before[b.set]))
+  if (!lost.length) return trade
+  if (lost.some((b) => worth(b.set, before[b.set]) === 4)) return null
   const rank = setRank(after, build, config)
   return rank > 0 && rank >= setRank(before, build, config) ? trade : null
 }
@@ -633,6 +652,8 @@ export interface Wearing {
   equipped: Map<string, Piece>
   /** What each slot is worth to a build; null if nothing usable is worn. */
   barsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>
+  /** Each slot's Roster rating for a build: its value against a typical good piece for it; null if nothing usable. */
+  ratingsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>
   /** One build per active character: the one they're wearing (see currentBuilds). */
   current: ActiveBuild[]
 }
@@ -649,30 +670,38 @@ export function wearing(result: EvaluationResult, pieces: Piece[]): Wearing {
     equipped.set(`${p.owner}|${p.slotKey}`, p)
   }
   const summaries = new Map(result.characters.map((c) => [c.char, c]))
+  const slotsOf = (ref: ActiveBuild) => summaries.get(ref.char)!.builds.find((b) => b.idx === ref.buildIdx)!.slots
   const barsOf = (ref: ActiveBuild) => {
-    const slots = summaries.get(ref.char)!.builds.find((b) => b.idx === ref.buildIdx)!.slots
+    const slots = slotsOf(ref)
     return Object.fromEntries(SLOTS.map((s) => [s, slots[s].value])) as Record<SlotKey, number | null>
   }
-  return { worn, equipped, barsOf, current: currentBuilds(result.activeBuilds, worn, barsOf) }
+  const ratingsOf = (ref: ActiveBuild) => {
+    const slots = slotsOf(ref)
+    return Object.fromEntries(SLOTS.map((s) => [s, slots[s].quality])) as Record<SlotKey, number | null>
+  }
+  return { worn, equipped, barsOf, ratingsOf, current: currentBuilds(result.activeBuilds, worn, barsOf, ratingsOf) }
 }
 
 /**
- * Each character's build that matches what they wear: its 4pc set is the one worn, then the most slots
- * with an acceptable main stat, then the highest value. Characters with nothing on get their first build.
+ * Each character's build that matches what they wear: its 4pc set is the one worn (not one it keeps for 2pc pairs
+ * only), then the most slots with an acceptable main stat, then the best Roster ratings. Ratings measure each slot
+ * against what that build can reach, so a build that weighs more stats doesn't win just because the same pieces add
+ * up to more for it. Characters with nothing on get their first build.
  */
 export function currentBuilds(
   activeBuilds: ActiveBuild[],
   worn: Map<string, Record<string, number>>,
   barsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>,
+  ratingsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>,
 ): ActiveBuild[] {
   const top = new Map<string, { ref: ActiveBuild; score: number[] }>()
   for (const ref of activeBuilds) {
     const bars = Object.values(barsOf(ref))
     const sets = worn.get(ref.char) ?? {}
     const score = [
-      Number(ref.build.sets4.some((s) => (sets[s.set] ?? 0) >= 4)),
+      Number(fourPieceSets(ref.build).some((s) => (sets[s.set] ?? 0) >= 4)),
       bars.filter((b) => b !== null).length,
-      bars.reduce<number>((s, b) => s + (b ?? 0), 0),
+      Object.values(ratingsOf(ref)).reduce<number>((s, q) => s + (q ?? 0), 0),
     ]
     const prev = top.get(ref.char)
     if (!prev || compareScores(score, prev.score) > 0) top.set(ref.char, { ref, score })
@@ -802,10 +831,10 @@ export function dropsToMatch(h: GainHistogram, target: number): number {
   return lo
 }
 
-/** Best tier 1–2 set by how many slots the character could fill from spares and their own pieces. */
+/** Best tier 1–2 4pc set by how many slots the character could fill from spares and their own pieces. */
 function spareCoverage(ref: ActiveBuild, spares: Piece[], pieces: Piece[]): { set: string; slots: number } | null {
   let top: { set: string; slots: number } | null = null
-  for (const { set, tier } of ref.build.sets4) {
+  for (const { set, tier } of fourPieceSets(ref.build)) {
     if (tier > 2) continue
     const slots = new Set<SlotKey>()
     for (const p of [...spares, ...pieces.filter((x) => x.owner === ref.char)]) {

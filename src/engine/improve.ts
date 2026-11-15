@@ -23,7 +23,7 @@ import {
   type SetTrade,
 } from './farm'
 import type { Piece } from './load'
-import { mainStatOk } from './match'
+import { fourPieceSets, mainStatOk } from './match'
 import { chanceToBeat, currentValue, expectedFinal, expectedGainOver } from './projection'
 import { DUST_COST, rerollOdds, rerollTerms, type Guarantee, type RerollOdds } from './reroll'
 import type { ArtifactConfig, SlotKey } from './types'
@@ -40,7 +40,7 @@ const MIN_PIECE_GAIN = 0.1
 export type SetFit =
   /** Fits the build: keeps every bonus, or `trade`s a 2pc for another the build accepts (see setsFit). */
   | { kind: 'keeps'; trade?: SetTrade }
-  /** Only useful once they move to 4pc of another listed set. */
+  /** Only useful once they move to 4pc of another listed set (not one kept for 2pc pairs only). */
   | { kind: 'switch'; tier: number }
   /** Loses the 2pc or 4pc bonus of this set. */
   | { kind: 'breaks'; set: string }
@@ -172,7 +172,7 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
     const fitOf = (p: Piece): SetFit => {
       const trade = swapSetFit(wornSets, wornPiece?.setKey, p.setKey, ref.build, config)
       if (trade) return trade.lost.length ? { kind: 'keeps', trade } : { kind: 'keeps' }
-      const listed = ref.build.sets4.find((s) => s.set === p.setKey)
+      const listed = fourPieceSets(ref.build).find((s) => s.set === p.setKey)
       return listed ? { kind: 'switch', tier: listed.tier } : { kind: 'breaks', set: wornPiece!.setKey }
     }
     const erWith = (p: Piece) => {

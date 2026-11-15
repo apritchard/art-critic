@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import { defaultRosterEntry, type ActiveBuild, type EvaluationResult } from '../engine/evaluate'
 import { currentBuilds, planFarming, RESIN_SHOWN, STRONGBOX_BATCH, wearing } from '../engine/farm'
+import { fourPieceSets } from '../engine/match'
 import { improveCharacter, type ImprovePlan, type PieceOption, type SlotPlan } from '../engine/improve'
 import type { Piece } from '../engine/load'
 import type { Guarantee } from '../engine/reroll'
@@ -67,7 +68,8 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
         const scored = (builds.length ? builds : c.builds).map((b) => {
           const qs = Object.values(b.slots).map((s) => s.quality ?? 0)
           const sets = worn.get(c.char) ?? {}
-          const onSet = config.characters[c.char]?.builds[b.idx]?.sets4.some((s) => (sets[s.set] ?? 0) >= 4)
+          const build = config.characters[c.char]?.builds[b.idx]
+          const onSet = build && fourPieceSets(build).some((s) => (sets[s.set] ?? 0) >= 4)
           return {
             onSet: Number(!!onSet),
             filled: qs.filter((q) => q > 0).length,
@@ -143,7 +145,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
   const [guarantee, setGuarantee] = useLocal<Guarantee>('reroll:guarantee', 2)
   const refs = useRefs(result, char)
   const worn = useMemo(() => wearing(result, pieces), [result, pieces])
-  const wornIdx = useMemo(() => currentBuilds(refs, worn.worn, worn.barsOf)[0]?.buildIdx ?? 0, [refs, worn])
+  const wornIdx = useMemo(() => currentBuilds(refs, worn.worn, worn.barsOf, worn.ratingsOf)[0]?.buildIdx ?? 0, [refs, worn])
   const [idx, setIdx] = useState<number | null>(null)
   const ref = refs[idx ?? wornIdx] ?? refs[0]
   // Spares the Farm tab's free upgrades already hand to someone.
@@ -232,9 +234,11 @@ function SetLine({ plan }: { plan: ImprovePlan }) {
   const wears =
     st.kind === 'listed'
       ? `Wears 4pc ${setName(st.set)} (tier ${st.tier})`
-      : st.kind === 'unlisted'
-        ? `Wears 4pc ${setName(st.set)}, which this build doesn't list`
-        : 'No 4pc set on'
+      : st.kind === 'twoPiece'
+        ? `Wears 4pc ${setName(st.set)}, which this build only wants for its 2pc`
+        : st.kind === 'unlisted'
+          ? `Wears 4pc ${setName(st.set)}, which this build doesn't list`
+          : 'No 4pc set on'
   return (
     <>
       {wears} · new pieces from {plan.targets.map(setName).join(' or ')}

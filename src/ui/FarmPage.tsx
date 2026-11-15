@@ -651,7 +651,13 @@ function SetStatusCell({ c }: { c: CharacterFarm }) {
   }
   return (
     <>
-      <span className="warn">{s.kind === 'unlisted' ? `4pc ${setName(s.set)} (not in build)` : 'No 4pc bonus'}</span>
+      <span className="warn">
+        {s.kind === 'twoPiece'
+          ? `4pc ${setName(s.set)} (build wants its 2pc)`
+          : s.kind === 'unlisted'
+            ? `4pc ${setName(s.set)} (not in build)`
+            : 'No 4pc bonus'}
+      </span>
       {spares}
     </>
   )

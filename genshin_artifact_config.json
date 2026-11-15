@@ -4785,11 +4785,13 @@
           "sets4": [
             {
               "set": "TenacityOfTheMillelith",
-              "tier": 1
+              "tier": 1,
+              "twoPieceOnly": true
             },
             {
               "set": "VourukashasGlow",
-              "tier": 1
+              "tier": 1,
+              "twoPieceOnly": true
             },
             {
               "set": "GildedDreams",
@@ -4821,18 +4823,20 @@
             "eleMas": 0.3
           },
           "erTarget": "100-120%",
-          "notes": "CRIT is useless"
+          "notes": "CRIT is useless. Tenacity 2pc + Vourukasha 2pc (40% HP): neither 4pc helps Bloom, and either costs 20% HP"
         },
         {
           "name": "C6 hybrid (Bloom + Hydro DMG)",
           "sets4": [
             {
               "set": "VourukashasGlow",
-              "tier": 1
+              "tier": 1,
+              "twoPieceOnly": true
             },
             {
               "set": "TenacityOfTheMillelith",
-              "tier": 1
+              "tier": 1,
+              "twoPieceOnly": true
             },
             {
               "set": "HeartOfDepth",
@@ -4873,7 +4877,7 @@
             "hp": 0.35
           },
           "erTarget": "100-140%",
-          "notes": "C6: +0.6% CR/+1.2% CD per 1k HP, capped at 50k (HP sands + R1 Key + 2pc HP + Hydro resonance or ~3 HP% rolls), so CRIT Rate circlet. HP goblet in Bloom teams (A4 caps at 74,444 HP), Hydro goblet outside Bloom; 4pc VG adds Skill/Burst DMG. Bloom never uses her CRIT (Lauma Bloom crits are fixed). KQM quick guide 7.1, KQM library, GameWith (TotM+HoD vape), GenshinBuilds 7.2"
+          "notes": "C6: +0.6% CR/+1.2% CD per 1k HP, capped at 50k (HP sands + R1 Key + 2pc HP + Hydro resonance or ~3 HP% rolls), so CRIT Rate circlet. HP goblet in Bloom teams (A4 caps at 74,444 HP), Hydro goblet outside Bloom. VG and Tenacity are 2pc only: HP + HP over 4pc VG's Skill/Burst DMG, which costs 20% HP, and Tenacity's 4pc buffs party ATK, not her. Bloom never uses her CRIT (Lauma Bloom crits are fixed). KQM quick guide 7.1, KQM library, GameWith (TotM+HoD vape), GenshinBuilds 7.2"
         }
       ]
     },

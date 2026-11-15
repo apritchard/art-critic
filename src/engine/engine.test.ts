@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { evaluate, defaultSettings } from './evaluate'
 import { addEquip, applyEquips, fingerprint, loadPieces, parseExport, resolveLocation } from './load'
-import { mainStatOk, matchSet } from './match'
+import { describeSetMatch, mainStatOk, matchSet } from './match'
 import {
   chanceToBeat,
   currentValue,
@@ -100,6 +100,11 @@ describe('set matching', () => {
     expect(matchSet(build(), 'GladiatorsFinale', cfg, '4pc-t12')).toEqual({ kind: '4pc', tier: 1 })
     expect(matchSet(build(), 'CrimsonWitchOfFlames', cfg, '4pc-t12')).toBeNull()
     expect(matchSet(build(), 'CrimsonWitchOfFlames', cfg, '4pc-all')).toEqual({ kind: '4pc', tier: 3 })
+    // A set kept for 2pc pairs only still counts at its tier, and says so.
+    const pairOnly = build({ sets4: [{ set: 'GladiatorsFinale', tier: 1, twoPieceOnly: true }] })
+    const m = matchSet(pairOnly, 'GladiatorsFinale', cfg, '4pc-t12')
+    expect(m).toEqual({ kind: '4pc', tier: 1, twoPieceOnly: true })
+    expect(describeSetMatch(m!)).toBe('tier 1, for its 2pc')
   })
   it('uses 2pc categories and "any" only in config mode', () => {
     expect(matchSet(build(), 'ScarletProof', cfg, '4pc-all')).toBeNull()
@@ -505,6 +510,19 @@ describe('evaluate', () => {
       expect(evs[4].reason).toMatch(/already wear a set they rank as high or higher/)
       const loose = run([...wearing('GladiatorsFinale'), flower('ShimenawasReminiscence')], { commitToWornSet: false })
       expect(loose.evaluations[4].verdict).toBe('level')
+    })
+
+    it("isn't committed by the 4pc of a set it keeps for 2pc pairs only", () => {
+      const sets4 = build().sets4.map((s) => (s.set === 'GladiatorsFinale' ? { ...s, twoPieceOnly: true } : s))
+      const pairs = config({ Diluc: [build({ sets4 })] })
+      const data: GoodExport = {
+        format: 'GOOD',
+        version: 3,
+        characters: owned,
+        artifacts: [...wearing('GladiatorsFinale'), flower('ShimenawasReminiscence')],
+      }
+      const evs = evaluate(loadPieces(data), owned, pairs, { ...defaultSettings(pairs), capNormal: 2 }, {}).evaluations
+      expect(evs[4].verdict).toBe('level')
     })
 
     it('still counts the worn set and better-ranked sets', () => {
