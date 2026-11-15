@@ -230,9 +230,17 @@ export function evaluate(
     const eq = equipped.get(`${char}|${slot}`)
     return eq && eq.rarity === 5 && mainStatOk(build, eq) ? eq : null
   }
+  // Asked for every piece and build, so remembered per build, character and slot.
+  const bars = new Map<BuildConfig, Map<string, number | null>>()
   const barFor = (char: string, build: BuildConfig, slot: SlotKey): number | null => {
-    const eq = usable(char, build, slot)
-    return eq ? expectedFinal(eq, build.substats) : null
+    let byBuild = bars.get(build)
+    if (!byBuild) bars.set(build, (byBuild = new Map()))
+    const key = `${char}|${slot}`
+    if (!byBuild.has(key)) {
+      const eq = usable(char, build, slot)
+      byBuild.set(key, eq ? expectedFinal(eq, build.substats) : null)
+    }
+    return byBuild.get(key)!
   }
   for (const summary of characters) {
     for (const b of summary.builds) {
@@ -364,11 +372,33 @@ export function evaluate(
     })
   }
 
-  // 6. Verdicts.
+  // 6. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
+  const spares = pieces.filter((p) => !p.owner && p.rarity === 5)
+  const gainFor = (ref: ActiveBuild, p: Piece): number | null =>
+    mainStatOk(ref.build, p) ? expectedFinal(p, ref.build.substats) - (barFor(ref.char, ref.build, p.slotKey) ?? 0) : null
+  const spareGains = new Map<ActiveBuild, number[]>()
+  const offStanding = (piece: Piece): OffStanding | null => {
+    let best: { ref: ActiveBuild; gain: number } | null = null
+    for (const ref of activeBuilds) {
+      const gain = gainFor(ref, piece)
+      if (gain !== null && (!best || gain > best.gain)) best = { ref, gain }
+    }
+    if (!best) return null
+    const { ref, gain } = best
+    let gains = spareGains.get(ref)
+    if (!gains) spareGains.set(ref, (gains = spares.flatMap((p) => gainFor(ref, p) ?? [])))
+    return {
+      char: ref.char,
+      gain,
+      bar: barFor(ref.char, ref.build, piece.slotKey),
+      better: gains.filter((g) => g > gain + 1e-9).length,
+    }
+  }
+
   const keptBy = new Map<string, number>()
   const evaluations = pieces.map((piece, i): Evaluation => {
     const candidates = perPiece[i].sort(compareCandidates)
-    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor)
+    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding)
     if (ev.grade === 'keep' && ev.best) keptBy.set(ev.best.ref.char, (keptBy.get(ev.best.ref.char) ?? 0) + 1)
     return ev
   })
@@ -403,6 +433,7 @@ function verdictFor(
   activeBuilds: ActiveBuild[],
   config: ArtifactConfig,
   setFor: (ref: ActiveBuild, piece: Piece) => SetMatch,
+  offStanding: (piece: Piece) => OffStanding | null,
 ): Evaluation {
   const base = { piece, candidates, nextStop: null as number | null }
   if (piece.rarity !== 5) {
@@ -455,7 +486,7 @@ function verdictFor(
       : `Subs too weak: best ${num(best.lineScore)} for ${characterName(best.ref.char)} (need ${num(best.threshold)})`
   } else {
     grade = 'toss'
-    reason = noFitReason(piece, settings, activeBuilds, config, setFor)
+    reason = noFitReason(piece, settings, activeBuilds, config, setFor, offStanding)
   }
 
   const verdict: Verdict =
@@ -491,20 +522,44 @@ function noFitReason(
   activeBuilds: ActiveBuild[],
   config: ArtifactConfig,
   setFor: (ref: ActiveBuild, piece: Piece) => SetMatch,
+  offStanding: (piece: Piece) => OffStanding | null,
 ): string {
   const set = setName(piece.setKey)
   const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
   // An off-set candidate only needs the main stat, so its absence means nobody wants that main stat at all.
   if (offSetAllowed(settings.offSet, piece)) return `No active character wants ${statShort(piece.mainStatKey)} ${slot}s`
+  const standing = describeOffStanding(offStanding(piece), slot)
   const users = activeBuilds.filter((ref) => matchSet(ref.build, piece.setKey, config, settings.setMatch))
   if (users.length && users.every((ref) => !setFor(ref, piece))) {
-    return `${set} users already wear a set they rank as high or higher`
+    return `${set} users already wear a set they rank as high or higher${standing}`
   }
   const usesSet = users.length > 0
   if (!usesSet || piece.slotKey === 'flower' || piece.slotKey === 'plume') {
-    return settings.setMatch === 'config'
-      ? `No active character uses ${set}`
-      : `No active character uses 4pc ${set}`
+    return `${settings.setMatch === 'config' ? `No active character uses ${set}` : `No active character uses 4pc ${set}`}${standing}`
   }
-  return `${set} users don't want ${statShort(piece.mainStatKey)} ${slot}s`
+  return `${set} users don't want ${statShort(piece.mainStatKey)} ${slot}s${standing}`
+}
+
+/**
+ * What a piece no build can use would do as someone's off-set piece, which the Off-set setting leaves out: its
+ * biggest expected gain over what a character wears in that slot, and how many spares (any set, any slot) would
+ * gain that character more. Shown in the reason only; it never changes a verdict.
+ */
+export interface OffStanding {
+  char: string
+  gain: number
+  /** What `char` wears in that slot now; null if nothing usable. */
+  bar: number | null
+  better: number
+}
+
+function describeOffStanding(s: OffStanding | null, slot: string): string {
+  if (!s) return ''
+  if (s.gain < 0.05) return ` · as an off-set ${slot} it wouldn't beat what anyone wears`
+  const who = characterName(s.char)
+  const from = s.bar === null ? 'nothing usable' : num(s.bar)
+  const rest = s.better
+    ? `, but ${s.better} other spare${s.better === 1 ? '' : 's'} would gain ${who} more`
+    : `, more than any other spare would: Settings → Off-set "Any" keeps it`
+  return ` · as an off-set ${slot}: +${num(s.gain)} for ${who} (${from} → ${num((s.bar ?? 0) + s.gain)})${rest}`
 }

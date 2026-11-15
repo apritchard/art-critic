@@ -46,9 +46,10 @@ describe.skipIf(!exportFile)('real export', () => {
     // Count equipped +0s too, as the prototype did: any build whose gate the piece passes.
     const plusZero = evaluations.filter((e) => e.piece.level === 0)
     // Count for the export the tool was built against; a newer export gives its own. The prototype got 1,131 with the
-    // research config; the build tuning of 2026-11-14 accepts more main stats, so more pieces pass.
+    // research config; the build tuning of 2026-11-14 accepts more main stats, so more pieces pass (1,201),
+    // Kokomi's EM bloom-healer build adds 9 more, Nilou's C6 hybrid build 2 more, and Dehya's C6 burst build 1 more.
     if (exportFile === PROTOTYPE_EXPORT) {
-      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(1201)
+      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(1213)
     }
     const unequippedPassing = plusZero.filter((e) => !e.piece.owner && e.candidates.some((c) => c.passChance))
     expect(plusZero.filter((e) => e.grade === 'keep').length).toBe(unequippedPassing.length)

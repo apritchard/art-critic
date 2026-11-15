@@ -1774,6 +1774,77 @@
           },
           "erTarget": "130-160%",
           "notes": ""
+        },
+        {
+          "name": "C6 on-field burst DPS",
+          "sets4": [
+            {
+              "set": "VourukashasGlow",
+              "tier": 1
+            },
+            {
+              "set": "MarechausseeHunter",
+              "tier": 2
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 2
+            },
+            {
+              "set": "UnfinishedReverie",
+              "tier": 3
+            },
+            {
+              "set": "CrimsonWitchOfFlames",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "ele15:pyro",
+              "burst20"
+            ],
+            [
+              "ele15:pyro",
+              "atk18"
+            ],
+            [
+              "atk18",
+              "burst20"
+            ],
+            [
+              "ele15:pyro",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "hp_",
+              "eleMas",
+              "enerRech_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critDMG_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "custom",
+          "substats": {
+            "critRate_": 1,
+            "enerRech_": 0.9,
+            "critDMG_": 0.85,
+            "atk_": 0.4,
+            "eleMas": 0.35,
+            "hp_": 0.3,
+            "atk": 0.15,
+            "hp": 0.1
+          },
+          "erTarget": "120-140%",
+          "notes": "Burst carry with Bennett (Mono Pyro, Furina Vape, Chevreuse OL). C6 burst +10% CR, up to +60% CD; C4 refunds 1.5 Energy/hit, so ER need ~60 below C0. KQM Mastersheet C6 calc: VG 112%, MH 103%, EoSF 100%. HP scaling + Bennett flat ATK make ATK% ~0.4 of a CRIT roll; CD circlet with Beacon (own calc). EM sands for Vape/Melt"
         }
       ]
     },
@@ -4751,6 +4822,58 @@
           },
           "erTarget": "100-120%",
           "notes": "CRIT is useless"
+        },
+        {
+          "name": "C6 hybrid (Bloom + Hydro DMG)",
+          "sets4": [
+            {
+              "set": "VourukashasGlow",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfDepth",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ],
+            [
+              "hp20",
+              "ele15:hydro"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "hp_"
+            ],
+            "goblet": [
+              "hp_",
+              "hydro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "hp_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "custom",
+          "substats": {
+            "hp_": 1,
+            "critRate_": 0.75,
+            "critDMG_": 0.7,
+            "eleMas": 0.4,
+            "enerRech_": 0.4,
+            "hp": 0.35
+          },
+          "erTarget": "100-140%",
+          "notes": "C6: +0.6% CR/+1.2% CD per 1k HP, capped at 50k (HP sands + R1 Key + 2pc HP + Hydro resonance or ~3 HP% rolls), so CRIT Rate circlet. HP goblet in Bloom teams (A4 caps at 74,444 HP), Hydro goblet outside Bloom; 4pc VG adds Skill/Burst DMG. Bloom never uses her CRIT (Lauma Bloom crits are fixed). KQM quick guide 7.1, KQM library, GameWith (TotM+HoD vape), GenshinBuilds 7.2"
         }
       ]
     },
@@ -5372,6 +5495,74 @@
           },
           "erTarget": "130-160%",
           "notes": "-100% CRIT Rate: CRIT substats worthless. Heart of Depth for DPS build"
+        },
+        {
+          "name": "Bloom healer (EM hybrid)",
+          "sets4": [
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 1
+            },
+            {
+              "set": "GildedDreams",
+              "tier": 2
+            },
+            {
+              "set": "DeepwoodMemories",
+              "tier": 3
+            },
+            {
+              "set": "OceanHuedClam",
+              "tier": 3
+            }
+          ],
+          "sets2": [
+            [
+              "em80",
+              "em80"
+            ],
+            [
+              "em80",
+              "heal15"
+            ],
+            [
+              "em80",
+              "hp20"
+            ],
+            [
+              "em80",
+              "er20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "eleMas",
+              "enerRech_",
+              "hp_"
+            ],
+            "goblet": [
+              "eleMas",
+              "hp_"
+            ],
+            "circlet": [
+              "heal_",
+              "eleMas"
+            ]
+          },
+          "substatPreset": "custom",
+          "substats": {
+            "eleMas": 1,
+            "enerRech_": 0.7,
+            "hp_": 0.5,
+            "hp": 0.2
+          },
+          "erTarget": "130-170%",
+          "notes": "Nilou Bloom: EM mains as she triggers many Blooms; Healing Bonus circlet keeps heals comfy. FoPL best, Gilded resin-efficient; Deepwood if no Dendro holds it (KQM quick guides, GameWith). CRIT useless",
+          "avoidMainStats": {
+            "goblet": [
+              "hydro_dmg_"
+            ]
+          }
         }
       ]
     },

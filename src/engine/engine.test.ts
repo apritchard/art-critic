@@ -439,6 +439,35 @@ describe('evaluate', () => {
       expect(judge('any').verdict).toBe('level')
     })
 
+    it('says what a piece it leaves out would do as an off-set piece, without keeping it', () => {
+      const atkGoblet = { ...goblet, mainStatKey: 'atk_' }
+      const cfgAtk = config({ Diluc: [build({ mainStats: { ...build().mainStats, goblet: ['atk_', 'pyro_dmg_'] } })] })
+      const reasonFor = (artifacts: GoodArtifact[]) => {
+        const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts }
+        const evs = evaluate(loadPieces(data), owned, cfgAtk, settings, {}).evaluations
+        return evs[0]
+      }
+      // Diluc wears nothing in the goblet slot, so the goblet's whole projected value is the gain.
+      const alone = reasonFor([atkGoblet])
+      expect(alone.verdict).toBe('trash')
+      expect(alone.reason).toMatch(/No active character uses 4pc Scarlet Proof · as an off-set goblet: \+[\d.]+ for Diluc \(nothing usable → [\d.]+\), more than any other spare would/)
+      // A stronger spare in the same slot outranks it.
+      const better = art({
+        setKey: 'ScarletProof',
+        slotKey: 'goblet',
+        mainStatKey: 'atk_',
+        substats: [
+          { key: 'critRate_', value: 3.9 },
+          { key: 'critDMG_', value: 7.8 },
+          { key: 'atk', value: 19 },
+          { key: 'hp', value: 299 },
+        ],
+      })
+      expect(reasonFor([atkGoblet, better]).reason).toMatch(/but 1 other spare would gain Diluc more/)
+      // Nobody can use the main stat at all: nothing to add.
+      expect(reasonFor([{ ...goblet, mainStatKey: 'def_' }]).reason).toBe('No active character uses 4pc Scarlet Proof')
+    })
+
     it('keeps only the best off-set candidates per build, across slots', () => {
       const evs = run([goblet, circlet]).evaluations
       expect(evs.filter((e) => e.grade === 'keep')).toHaveLength(1)
