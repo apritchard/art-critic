@@ -971,7 +971,18 @@
               "hp_"
             ],
             "goblet": [
-              "hp_"
+              "hp_",
+              "atk_",
+              "def_",
+              "eleMas",
+              "pyro_dmg_",
+              "electro_dmg_",
+              "cryo_dmg_",
+              "hydro_dmg_",
+              "dendro_dmg_",
+              "anemo_dmg_",
+              "geo_dmg_",
+              "physical_dmg_"
             ],
             "circlet": [
               "heal_",
@@ -1191,6 +1202,56 @@
           },
           "erTarget": "140-180%",
           "notes": "Overload teams"
+        },
+        {
+          "name": "Support and Quickswap DPS",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 3
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 3
+            },
+            {
+              "set": "EmblemOfSeveredFate",
+              "tier": 1
+            },
+            {
+              "set": "GoldenTroupe",
+              "tier": 2
+            }
+          ],
+          "sets2": [
+            [
+              "hp20",
+              "hp20"
+            ]
+          ],
+          "mainStats": {
+            "sands": [
+              "enerRech_",
+              "atk_"
+            ],
+            "goblet": [
+              "pyro_dmg_"
+            ],
+            "circlet": [
+              "critRate_",
+              "critDMG_"
+            ]
+          },
+          "substatPreset": "ER_HP_SUP",
+          "substats": {
+            "hp_": 1,
+            "enerRech_": 0.8,
+            "hp": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.15
+          },
+          "erTarget": "170-200%",
+          "notes": "Overload teams"
         }
       ]
     },
@@ -1323,10 +1384,13 @@
               "eleMas"
             ],
             "goblet": [
-              "eleMas"
+              "eleMas",
+              "cryo_dmg_"
             ],
             "circlet": [
-              "eleMas"
+              "critRate_",
+              "eleMas",
+              "critDMG_"
             ]
           },
           "substatPreset": "EM_PURE",
@@ -1686,17 +1750,19 @@
           "mainStats": {
             "sands": [
               "atk_",
-              "enerRech_"
+              "enerRech_",
+              "hp_"
             ],
             "goblet": [
-              "pyro_dmg_"
+              "pyro_dmg_",
+              "hp_"
             ],
             "circlet": [
               "critRate_",
               "critDMG_"
             ]
           },
-          "substatPreset": "ATK_CRIT_ER",
+          "substatPreset": "custom",
           "substats": {
             "critRate_": 1,
             "critDMG_": 1,
@@ -1704,7 +1770,7 @@
             "atk_": 0.7,
             "atk": 0.3,
             "eleMas": 0.25,
-            "hp_": 0.2
+            "hp_": 0.7
           },
           "erTarget": "130-160%",
           "notes": ""
@@ -2142,7 +2208,8 @@
           ],
           "mainStats": {
             "sands": [
-              "enerRech_"
+              "enerRech_",
+              "atk_"
             ],
             "goblet": [
               "anemo_dmg_",
@@ -3141,7 +3208,8 @@
           ],
           "mainStats": {
             "sands": [
-              "atk_"
+              "atk_",
+              "enerRech_"
             ],
             "goblet": [
               "hydro_dmg_"
@@ -5932,7 +6000,8 @@
           ],
           "mainStats": {
             "sands": [
-              "atk_"
+              "atk_",
+              "enerRech_"
             ],
             "goblet": [
               "atk_",
@@ -6394,12 +6463,14 @@
           ],
           "mainStats": {
             "sands": [
+              "enerRech_",
               "eleMas",
-              "enerRech_"
+              "atk_"
             ],
             "goblet": [
+              "eleMas",
               "anemo_dmg_",
-              "eleMas"
+              "atk_"
             ],
             "circlet": [
               "critRate_",
@@ -6854,7 +6925,9 @@
               "def_"
             ],
             "circlet": [
-              "def_"
+              "def_",
+              "heal_",
+              "critRate_"
             ]
           },
           "substatPreset": "ER_DEF_SUP",
@@ -7271,8 +7344,8 @@
               "anemo_dmg_"
             ],
             "circlet": [
-              "eleMas",
               "critRate_",
+              "eleMas",
               "critDMG_"
             ]
           },

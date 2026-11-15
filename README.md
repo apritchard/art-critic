@@ -13,6 +13,32 @@ It reads an [Irminsul](https://github.com/konkers/irminsul) GOOD export plus `ge
    - The first start needs internet: it installs packages and downloads the game data used for Energy Recharge.
    - After pulling changes that add packages, run `npm install` again.
 
+## Configure
+
+Every character comes with a researched build, so you can start right away. It's worth a few minutes to tell the tool who you're building and how. Everything you change is saved in `state/user-state.json` and re-scores live.
+
+**Mark your priorities** in the **Roster** tab:
+
+1. Owned Lv 80+ characters start as Normal and the rest as Ignored. Change each one as needed:
+   - **★ Priority:** who you're actively building. They keep 5 candidates per slot instead of 3, come first in Level up and Improve, and get first pick of free upgrades. Once anyone is Priority, the resin, Strongbox and Elixir rankings count only Priority characters.
+   - **Normal:** counts when judging pieces.
+   - **Ignore:** doesn't count. Use it for characters you don't play, so pieces aren't kept locked for them.
+2. For a character with more than one build, untick the builds you don't run.
+
+"Reset to defaults" puts everyone back to the Lv 80 rule.
+
+**Set your preferred builds** in the **Builds** tab:
+
+1. Pick a character from the list. Tick "Include unowned" to plan for someone you don't have yet.
+2. Change whatever doesn't match how you play them:
+   - **4-piece sets:** tier 1 is best, and tiers 1–2 count when deciding what to keep. Add a set from the dropdown, or remove one with ✕.
+   - **Main stats:** toggle the sands, goblet and circlet main stats you'd accept.
+   - **Substat weights:** pick a preset, or drag the sliders (1 = fully wanted, 0 = useless).
+   - **ER target:** for example "120-140%". The low end becomes the build's ER minimum.
+3. To run a second build alongside the first, click "+ Copy build", rename it and edit the copy.
+
+"Reset to research config" undoes all edits for that character.
+
 ## Using it
 
 - **Triage +0**, **In progress** (+1 to +19) and **+20 review** list pieces whose lock state should change.

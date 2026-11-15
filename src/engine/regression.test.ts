@@ -45,9 +45,10 @@ describe.skipIf(!exportFile)('real export', () => {
     const { evaluations } = evaluate(pieces, data.characters, config, settings, roster)
     // Count equipped +0s too, as the prototype did: any build whose gate the piece passes.
     const plusZero = evaluations.filter((e) => e.piece.level === 0)
-    // 1,131 is the prototype's count for the export the tool was built against; a newer export gives its own.
+    // Count for the export the tool was built against; a newer export gives its own. The prototype got 1,131 with the
+    // research config; the build tuning of 2026-11-14 accepts more main stats, so more pieces pass.
     if (exportFile === PROTOTYPE_EXPORT) {
-      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(1131)
+      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(1201)
     }
     const unequippedPassing = plusZero.filter((e) => !e.piece.owner && e.candidates.some((c) => c.passChance))
     expect(plusZero.filter((e) => e.grade === 'keep').length).toBe(unequippedPassing.length)
