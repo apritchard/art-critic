@@ -40,6 +40,28 @@ export function withWeight(build: BuildConfig, key: string, weight: number): Bui
   return { ...build, substats, substatPreset: 'custom' }
 }
 
+/** A 2pc category's meaning: "er20" → "Energy Recharge +20%", "ele15:cryo" → "Elemental DMG +15% (Cryo)". */
+export function categoryLabel(config: ArtifactConfig, category: string): string {
+  const known = config.setCategories ?? {}
+  if (known[category]) return known[category]
+  const [base, element] = category.split(':')
+  const generic = element && known[`${base}:<element>`]
+  return generic ? `${generic.replace(/\s*\(.*\)$/, '')} (${element[0].toUpperCase()}${element.slice(1)})` : category
+}
+
+/** Categories a 2pc pair can name: every one some set has, then "any". */
+export function pairCategories(config: ArtifactConfig): string[] {
+  const used = [...new Set(Object.values(config.sets).map((s) => s.twoPieceCategory))].filter((c) => c && c !== 'any')
+  return [...used.sort((a, b) => categoryLabel(config, a).localeCompare(categoryLabel(config, b))), 'any']
+}
+
+/** Adds a 2pc pair unless the build already has it (in either order). */
+export function withPair(build: BuildConfig, pair: [string, string]): BuildConfig {
+  const key = (p: string[]) => [...p].sort().join('+')
+  if (build.sets2.some((p) => key(p) === key(pair))) return build
+  return { ...build, sets2: [...build.sets2, pair] }
+}
+
 /** Roster build toggles are stored by index, so removing a build shifts the ones after it. */
 /**
  * Switched-off build positions once a character's `from` builds are replaced by `to` (a reset to the config), matched

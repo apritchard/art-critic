@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { erModel, type GameData } from './er'
 import { defaultSettings, evaluate } from './evaluate'
-import { STRONGBOX_SETS, type DomainsFile } from './farm'
+import { planFarming, STRONGBOX_SETS, type DomainsFile } from './farm'
 import { improveCharacter } from './improve'
 import { loadPieces } from './load'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodExport, Roster, SlotKey } from './types'
@@ -170,5 +171,109 @@ describe('Domains file', () => {
   it('names only sets the config knows, each in one domain', () => {
     expect(dropped.filter((s) => !real.sets[s])).toEqual([])
     expect(new Set(dropped).size).toBe(dropped.length)
+  })
+})
+
+describe('a support short of their ER minimum', () => {
+  // Like Shenhe: 2pc + 2pc ATK and an ER sands from a third set, wanting ATK% and ER. The spare circlet has CRIT
+  // the build doesn't weigh and a little less ER than the worn one, but it's a second Emblem piece: +20% ER.
+  const quill: BuildConfig = {
+    ...build,
+    name: 'Quill',
+    sets4: [{ set: 'NoblesseOblige', tier: 1 }],
+    sets2: [['atk18', 'atk18']],
+    mainStats: { sands: ['enerRech_'], goblet: ['atk_'], circlet: ['atk_'] },
+    substats: { atk_: 1, enerRech_: 0.8, atk: 0.5 },
+    erTarget: '200%',
+  }
+  const cat = (twoPieceCategory: string) => ({ twoPiece: '', fourPiece: '', twoPieceCategory })
+  const cfgWith = (b: Partial<BuildConfig>): ArtifactConfig => ({
+    ...config,
+    sets: {
+      GladiatorsFinale: cat('atk18'),
+      ShimenawasReminiscence: cat('atk18'),
+      EmblemOfSeveredFate: cat('er20'),
+      NoblesseOblige: cat('burst20'),
+    },
+    characters: { Shenhe: { element: 'cryo', confidence: 'consensus', enabled: true, builds: [{ ...quill, ...b }] } },
+  })
+  const gd: GameData = {
+    source: 'test',
+    fetched: '',
+    weapons: { FavoniusLance: { sub: { stat: 'enerRech_', base: 0.3, curve: 'FLAT' } } },
+    chars: { Shenhe: { stat: 'atk_', values: [0, 0, 0, 0, 0, 0, 0.288] } },
+    curves: { FLAT: Array(101).fill(1) },
+    artMain: { '5': { enerRech_: Array.from({ length: 21 }, (_, l) => 0.078 + l * 0.022) } },
+  }
+  const on = (over: Partial<GoodArtifact>) => art({ location: 'Shenhe', substats: [], ...over })
+  const data: GoodExport = {
+    format: 'GOOD',
+    version: 2,
+    characters: [{ key: 'Shenhe', level: 90, constellation: 0, ascension: 6, talent: { auto: 1, skill: 1, burst: 1 } }],
+    weapons: [{ key: 'FavoniusLance', level: 90, ascension: 6, refinement: 1, location: 'Shenhe', lock: true }],
+    artifacts: [
+      on({ slotKey: 'flower', setKey: 'GladiatorsFinale' }),
+      on({
+        slotKey: 'circlet',
+        setKey: 'GladiatorsFinale',
+        mainStatKey: 'atk_',
+        substats: [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 20.2 }, { key: 'def', value: 21 }, { key: 'enerRech_', value: 5.2 }],
+      }),
+      on({ slotKey: 'plume', setKey: 'ShimenawasReminiscence' }),
+      on({ slotKey: 'goblet', setKey: 'ShimenawasReminiscence', mainStatKey: 'atk_' }),
+      on({ slotKey: 'sands', setKey: 'EmblemOfSeveredFate', mainStatKey: 'enerRech_' }),
+      art({
+        slotKey: 'circlet',
+        setKey: 'EmblemOfSeveredFate',
+        mainStatKey: 'atk_',
+        substats: [{ key: 'critRate_', value: 10.9 }, { key: 'hp_', value: 11.7 }, { key: 'def', value: 42 }, { key: 'enerRech_', value: 4.5 }],
+      }),
+    ],
+  }
+  const pieces = loadPieces(data)
+  const roster: Roster = { Shenhe: { priority: 'priority', disabledBuilds: [] } }
+  const run = (b: Partial<BuildConfig> = {}) => {
+    const cfg = cfgWith(b)
+    const result = evaluate(pieces, data.characters, cfg, defaultSettings(cfg), roster)
+    const er = erModel(data, gd, cfg)
+    const ref = result.activeBuilds.find((r) => r.char === 'Shenhe')!
+    const plan = improveCharacter({ result, pieces, config: cfg, domains, er, ref, guarantee: 2, claimed: new Map(), strongboxSets: null })
+    const spare = plan.slots.find((s) => s.slot === 'circlet')!.spares.find((o) => o.piece.setKey === 'EmblemOfSeveredFate')
+    return { spare, swaps: planFarming(result, pieces, cfg, domains, 'priority', er).swaps }
+  }
+  // 100% + 30% weapon + 51.8% sands + 5.2% line = 187%; the spare gives up 0.7% of line for the 20% 2pc, and
+  // the 13% that reaches 200% counts at her 0.8 ER weight. Neither circlet has a line she weighs besides ER.
+  const erGain = (0.8 * (200 - 187)) / 6.48
+
+  it('lists the spare for the ER it brings, though it breaks a 2pc the build has no pair for', () => {
+    const { spare, swaps } = run()
+    expect(spare?.er?.from).toBeCloseTo(187)
+    expect(spare?.er?.to).toBeCloseTo(206.3)
+    expect(spare?.erGain).toBeCloseTo(erGain)
+    expect(spare?.gain).toBeCloseTo(erGain)
+    expect(spare?.value).toBe(0)
+    expect(spare?.fit).toEqual({ kind: 'breaks', set: 'GladiatorsFinale' })
+    expect(swaps).toEqual([])
+  })
+
+  it('counts ER up to the top of a target range', () => {
+    const { spare } = run({ erTarget: '180-200%' })
+    expect(spare?.er).toMatchObject({ need: 180, cap: 200 })
+    expect(spare?.erGain).toBeCloseTo(erGain)
+  })
+
+  it('makes it a free upgrade once the build lists an ATK + ER pair', () => {
+    const { spare, swaps } = run({ sets2: [['atk18', 'atk18'], ['atk18', 'er20']] })
+    const trade = { lost: [{ set: 'GladiatorsFinale', pieces: 2 }], gained: [{ set: 'EmblemOfSeveredFate', pieces: 2 }] }
+    expect(spare?.fit).toEqual({ kind: 'keeps', trade })
+    expect(swaps).toHaveLength(1)
+    expect(swaps[0]).toMatchObject({ slot: 'circlet', trade })
+    expect(swaps[0].erGain).toBeCloseTo(erGain)
+  })
+
+  it('ignores the extra ER once the target is met', () => {
+    const { spare, swaps } = run({ sets2: [['atk18', 'atk18'], ['atk18', 'er20']], erTarget: '180%' })
+    expect(spare).toBeUndefined()
+    expect(swaps).toEqual([])
   })
 })

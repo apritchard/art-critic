@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { erModel, erNeed, pieceER, totalER, type GameData } from './er'
+import { erCap, erChangeValue, erModel, erNeed, pieceER, totalER, withoutER, type GameData } from './er'
 import { loadPieces } from './load'
-import { rerollOdds } from './reroll'
+import { rerollOdds, rerollTerms } from './reroll'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodExport } from './types'
 
 const target = (erTarget: string) => erNeed({ erTarget } as BuildConfig)
+const cap = (erTarget: string) => erCap({ erTarget } as BuildConfig)
 
 // A flat curve keeps the arithmetic readable: weapon substats are base × curve[level].
 const gd: GameData = {
@@ -54,6 +55,37 @@ describe('ER targets', () => {
     expect(target('To requirement (~120%)')).toBe(120)
     expect(target('Low; mostly skippable (GameWith)')).toBeNull()
     expect(target('')).toBeNull()
+  })
+
+  it('stops counting ER at the top of the range, or at the one number given', () => {
+    expect(cap('110-130%')).toBe(130)
+    expect(cap('~130–180%')).toBe(180)
+    expect(cap('250%+ at C0 (~165% at C6)')).toBe(250)
+    expect(cap('To requirement (~120%)')).toBe(120)
+    expect(cap('Low; mostly skippable (GameWith)')).toBeNull()
+  })
+})
+
+describe('the value of a change in total ER', () => {
+  const change = (from: number, to: number) => ({ from, to, need: 110, cap: 130 })
+
+  it("counts ER at the build's weight up to the cap", () => {
+    expect(erChangeValue(change(100, 106.48), 1)).toBeCloseTo(1)
+    expect(erChangeValue(change(100, 106.48), 0.8)).toBeCloseTo(0.8)
+    expect(erChangeValue(change(120, 140), 0.5)).toBeCloseTo((0.5 * 10) / 6.48) // only the 10% up to 130
+  })
+
+  it('makes ER past the cap worth nothing, and ER lost under it a cost', () => {
+    expect(erChangeValue(change(150, 135), 0.8)).toBe(0)
+    expect(erChangeValue(change(140, 120), 0.8)).toBeCloseTo((-0.8 * 10) / 6.48)
+    expect(erChangeValue({ from: 100, to: 140, need: null, cap: null }, 1)).toBe(0)
+    expect(erChangeValue(null, 1)).toBe(0)
+  })
+
+  it('leaves ER out of the weights it replaces', () => {
+    expect(withoutER({ atk_: 1, enerRech_: 0.8 })).toEqual({ atk_: 1 })
+    const noEr = { atk_: 1 }
+    expect(withoutER(noEr)).toBe(noEr)
   })
 })
 
@@ -124,6 +156,17 @@ describe('rerolls that need to keep ER', () => {
     expect(bound.gain).toBeLessThan(free.gain)
     expect(bound.chance).toBeLessThan(free.chance)
     expect(bound.chosen).toContain('enerRech_')
+  })
+
+  it('values the ER line at nothing when the wearer would be past their cap without it', () => {
+    const b = { erTarget: '120-140%', substats: W } as unknown as BuildConfig
+    // 200% − 32.4% still clears 140%: every bit of the line is spare.
+    expect(rerollTerms(plume, b, 200).weights).toEqual({ critRate_: 1, critDMG_: 1 })
+    // 160% − 32.4% doesn't: the line keeps its weight, and it may drop 40% before she's under 120%.
+    const close = rerollTerms(plume, b, 160)
+    expect(close.weights).toBe(W)
+    expect(close.erMin).toBeCloseTo(32.4 - 40)
+    expect(rerollTerms(plume, b, null)).toMatchObject({ weights: W, erMin: null })
   })
 
   it('leaves the odds alone when the line has room to spare', () => {

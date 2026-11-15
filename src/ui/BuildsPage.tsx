@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react'
 import {
   allowedMains,
+  categoryLabel,
   MAIN_SLOTS,
+  pairCategories,
   remapDisabled,
   shiftDisabled,
   SUBSTAT_KEYS,
   withMainStats,
+  withPair,
   withWeight,
 } from '../engine/builds'
-import { erNeed, totalER } from '../engine/er'
+import { erCap, erNeed, totalER } from '../engine/er'
 import { defaultRosterEntry, type EvaluationResult } from '../engine/evaluate'
 import { MAIN_ODDS } from '../engine/farm'
 import { characterName, SLOT_LABEL, setName, statLabel, statShort } from '../engine/stats'
@@ -72,6 +75,7 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
   const summary = result.characters.find((c) => c.char === char)
   const slots = summary?.builds.find((b) => b.idx === i)?.slots
   const need = erNeed(build)
+  const cap = erCap(build)
   const erNow = useMemo(() => totalER(er, char, pieces.filter((p) => p.owner === char)), [er, char, pieces])
 
   const save = (b: BuildConfig) => setCharacterBuilds(char, builds.map((x, j) => (j === i ? b : x)))
@@ -142,8 +146,12 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
         <label>
           ER target <input value={build.erTarget} onChange={(e) => save({ ...build, erTarget: e.target.value })} />
         </label>
-        <span className="sub-note" title="Free upgrades and rerolls won't take this character's ER below the minimum">
+        <span
+          className="sub-note"
+          title="Free upgrades and rerolls won't take this character's ER below the minimum. Where their total ER is known, ER counts at this build's ER weight up to the top of the target and nothing past it."
+        >
           {need === null ? 'No ER minimum (no percentage)' : `Minimum ${need}%`}
+          {cap !== null && need !== null && cap > need && ` · counts up to ${cap}%`}
           {erNow !== null && ` · wears ${erNow.toFixed(0)}%`}
         </span>
       </div>
@@ -199,9 +207,25 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
             </option>
           ))}
         </select>
-        {build.sets2.length > 0 && (
-          <p className="sub-note">2pc + 2pc options (used only by the loosest set matching): {build.sets2.map((c) => c.join(' + ')).join(' · ')}</p>
-        )}
+      </section>
+
+      <section className="field">
+        <h3>2-piece pairs</h3>
+        <p className="hint">
+          Two 2pc bonuses this build is happy with instead of a 4pc. Free upgrades and Improve let a swap give up a 2pc
+          bonus as long as what's left still makes one of these pairs (or a 4pc set above): add ATK + Energy Recharge,
+          say, and trading a 2pc ATK set for a 2pc ER set counts. The loosest set matching also keeps pieces of their
+          sets. "Any set" leaves that half free.
+        </p>
+        {build.sets2.map((pair, j) => (
+          <div key={pair.join('+') + j} className="set-row">
+            <span className="set-row-name">{pair.map((c) => categoryLabel(config, c)).join(' + ')}</span>
+            <button className="ghost small" onClick={() => save({ ...build, sets2: build.sets2.filter((_, k) => k !== j) })} title="Remove">
+              ✕
+            </button>
+          </div>
+        ))}
+        <PairAdder onAdd={(pair) => save(withPair(build, pair))} />
       </section>
 
       <section className="field">
@@ -273,6 +297,40 @@ function Editor({ char, result }: { char: string; result: EvaluationResult }) {
           <p className="hint">{build.notes}</p>
         </section>
       )}
+    </div>
+  )
+}
+
+/** Two category pickers and an Add button for a new 2pc pair. */
+function PairAdder({ onAdd }: { onAdd: (pair: [string, string]) => void }) {
+  const { config } = useStore()
+  const options = useMemo(() => pairCategories(config), [config])
+  const [first, setFirst] = useState('')
+  const [second, setSecond] = useState('')
+  const pick = (value: string, set: (v: string) => void) => (
+    <select value={value} onChange={(e) => set(e.target.value)}>
+      <option value="">Choose a 2pc…</option>
+      {options.map((c) => (
+        <option key={c} value={c}>
+          {categoryLabel(config, c)}
+        </option>
+      ))}
+    </select>
+  )
+  return (
+    <div className="pair-adder">
+      {pick(first, setFirst)} + {pick(second, setSecond)}
+      <button
+        className="ghost"
+        disabled={!first || !second}
+        onClick={() => {
+          onAdd([first, second])
+          setFirst('')
+          setSecond('')
+        }}
+      >
+        Add pair
+      </button>
     </div>
   )
 }

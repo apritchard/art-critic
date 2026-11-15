@@ -1,7 +1,7 @@
 // Everything that could improve one character's pieces, slot by slot: spare +20s, pieces other characters
 // wear, pieces worth leveling, a reroll, an Elixir craft, the Strongbox and domains. Every option says how
 // likely it is to beat what they wear now and by how much on average, so they compare side by side.
-import { erNeed, totalER, type ErModel } from './er'
+import { erCap, erChangeValue, erNeed, totalER, withoutER, type ErChange, type ErModel } from './er'
 import type { ActiveBuild, EvaluationResult, Verdict } from './evaluate'
 import {
   dropPool,
@@ -9,26 +9,25 @@ import {
   expectedBestOf,
   farmTargets,
   gainHistograms,
-  keepsSetBonuses,
   ON_SET_DROPS_PER_RUN,
   RESIN_PER_RUN,
   RESIN_SHOWN,
   setStatus,
   STRONGBOX_BATCH,
+  swapSetFit,
   upgradeOdds,
   wearing,
   type DomainsFile,
   type ElixirPick,
   type SetStatus,
+  type SetTrade,
 } from './farm'
 import type { Piece } from './load'
 import { mainStatOk } from './match'
 import { chanceToBeat, currentValue, expectedFinal, expectedGainOver } from './projection'
-import { DUST_COST, rerollOdds, type Guarantee, type RerollOdds } from './reroll'
+import { DUST_COST, rerollOdds, rerollTerms, type Guarantee, type RerollOdds } from './reroll'
 import type { ArtifactConfig, SlotKey } from './types'
 import { SLOTS } from './types'
-
-const ER = 'enerRech_'
 
 /** How many of each kind of piece option to list per slot. */
 export const SHOWN = { spare: 4, taken: 4, level: 5 }
@@ -39,7 +38,8 @@ const MIN_PIECE_GAIN = 0.1
 
 /** What wearing a piece does to the character's set bonuses. */
 export type SetFit =
-  | { kind: 'keeps' }
+  /** Fits the build: keeps every bonus, or `trade`s a 2pc for another the build accepts (see setsFit). */
+  | { kind: 'keeps'; trade?: SetTrade }
   /** Only useful once they move to 4pc of another listed set. */
   | { kind: 'switch'; tier: number }
   /** Loses the 2pc or 4pc bonus of this set. */
@@ -51,11 +51,13 @@ export interface PieceOption {
   chance: number
   /** Average improvement, counting a result under the worn piece as no gain. */
   gain: number
-  /** Value once finished (projected for a piece still to level). */
+  /** Value once finished (projected for a piece still to level). Leaves ER out when it's counted in `erGain`. */
   value: number
   fit: SetFit
   /** Total ER (%) before and after wearing it, for finished pieces; null if unknown. */
-  er: { from: number; to: number; need: number | null } | null
+  er: ErChange | null
+  /** Part of `gain` from the change in their total ER (see erChangeValue); finished pieces only. */
+  erGain: number
 }
 
 export interface SpareOption extends PieceOption {
@@ -79,7 +81,7 @@ export interface LevelOption extends PieceOption {
 
 export interface RerollChoice extends RerollOdds {
   cost: number
-  er: { from: number; to: number; need: number | null } | null
+  er: ErChange | null
 }
 
 /** Odds from a batch of Strongbox crafts or 200 resin of domain runs. */
@@ -116,6 +118,7 @@ export interface ImprovePlan {
   targets: string[]
   er: number | null
   need: number | null
+  cap: number | null
   /** Weakest slot first. */
   slots: SlotPlan[]
 }
@@ -135,7 +138,7 @@ export interface ImproveInput {
 }
 
 export function improveCharacter(input: ImproveInput): ImprovePlan {
-  const { result, pieces, domains, er, ref, guarantee, claimed, strongboxSets } = input
+  const { result, pieces, config, domains, er, ref, guarantee, claimed, strongboxSets } = input
   const { worn, equipped, barsOf, current } = wearing(result, pieces)
   const char = ref.char
   const w = ref.build.substats
@@ -145,6 +148,10 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
   const mine = SLOTS.flatMap((s) => equipped.get(`${char}|${s}`) ?? [])
   const erNow = totalER(er, char, mine)
   const need = erNeed(ref.build)
+  const cap = erCap(ref.build)
+  // With their total ER and target known, finished pieces are valued without ER lines plus the change in the total.
+  const byTotal = erNow !== null && cap !== null
+  const wFinished = byTotal ? withoutER(w) : w
   const status = setStatus(wornSets, ref.build)
   const targets = farmTargets(ref.build, status)
   const verdicts = new Map(result.evaluations.map((e) => [e.piece.id, e.verdict]))
@@ -163,19 +170,24 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
     const wornPiece = equipped.get(`${char}|${slot}`) ?? null
     const now = bars[slot]
     const fitOf = (p: Piece): SetFit => {
-      if (keepsSetBonuses(wornSets, wornPiece?.setKey, p.setKey)) return { kind: 'keeps' }
+      const trade = swapSetFit(wornSets, wornPiece?.setKey, p.setKey, ref.build, config)
+      if (trade) return trade.lost.length ? { kind: 'keeps', trade } : { kind: 'keeps' }
       const listed = ref.build.sets4.find((s) => s.set === p.setKey)
       return listed ? { kind: 'switch', tier: listed.tier } : { kind: 'breaks', set: wornPiece!.setKey }
     }
     const erWith = (p: Piece) => {
       const to = totalER(er, char, [...mine.filter((x) => x.slotKey !== slot), p])
-      return erNow !== null && to !== null ? { from: erNow, to, need } : null
+      return erNow !== null && to !== null ? { from: erNow, to, need, cap } : null
     }
+    const nowFinished = byTotal && wornPiece && now !== null ? expectedFinal(wornPiece, wFinished) : now
+    // A finished piece can beat the worn one on substats, on the ER it brings toward their target, or both.
     const finished = (p: Piece): PieceOption | null => {
-      const value = currentValue(p, w)
-      const gain = value - (now ?? 0)
+      const value = currentValue(p, wFinished)
+      const erChange = erWith(p)
+      const erGain = byTotal ? erChangeValue(erChange, w.enerRech_ ?? 0) : 0
+      const gain = value - (nowFinished ?? 0) + erGain
       if (gain < MIN_PIECE_GAIN) return null
-      return { piece: p, chance: 1, gain, value, fit: fitOf(p), er: erWith(p) }
+      return { piece: p, chance: 1, gain, value, fit: fitOf(p), er: erChange, erGain }
     }
     // Pieces that keep her set bonuses come first, then the biggest gain.
     const byFit = (a: PieceOption, b: PieceOption) =>
@@ -226,21 +238,20 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
         const chance = chanceToBeat(p, w, now)
         if (chance < MIN_LEVEL_CHANCE) return []
         const gain = expectedGainOver(p, w, now)
-        return [{ piece: p, chance, gain, value: expectedFinal(p, w), fit, er: null, verdict: verdicts.get(p.id) ?? 'skip' }]
+        return [{ piece: p, chance, gain, value: expectedFinal(p, w), fit, er: null, erGain: 0, verdict: verdicts.get(p.id) ?? 'skip' }]
       })
       .sort(byFit)
       .slice(0, SHOWN.level)
 
     let reroll: RerollChoice | null = null
     if (wornPiece && wornPiece.rarity === 5 && wornPiece.level === 20 && mainStatOk(ref.build, wornPiece)) {
-      const line = wornPiece.substats.find((s) => s.key === ER)?.value ?? 0
-      const erMin = erNow !== null && need !== null ? line - Math.max(0, erNow - need) : null
-      const odds = rerollOdds(wornPiece, w, guarantee, erMin)
+      const terms = rerollTerms(wornPiece, ref.build, erNow)
+      const odds = rerollOdds(wornPiece, terms.weights, guarantee, terms.erMin)
       if (odds) {
         reroll = {
           ...odds,
           cost: DUST_COST[slot],
-          er: erNow !== null && odds.erAfter !== undefined ? { from: erNow, to: erNow - line + odds.erAfter, need } : null,
+          er: erNow !== null && odds.erAfter !== undefined ? { from: erNow, to: erNow - terms.line + odds.erAfter, need, cap } : null,
         }
       }
     }
@@ -278,5 +289,5 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
 
   // Weakest first: nothing usable, then the lowest rating.
   slots.sort((a, b) => (a.quality ?? -1) - (b.quality ?? -1))
-  return { ref, status, targets, er: erNow, need, slots }
+  return { ref, status, targets, er: erNow, need, cap, slots }
 }

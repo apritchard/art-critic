@@ -1,9 +1,9 @@
 // Farming planner: who gains most from new artifacts, and where to get them (domains, Strongbox, Elixir).
-import { erNeed, totalER, type ErModel } from './er'
+import { erCap, erChangeValue, erNeed, totalER, withoutER, type ErChange, type ErModel } from './er'
 import type { ActiveBuild, EvaluationResult } from './evaluate'
 import type { Piece } from './load'
 import { mainStatOk } from './match'
-import { currentValue } from './projection'
+import { currentValue, expectedFinal } from './projection'
 import { ROLL_TIERS } from './stats'
 import type { ArtifactConfig, BuildConfig, SlotKey } from './types'
 import { SLOTS } from './types'
@@ -282,6 +282,88 @@ export function keepsSetBonuses(worn: Record<string, number>, outgoing: string |
   return keepsBonuses(worn, swapSets(worn, outgoing, incoming))
 }
 
+/** A set bonus: the 2pc, or the 4pc (which comes with the 2pc). */
+export interface SetBonus {
+  set: string
+  pieces: 2 | 4
+}
+
+/** Set bonuses a swap gives up and gets. */
+export interface SetTrade {
+  lost: SetBonus[]
+  gained: SetBonus[]
+}
+
+const bonusAt = (n: number | undefined): 0 | 2 | 4 => ((n ?? 0) >= 4 ? 4 : (n ?? 0) >= 2 ? 2 : 0)
+
+function bonusChanges(before: Record<string, number>, after: Record<string, number>): SetTrade {
+  const lost: SetBonus[] = []
+  const gained: SetBonus[] = []
+  for (const set of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const was = bonusAt(before[set])
+    const now = bonusAt(after[set])
+    if (now < was) lost.push({ set, pieces: was as 2 | 4 })
+    if (now > was) gained.push({ set, pieces: now as 2 | 4 })
+  }
+  return { lost, gained }
+}
+
+/**
+ * True when the 2pc bonuses in `counts` make this pair of the build's 2pc categories. Each category needs its own
+ * set (two ATK +18% bonuses need two sets), and "any" needs nothing: it marks an off-set-friendly half.
+ */
+function pairMet(pair: string[], counts: Record<string, number>, config: ArtifactConfig | null): boolean {
+  const have = Object.keys(counts)
+    .filter((set) => counts[set] >= 2)
+    .map((set) => config?.sets[set]?.twoPieceCategory)
+  for (const category of pair) {
+    if (category === 'any') continue
+    const i = have.indexOf(category)
+    if (i < 0) return false
+    have.splice(i, 1)
+  }
+  return true
+}
+
+/** How well set counts meet a build: a listed 4pc (lower tier ranks higher), else one of its 2pc pairs, else 0. */
+function setRank(counts: Record<string, number>, build: BuildConfig, config: ArtifactConfig | null): number {
+  const tiers = build.sets4.filter((s) => (counts[s.set] ?? 0) >= 4).map((s) => s.tier)
+  if (tiers.length) return 10 - Math.min(...tiers)
+  return build.sets2.some((pair) => pairMet(pair, counts, config)) ? 1 : 0
+}
+
+/**
+ * Whether going from `before` to `after` set counts leaves a character's sets fit for their build, and what it
+ * trades. It does when every 2pc and 4pc bonus stays. It also does when only 2pc bonuses are lost and they'd still
+ * meet the build at least as well as before (a listed 4pc, else one of its 2pc pairs): so trading one 2pc for
+ * another is fine when the pair it makes is listed, and so is giving up a 2pc to complete a listed 4pc. A 4pc
+ * bonus is never traded away, even one the build doesn't list. Null when it doesn't fit.
+ * Without the config (`null`), only 4pc sets and "any" pairs can be checked.
+ */
+export function setsFit(
+  before: Record<string, number>,
+  after: Record<string, number>,
+  build: BuildConfig,
+  config: ArtifactConfig | null,
+): SetTrade | null {
+  const trade = bonusChanges(before, after)
+  if (!trade.lost.length) return trade
+  if (trade.lost.some((b) => b.pieces === 4)) return null
+  const rank = setRank(after, build, config)
+  return rank > 0 && rank >= setRank(before, build, config) ? trade : null
+}
+
+/** setsFit for one swap: `incoming` in for `outgoing` (undefined for an empty slot). */
+export function swapSetFit(
+  worn: Record<string, number>,
+  outgoing: string | undefined,
+  incoming: string,
+  build: BuildConfig,
+  config: ArtifactConfig | null,
+): SetTrade | null {
+  return setsFit(worn, swapSets(worn, outgoing, incoming), build, config)
+}
+
 export type FarmScope = 'priority' | 'all'
 
 export interface ElixirPick {
@@ -338,12 +420,17 @@ export interface Swap {
   ref: ActiveBuild
   slot: SlotKey
   piece: Piece
+  /** Substat values of the worn piece and the spare. They leave ER out when it's counted in `erGain` instead. */
   from: number | null
   to: number
   /** Main stat of the piece it replaces, when different: substat scores don't weigh that trade. */
   mainFrom: string | null
-  /** The character's total ER (%) before and after (counting their earlier swaps), and the build's minimum. */
-  er: { from: number; to: number; need: number | null } | null
+  /** The character's total ER (%) before and after (counting their earlier swaps), and the build's minimum and cap. */
+  er: ErChange | null
+  /** What the change in their total ER is worth (see erChangeValue); 0 when their ER or target is unknown. */
+  erGain: number
+  /** The set bonuses it gives up and gets, when it gives one up for another the build accepts; null otherwise. */
+  trade: SetTrade | null
 }
 
 export interface FarmPlan {
@@ -428,11 +515,13 @@ export function planFarming(
   const spares = pieces.filter((p) => !p.owner && p.rarity === 5 && p.level === 20)
 
   // 1. Free upgrades come first, so new pieces are judged against what the character could wear today.
-  const { swaps, erHeld } = freeSwaps(current, spares, worn, equipped, barsOf, er)
+  const { swaps, erHeld } = freeSwaps(current, spares, worn, equipped, barsOf, er, config)
   const swapIn = new Map(swaps.map((s) => [`${s.char}|${s.slot}`, s.piece]))
   const barsAfterSwaps = (ref: ActiveBuild) => {
     const bars = barsOf(ref)
     for (const slot of SLOTS) {
+      // The higher of the two, since these bars weigh ER lines: a swap made for its ER, or one shedding spare ER,
+      // can score lower here, and a new piece is judged without knowing what it does to the total.
       const p = swapIn.get(`${ref.char}|${slot}`)
       if (p && mainStatOk(ref.build, p)) bars[slot] = Math.max(bars[slot] ?? 0, currentValue(p, ref.build.substats))
     }
@@ -702,8 +791,11 @@ function spareCoverage(ref: ActiveBuild, spares: Piece[], pieces: Piece[]): { se
 }
 
 /**
- * Spare +20s that beat what an active character wears without breaking a set bonus; each used once. A swap
- * that would take the character's ER below their build's minimum (and lower than it is now) is held back.
+ * Spare +20s that beat what an active character wears without leaving their sets unfit for their build (see
+ * setsFit); each used once. Where a character's total ER and ER target are known, ER lines leave the substat values
+ * and the change in their total counts instead (see erChangeValue), so a swap can win by bringing ER toward the
+ * target or by shedding ER past it. A swap that would take the character's ER below their build's minimum (and
+ * lower than it is now) is held back.
  */
 function freeSwaps(
   builds: ActiveBuild[],
@@ -712,24 +804,38 @@ function freeSwaps(
   equipped: Map<string, Piece>,
   barsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>,
   er: ErModel | null,
+  config: ArtifactConfig,
 ): { swaps: Swap[]; erHeld: number } {
   const options: Swap[] = []
   for (const ref of builds) {
     const bars = barsOf(ref)
     const wornSets = worn.get(ref.char) ?? {}
+    const mine = SLOTS.flatMap((s) => equipped.get(`${ref.char}|${s}`) ?? [])
+    const need = erNeed(ref.build)
+    const cap = erCap(ref.build)
+    const erNow = totalER(er, ref.char, mine)
+    const byTotal = erNow !== null && cap !== null
+    const w = byTotal ? withoutER(ref.build.substats) : ref.build.substats
     for (const piece of spares) {
       if (!mainStatOk(ref.build, piece)) continue
-      const from = bars[piece.slotKey]
-      const to = currentValue(piece, ref.build.substats)
-      if (to - (from ?? 0) < MIN_SWAP_GAIN) continue
       const outgoing = equipped.get(`${ref.char}|${piece.slotKey}`)
-      if (!keepsSetBonuses(wornSets, outgoing?.setKey, piece.setKey)) continue
+      const bar = bars[piece.slotKey]
+      const from = bar !== null && byTotal ? expectedFinal(outgoing!, w) : bar
+      const to = currentValue(piece, w)
+      const erGain = byTotal
+        ? erChangeValue(
+            { from: erNow, to: totalER(er, ref.char, [...mine.filter((p) => p.slotKey !== piece.slotKey), piece]) ?? erNow, need, cap },
+            ref.build.substats.enerRech_ ?? 0,
+          )
+        : 0
+      if (to - (from ?? 0) + erGain < MIN_SWAP_GAIN) continue
+      if (!swapSetFit(wornSets, outgoing?.setKey, piece.setKey, ref.build, config)) continue
       const mainFrom = outgoing && outgoing.mainStatKey !== piece.mainStatKey ? outgoing.mainStatKey : null
-      options.push({ char: ref.char, ref, slot: piece.slotKey, piece, from, to, mainFrom, er: null })
+      options.push({ char: ref.char, ref, slot: piece.slotKey, piece, from, to, mainFrom, er: null, erGain, trade: null })
     }
   }
   // ★ Priority characters pick first, biggest gain first; the list keeps that order.
-  const gain = (s: Swap) => s.to - (s.from ?? 0)
+  const gain = (s: Swap) => s.to - (s.from ?? 0) + s.erGain
   const starred = (s: Swap) => Number(s.ref.priority === 'priority')
   options.sort((a, b) => starred(b) - starred(a) || gain(b) - gain(a))
   const usedPieces = new Set<string>()
@@ -750,8 +856,10 @@ function freeSwaps(
     if (usedPieces.has(s.piece.id) || usedSlots.has(slotKey)) continue
     const now = wornBy(s.char)
     const before = worn.get(s.char) ?? {}
-    const sets = swapSets(setsNow.get(s.char) ?? before, now.get(s.slot)?.setKey, s.piece.setKey)
-    if (!keepsBonuses(before, sets)) continue
+    const prev = setsNow.get(s.char) ?? before
+    const sets = swapSets(prev, now.get(s.slot)?.setKey, s.piece.setKey)
+    // Against what they wore at the start: two swaps that each fit can leave the sets unfit together.
+    if (!setsFit(before, sets, s.ref.build, config)) continue
     const from = totalER(er, s.char, [...now.values()])
     const to = totalER(er, s.char, [...new Map(now).set(s.slot, s.piece).values()])
     const need = erNeed(s.ref.build)
@@ -759,11 +867,16 @@ function freeSwaps(
       held.add(slotKey)
       continue
     }
+    const erChange = from !== null && to !== null ? { from, to, need, cap: erCap(s.ref.build) } : null
+    const erGain = erChangeValue(erChange, s.ref.build.substats.enerRech_ ?? 0)
+    // An earlier swap may already have closed the ER gap this one was counting on, or used up the spare ER.
+    if (gain({ ...s, erGain }) < MIN_SWAP_GAIN) continue
     usedPieces.add(s.piece.id)
     usedSlots.add(slotKey)
     now.set(s.slot, s.piece)
     setsNow.set(s.char, sets)
-    out.push({ ...s, er: from !== null && to !== null ? { from, to, need } : null })
+    const step = bonusChanges(prev, sets)
+    out.push({ ...s, er: erChange, erGain, trade: step.lost.length ? step : null })
   }
   return { swaps: out, erHeld: [...held].filter((k) => !usedSlots.has(k)).length }
 }

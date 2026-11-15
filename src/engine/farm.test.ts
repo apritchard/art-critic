@@ -12,6 +12,7 @@ import {
   planFarming,
   setStatus,
   simulatePieces,
+  swapSetFit,
   upgradeOdds,
   type DomainsFile,
 } from './farm'
@@ -222,6 +223,49 @@ describe('set bonuses', () => {
     expect(keepsSetBonuses({ NoblesseOblige: 2, GladiatorsFinale: 2, CrimsonWitchOfFlames: 1 }, 'GladiatorsFinale', 'X')).toBe(false)
     expect(keepsSetBonuses({}, undefined, 'X')).toBe(true)
   })
+
+  const cat = (twoPieceCategory: string) => ({ twoPiece: '', fourPiece: '', twoPieceCategory })
+  const cats: ArtifactConfig = {
+    ...config,
+    sets: {
+      GladiatorsFinale: cat('atk18'),
+      ShimenawasReminiscence: cat('atk18'),
+      EmblemOfSeveredFate: cat('er20'),
+      NoblesseOblige: cat('burst20'),
+      CrimsonWitchOfFlames: cat('ele15:pyro'),
+    },
+  }
+
+  it('lets a swap trade one 2pc for another only when the build lists the pair it makes', () => {
+    const quill = build({ sets4: [{ set: 'NoblesseOblige', tier: 1 }], sets2: [['atk18', 'atk18']] })
+    const twoTwo = { GladiatorsFinale: 2, ShimenawasReminiscence: 2, EmblemOfSeveredFate: 1 }
+    // ATK + ATK → ATK + ER isn't a pair this build lists.
+    expect(swapSetFit(twoTwo, 'GladiatorsFinale', 'EmblemOfSeveredFate', quill, cats)).toBeNull()
+    const withEr = build({ ...quill, sets2: [['atk18', 'atk18'], ['atk18', 'er20']] })
+    expect(swapSetFit(twoTwo, 'GladiatorsFinale', 'EmblemOfSeveredFate', withEr, cats)).toEqual({
+      lost: [{ set: 'GladiatorsFinale', pieces: 2 }],
+      gained: [{ set: 'EmblemOfSeveredFate', pieces: 2 }],
+    })
+    // Keeping every bonus needs no pair.
+    expect(swapSetFit(twoTwo, 'EmblemOfSeveredFate', 'X', quill, cats)).toEqual({ lost: [], gained: [] })
+    // Two ATK bonuses need two sets: 4pc Gladiator is one.
+    expect(swapSetFit({ GladiatorsFinale: 3, ShimenawasReminiscence: 2 }, 'ShimenawasReminiscence', 'GladiatorsFinale', quill, cats)).toBeNull()
+    // "any" leaves that half free.
+    const loose = build({ ...quill, sets2: [['atk18', 'any']] })
+    expect(swapSetFit(twoTwo, 'GladiatorsFinale', 'EmblemOfSeveredFate', loose, cats)?.lost).toEqual([{ set: 'GladiatorsFinale', pieces: 2 }])
+    // Without the config the categories are unknown, so only keeping every bonus fits.
+    expect(swapSetFit(twoTwo, 'GladiatorsFinale', 'EmblemOfSeveredFate', withEr, null)).toBeNull()
+  })
+
+  it('gives up a 2pc to complete a listed 4pc, but never trades a 4pc away', () => {
+    const dps = build({ sets2: [['any', 'any']] })
+    expect(
+      swapSetFit({ CrimsonWitchOfFlames: 3, GladiatorsFinale: 2 }, 'GladiatorsFinale', 'CrimsonWitchOfFlames', dps, cats),
+    ).toEqual({ lost: [{ set: 'GladiatorsFinale', pieces: 2 }], gained: [{ set: 'CrimsonWitchOfFlames', pieces: 4 }] })
+    // Even with "any + any" still met afterwards, a 4pc stays: listed or not.
+    expect(swapSetFit({ CrimsonWitchOfFlames: 4, GladiatorsFinale: 1 }, 'CrimsonWitchOfFlames', 'GladiatorsFinale', dps, cats)).toBeNull()
+    expect(swapSetFit({ NoblesseOblige: 4, GladiatorsFinale: 1 }, 'NoblesseOblige', 'GladiatorsFinale', dps, cats)).toBeNull()
+  })
 })
 
 describe('planFarming', () => {
@@ -259,6 +303,21 @@ describe('planFarming', () => {
     expect(hutao[0].to).toBeGreaterThan(hutao[0].from ?? 0)
   })
 
+  // Hu Tao's ER is 100% plus her artifacts: neither her ascension stat nor her weapon gives any.
+  const gd: GameData = {
+    source: 'test',
+    fetched: '',
+    weapons: { StaffOfHoma: { sub: { stat: 'critDMG_', base: 0.66, curve: 'FLAT' } } },
+    chars: { HuTao: { stat: 'critDMG_', values: [0, 0, 0, 0, 0, 0, 0.384] } },
+    curves: { FLAT: Array(101).fill(1) },
+    artMain: {},
+  }
+  const withTarget = (erTarget: string): ArtifactConfig => ({
+    ...config,
+    characters: { ...config.characters, HuTao: { ...config.characters.HuTao, builds: [build({ erTarget })] } },
+  })
+  const homa = [{ key: 'StaffOfHoma', level: 90, ascension: 6, refinement: 1, location: 'HuTao', lock: true }]
+
   it('holds back swaps that drop ER below the build minimum', () => {
     // Hu Tao's worn Gladiator circlet carries 30% ER; the spare circlet has none.
     const erPieces = loadPieces({
@@ -269,34 +328,77 @@ describe('planFarming', () => {
           : a,
       ),
     })
-    const withTarget = (erTarget: string): ArtifactConfig => ({
-      ...config,
-      characters: { ...config.characters, HuTao: { ...config.characters.HuTao, builds: [build({ erTarget })] } },
-    })
-    const gd: GameData = {
-      source: 'test',
-      fetched: '',
-      weapons: { StaffOfHoma: { sub: { stat: 'critDMG_', base: 0.66, curve: 'FLAT' } } },
-      chars: { HuTao: { stat: 'critDMG_', values: [0, 0, 0, 0, 0, 0, 0.384] } },
-      curves: { FLAT: Array(101).fill(1) },
-      artMain: {},
-    }
-    const exportWithWeapon = {
-      ...data,
-      weapons: [{ key: 'StaffOfHoma', level: 90, ascension: 6, refinement: 1, location: 'HuTao', lock: true }],
-    }
+    const exportWithWeapon = { ...data, weapons: homa }
     const plan = (erTarget: string) => {
       const cfg = withTarget(erTarget)
       const er = erModel(exportWithWeapon, gd, cfg)
       const res = evaluate(erPieces, data.characters, cfg, defaultSettings(cfg), roster)
       return planFarming(res, erPieces, cfg, domains, 'priority', er)
     }
-    // 130% now; the swap leaves 100%.
+    // 130% now; the swap leaves 100%. The 20% lost under 120% costs a little of the swap's gain.
     const loose = plan('100-120%').swaps.find((s) => s.char === 'HuTao')
-    expect(loose?.er).toEqual({ from: 130, to: 100, need: 100 })
+    expect(loose?.er).toEqual({ from: 130, to: 100, need: 100, cap: 120 })
+    expect(loose?.erGain).toBeCloseTo((-0.3 * 20) / 6.48)
     const strict = plan('120%')
     expect(strict.swaps.some((s) => s.char === 'HuTao')).toBe(false)
     expect(strict.erHeld).toBe(1)
+  })
+
+  it('treats ER past the target as worth nothing, so a swap can shed it', () => {
+    // Hu Tao's worn circlet: 2 crit rolls plus 30% ER she doesn't need at 100%. The spare has 3.5 crit rolls.
+    const erData: GoodExport = {
+      ...data,
+      weapons: homa,
+      artifacts: [
+        ...worn,
+        art({ slotKey: 'circlet', setKey: 'GladiatorsFinale', location: 'HuTao', substats: [...art().substats.slice(0, 3), { key: 'enerRech_', value: 30 }] }),
+        art({ slotKey: 'circlet', setKey: 'ShimenawasReminiscence', substats: [{ key: 'critRate_', value: 3.9 }, { key: 'critDMG_', value: 19.4 }, { key: 'def', value: 46 }, { key: 'hp', value: 598 }] }),
+      ],
+    }
+    const ps = loadPieces(erData)
+    const swapsFor = (erTarget: string, gameData: GameData | null = gd) => {
+      const cfg = withTarget(erTarget)
+      const res = evaluate(ps, erData.characters, cfg, defaultSettings(cfg), roster)
+      return planFarming(res, ps, cfg, domains, 'priority', erModel(erData, gameData, cfg)).swaps.filter((s) => s.char === 'HuTao')
+    }
+    const [swap] = swapsFor('100%')
+    expect(swap).toMatchObject({ erGain: 0, er: { from: 130, to: 100 } })
+    expect(swap.from).toBeCloseTo(3.9 / 3.89 + 7.8 / 7.77)
+    expect(swap.to).toBeCloseTo(3.9 / 3.89 + 19.4 / 7.77)
+    // With her ER unknown, the line keeps its 0.3 weight (1.39) and the spare isn't worth the trouble.
+    expect(swapsFor('100%', null)).toEqual([])
+  })
+
+  it('counts the ER a swap brings toward the target', () => {
+    // The spare has half the worn circlet's CRIT DMG and 32.4% ER instead of flat HP.
+    const erData: GoodExport = {
+      ...data,
+      weapons: homa,
+      artifacts: [
+        ...worn,
+        art({ slotKey: 'circlet', setKey: 'GladiatorsFinale', location: 'HuTao' }),
+        art({
+          slotKey: 'circlet',
+          setKey: 'ShimenawasReminiscence',
+          substats: [{ key: 'critRate_', value: 3.9 }, { key: 'critDMG_', value: 3.9 }, { key: 'def', value: 46 }, { key: 'enerRech_', value: 32.4 }],
+        }),
+      ],
+    }
+    const ps = loadPieces(erData)
+    const swapsFor = (erTarget: string) => {
+      const cfg = withTarget(erTarget)
+      const res = evaluate(ps, erData.characters, cfg, defaultSettings(cfg), roster)
+      return planFarming(res, ps, cfg, domains, 'priority', erModel(erData, gd, cfg)).swaps.filter((s) => s.char === 'HuTao')
+    }
+    // Short of 150%, the 32.4% she gains (five max rolls) counts at her 0.3 ER weight, and outweighs the CRIT DMG.
+    const [swap] = swapsFor('150%')
+    expect(swap.to).toBeLessThan(swap.from!)
+    expect(swap.er).toEqual({ from: 100, to: 132.4, need: 150, cap: 150 })
+    expect(swap.erGain).toBeCloseTo(0.3 * 5)
+    // Only the ER up to the top of the target counts: 10% of it toward 100-110% isn't enough.
+    expect(swapsFor('100-110%')).toEqual([])
+    // Once 100% is enough, the ER is worth nothing and the swap isn't worth making.
+    expect(swapsFor('100%')).toEqual([])
   })
 
   it('gives ★ Priority characters first pick and lists them first', () => {

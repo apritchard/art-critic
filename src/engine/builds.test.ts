@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { allowedMains, applyOverrides, remapDisabled, shiftDisabled, withMainStats, withWeight } from './builds'
+import {
+  allowedMains,
+  applyOverrides,
+  categoryLabel,
+  pairCategories,
+  remapDisabled,
+  shiftDisabled,
+  withMainStats,
+  withPair,
+  withWeight,
+} from './builds'
 import { mainStatOk } from './match'
 import type { ArtifactConfig, BuildConfig } from './types'
 
@@ -62,5 +72,18 @@ describe('build edits', () => {
     // A was deleted and C (now at 1) switched off; the reset brings back A, B, C.
     expect(remapDisabled([1], [b, c], [a, b, c])).toEqual([2])
     expect(remapDisabled([0], [{ ...build, name: 'Mine' }], [a])).toEqual([])
+  })
+
+  it('names 2pc categories and adds each pair once', () => {
+    const cfg = {
+      sets: { A: { twoPieceCategory: 'er20' }, B: { twoPieceCategory: 'ele15:cryo' }, C: { twoPieceCategory: 'atk18' } },
+      setCategories: { er20: 'Energy Recharge +20%', atk18: 'ATK +18%', 'ele15:<element>': 'Elemental DMG +15%', any: 'Any set' },
+    } as unknown as ArtifactConfig
+    expect(categoryLabel(cfg, 'ele15:cryo')).toBe('Elemental DMG +15% (Cryo)')
+    expect(categoryLabel(cfg, 'mystery')).toBe('mystery')
+    expect(pairCategories(cfg)).toEqual(['atk18', 'ele15:cryo', 'er20', 'any'])
+    const withEr = withPair(build, ['atk18', 'er20'])
+    expect(withEr.sets2).toEqual([['atk18', 'er20']])
+    expect(withPair(withEr, ['er20', 'atk18'])).toBe(withEr)
   })
 })

@@ -13,6 +13,7 @@ import {
   type Contribution,
   type ElixirPick,
   type FarmScope,
+  type SetTrade,
   type SourceScore,
   type Swap,
 } from '../engine/farm'
@@ -25,6 +26,10 @@ import { useLocal } from './local'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 const num = (x: number) => x.toFixed(2)
+/** "+0.6" or "−0.1": a swap made for its ER can score lower on substats. */
+const signed = (x: number) => `${x < -0.05 ? '−' : '+'}${Math.abs(x).toFixed(1)}`
+/** A build's ER target as the app reads it: "110–130%", or "220%" for one number. */
+export const erTargetText = (need: number, cap: number | null) => (cap === null || cap === need ? `${need}%` : `${need}–${cap}%`)
 type WornAt = Map<string, Piece>
 
 /** What a slot is worth now; when it counts as nothing, say why. */
@@ -244,7 +249,9 @@ function Swaps({ swaps, worn, equip }: { swaps: Swap[]; worn: WornAt; equip: (s:
             <th />
             <th>Character</th>
             <th>Spare</th>
-            <th title="Value of the worn piece → the spare, for this character's build">Now → spare</th>
+            <th title="Substat value of the worn piece → the spare, for this character's build. Where their total ER is known, ER lines are left out here and the change in the total is counted below.">
+              Now → spare
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -269,11 +276,13 @@ function Swaps({ swaps, worn, equip }: { swaps: Swap[]; worn: WornAt; equip: (s:
                       Main stat changes: {statShort(s.mainFrom)} → {statShort(s.piece.mainStatKey)}
                     </div>
                   )}
+                  <TradeNote trade={s.trade} />
                   <ErChange er={s.er} />
                 </td>
                 <td className="num">
                   <Now char={s.char} slot={s.slot} value={s.from} worn={worn} /> → <b>{s.to.toFixed(1)}</b>
-                  <div className="sub-note">+{(s.to - (s.from ?? 0)).toFixed(1)}</div>
+                  <div className="sub-note">{signed(s.to - (s.from ?? 0))}</div>
+                  <ErGainNote gain={s.erGain} er={s.er} />
                 </td>
               </tr>
             )
@@ -533,15 +542,50 @@ function Beneficiaries({ rows, domainOf }: { rows: CharacterFarm[]; domainOf: Ma
   )
 }
 
+/** "Trades the Gladiator's Finale 2pc for the Celestial Gift 2pc", for a swap that gives up a set bonus. */
+export function TradeNote({ trade }: { trade: SetTrade | null | undefined }) {
+  if (!trade?.lost.length) return null
+  const list = (bonuses: SetTrade['lost']) => bonuses.map((b) => `${setName(b.set)} ${b.pieces}pc`).join(' and the ')
+  return (
+    <div className="sub-note" title="Still a set combination this build lists (Builds tab)">
+      {trade.gained.length
+        ? `Trades the ${list(trade.lost)} for the ${list(trade.gained)}`
+        : `Gives up the ${list(trade.lost)}, which this build doesn't need`}
+    </div>
+  )
+}
+
+/** The part of a gain that comes from the change in the character's total ER (see erChangeValue). */
+export function ErGainNote({ gain, er }: { gain: number; er: ErTotals | null | undefined }) {
+  if (Math.abs(gain) < 0.05 || er?.cap == null) return null
+  const title = "ER counts at the build's ER weight up to its target (6.48% = one max roll) and nothing past it"
+  return gain > 0 ? (
+    <div className="sub-note good" title={title}>
+      +{gain.toFixed(1)} for ER toward {er.cap}%
+    </div>
+  ) : (
+    <div className="sub-note warn" title={title}>
+      −{Math.abs(gain).toFixed(1)} for ER lost under {er.cap}%
+    </div>
+  )
+}
+
+interface ErTotals {
+  from: number
+  to: number
+  need: number | null
+  cap?: number | null
+}
+
 /** A character's total ER before → after a change (`approx`: on average), when it moves. */
-export function ErChange({ er, approx }: { er: { from: number; to: number; need: number | null } | null; approx?: boolean }) {
+export function ErChange({ er, approx }: { er: ErTotals | null; approx?: boolean }) {
   if (!er || Math.abs(er.to - er.from) < 0.5) return null
   // Red when it takes them (further) below their build's minimum.
   const short = er.need !== null && er.to < er.need && er.to < er.from
   return (
     <div className={`sub-note${short ? ' warn' : ''}`} title="Total Energy Recharge: base, ascension, weapon, artifacts and 2pc bonuses">
       ER {er.from.toFixed(0)}% → {approx && '~'}
-      {er.to.toFixed(0)}%{er.need !== null && <span className="muted"> (needs {er.need}%)</span>}
+      {er.to.toFixed(0)}%{er.need !== null && <span className="muted"> (needs {erTargetText(er.need, er.cap ?? null)})</span>}
     </div>
   )
 }

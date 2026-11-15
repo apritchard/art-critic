@@ -994,6 +994,18 @@ kbd {
   min-width: 260px;
 }
 
+.pair-adder {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.pair-adder select {
+  max-width: 100%;
+}
+
 .main-row {
   flex-wrap: nowrap;
   align-items: flex-start;

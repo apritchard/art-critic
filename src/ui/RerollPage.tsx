@@ -16,13 +16,13 @@ type RerollSort = 'gain' | 'chance'
 const weightClass = (w: number) => (w >= 0.75 ? 'w-hi' : w >= 0.3 ? 'w-mid' : w > 0 ? 'w-lo' : 'w-zero')
 
 export function RerollPage({ result }: { result: EvaluationResult }) {
-  const { pieces, er, done, toggleDone } = useStore()
+  const { pieces, er, config, done, toggleDone } = useStore()
   const [guarantee, setGuarantee] = useLocal<Guarantee>('reroll:guarantee', 2)
   const [sort, setSort] = useLocal<RerollSort>('reroll:sort', 'gain')
   const [priorityFirst, setPriorityFirst] = useLocal('reroll:priorityFirst', true)
   const [query, setQuery] = useState('')
   const [all, setAll] = useState(false)
-  const plan = useMemo(() => planRerolls(result, pieces, guarantee, er), [result, pieces, guarantee, er])
+  const plan = useMemo(() => planRerolls(result, pieces, guarantee, er, config), [result, pieces, guarantee, er, config])
 
   const rows = useMemo(() => {
     const key = (o: RerollOption) => (sort === 'gain' ? o.gain / o.cost : o.chance)
@@ -121,7 +121,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                       keeps needed ER
                     </div>
                   )}
-                  <ErChange er={o.er && { from: o.er.now, to: o.er.after, need: o.er.need }} approx />
+                  <ErChange er={o.er && { from: o.er.now, to: o.er.after, need: o.er.need, cap: o.er.cap }} approx />
                 </td>
                 <td className="num">{o.cost}</td>
               </tr>

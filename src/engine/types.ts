@@ -91,6 +91,8 @@ export interface ArtifactConfig {
   }
   legacySets: string[]
   sets: Record<string, SetConfig>
+  /** What each 2pc category means ("er20" → "Energy Recharge +20%"); "ele15:<element>" covers every element. */
+  setCategories?: Record<string, string>
   substatPresets: Record<string, Record<string, number>>
   characters: Record<string, CharacterConfig>
 }

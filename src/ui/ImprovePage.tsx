@@ -7,7 +7,7 @@ import type { Guarantee } from '../engine/reroll'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
-import { EquipLog, ErChange, runs } from './FarmPage'
+import { EquipLog, ErChange, ErGainNote, erTargetText, runs, TradeNote } from './FarmPage'
 import { useLocal } from './local'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
@@ -145,7 +145,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
           {plan.er !== null && (
             <span className={plan.need !== null && plan.er < plan.need ? 'warn' : ''}>
               {' '}
-              · ER {plan.er.toFixed(0)}%{plan.need !== null && ` (needs ${plan.need}%)`}
+              · ER {plan.er.toFixed(0)}%{plan.need !== null && ` (needs ${erTargetText(plan.need, plan.cap)})`}
             </span>
           )}
           {ref.priority === 'ignore' && ' · ignored in Roster'}
@@ -312,6 +312,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
       <div className="sub-note">{shortSubs(o.piece)}</div>
       <FitNote o={o} plan={plan} />
       <ErChange er={o.er} />
+      <ErGainNote gain={o.erGain} er={o.er} />
     </>
   )
 
@@ -450,6 +451,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
 function FitNote({ o, plan }: { o: PieceOption; plan: ImprovePlan }) {
   const st = plan.status
   if (o.fit.kind === 'keeps') {
+    if (o.fit.trade) return <TradeNote trade={o.fit.trade} />
     return st.kind !== 'none' && o.piece.setKey !== st.set ? <div className="sub-note">uses the off-set slot</div> : null
   }
   if (o.fit.kind === 'switch') {

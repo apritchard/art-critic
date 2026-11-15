@@ -35,9 +35,10 @@ Every character comes with a researched build, so you can start right away. It's
 1. Pick a character from the list. Tick "Include unowned" to plan for someone you don't have yet.
 2. Change whatever doesn't match how you play them:
    - **4-piece sets:** tier 1 is best, and tiers 1–2 count when deciding what to keep. Add a set from the dropdown, or remove one with ✕.
+   - **2-piece pairs:** two 2pc bonuses the build is happy with instead of a 4pc, such as ATK + ATK. A swap may trade one 2pc bonus for another as long as what's left still makes one of these pairs (see [Free upgrades](#farming)). Add a pair with the two pickers, or remove one with ✕.
    - **Main stats:** toggle the sands, goblet and circlet main stats you'd accept.
    - **Substat weights:** pick a preset, or drag the sliders (1 = fully wanted, 0 = useless).
-   - **ER target:** for example "120-140%". The low end becomes the build's ER minimum.
+   - **ER target:** for example "120-140%". The low end becomes the build's ER minimum, and ER past the high end counts for nothing (see [Energy Recharge](#energy-recharge)).
 3. To run a second build alongside the first, click "+ Copy build", rename it and edit the copy.
 
 "Reset to research config" undoes all edits for that character.
@@ -59,7 +60,7 @@ Every character comes with a researched build, so you can start right away. It's
   - You can keep the old stats, so a reroll never loses value. "Better" is the chance it comes out ahead, and "Gain" is the average improvement (a worse roll counts as 0), ranked per Dust: 1 for a flower or plume, 2 otherwise.
   - Dots show which lines each upgrade went to, and the row counts how many landed on stats the build doesn't use. It's computed exactly from the starting values in the export.
   - A piece worth at least 2 rolls more to someone else, and better than a real piece they wear, is flagged "consider moving it instead". Rerolling would throw that value away.
-  - Each row shows the wearer's ER now and on average after the reroll. When the piece's ER line is needed to stay at the build's ER minimum, results that lose it count as no change, and the suggested pick may include ER (sometimes paired with a dead line, so the guaranteed upgrades feed ER and the free ones go to the good lines).
+  - Each row shows the wearer's ER now and on average after the reroll. When the piece's ER line is needed to stay at the build's ER minimum, results that lose it count as no change, and the suggested pick may include ER (sometimes paired with a dead line, so the guaranteed upgrades feed ER and the free ones go to the good lines). When the wearer would still be past their ER target without the line, the line is spare and counts for nothing.
 
   ![The Reroll tab: worn pieces ranked by gain per Dust, with the chance a reroll comes out better and the two lines to pick](docs/screenshots/reroll.png)
 - **◇ Off-set picks**, at the top of each list's set rail, gathers pieces kept as someone's off-set piece. Find these in-game by slot and main stat, not by set.
@@ -75,11 +76,11 @@ Every character comes with a researched build, so you can start right away. It's
 
   ![The Roster tab: each character's priority, builds and ER, and how good each equipped piece is](docs/screenshots/roster.png)
 - **Improve** puts every way to improve one character's pieces side by side, weakest slot first. The rail lists active characters, ★ Priority first and then by weakest slot.
-  - **Spare +20:** unequipped pieces that beat what they wear, flagged when Free upgrades already gives one to someone else.
+  - **Spare +20:** unequipped pieces that beat what they wear, flagged when Free upgrades already gives one to someone else. ER is judged by what the piece does to the character's total, against their ER target (see [Energy Recharge](#energy-recharge)).
   - **From another character:** pieces others wear, showing what the current wearer loses. Ignored characters' pieces come first, since they cost nothing.
   - **Level:** unequipped pieces still to level, with the chance they beat the worn piece at +20. Pieces Triage marks to unlock are flagged, so you can lock them first.
   - **Reroll**, **Sanctifying Elixir**, **Strongbox** (per batch of 13) and **Domain** (per 200 resin), with the same odds as their tabs.
-  - Each option shows its chance of beating the worn piece, its average gain (a miss counts as no change) and its cost. Pieces that would cost a set bonus are dimmed; pieces that only fit another listed 4pc set say so. The build switcher looks at a character's other builds.
+  - Each option shows its chance of beating the worn piece, its average gain (a miss counts as no change) and its cost. Pieces that would cost a set bonus are dimmed; pieces that only fit another listed 4pc set say so, and so do pieces that trade a 2pc for another the build lists. The build switcher looks at a character's other builds.
 
   ![The Improve tab for one character: their weakest slot, with leveling, rerolling, an Elixir, the Strongbox and a domain compared by chance, average gain and cost](docs/screenshots/improve.png)
 - **Settings** has every threshold, with live keep/toss counts.
@@ -125,7 +126,11 @@ Units: a piece's value is Σ weight × (substat value ÷ max roll), so one max C
 
 The Farm tab simulates leveled-up 5★ pieces using the game's slot, main stat and substat odds, then scores each against what every active character wears. Characters with several builds are judged by the one they're wearing: its 4pc set first, then how many main stats fit.
 
-- **Free upgrades:** spare +20s that beat a worn piece without breaking a 2pc or 4pc bonus or taking the character below their build's ER minimum. Each spare and each slot is used once. Rows show the ER change, and flag a swap that changes the main stat (EM goblet → Dendro DMG goblet, say): scores compare substats only, so that trade is yours to judge. ★ Priority characters are listed first and get first pick of a spare two people want; within each group, biggest gain first. Everything below assumes you've made these swaps. Tick one once it's equipped and every tab counts it as worn (see [Equips since the export](#using-it)).
+- **Free upgrades:** spare +20s that beat a worn piece without costing the build its set bonuses or taking the character below their build's ER minimum.
+  - A swap may give up a 2pc bonus when what's left still makes one of the build's [2-piece pairs](#configure), or completes one of its 4pc sets. Trading a Gladiator's Finale 2pc for a Celestial Gift 2pc is fine once the build lists ATK + Energy Recharge, and the row says what it trades. A 4pc bonus is never traded away, even one the build doesn't list.
+  - ER is judged by what the swap does to the character's total, against their ER target (see [Energy Recharge](#energy-recharge)). So a piece slightly lower on substats can win by completing an ER 2pc for someone short of their target, and a piece can win by trading ER someone has to spare for better lines.
+
+  Each spare and each slot is used once. Rows show the ER change, and flag a swap that changes the main stat (EM goblet → Dendro DMG goblet, say): scores compare substats only, so that trade is yours to judge. ★ Priority characters are listed first and get first pick of a spare two people want; within each group, biggest gain first. Everything below assumes you've made these swaps. Tick one once it's equipped and every tab counts it as worn (see [Equips since the export](#using-it)).
 
   ![Free upgrades: spare +20s that beat what someone wears, with the main stat and ER changes flagged, under the list of equips made since the export](docs/screenshots/farm.png)
 - **Where to spend resin:** domains ranked by expected gain from 200 resin (10 runs, about 10.7 five-star drops). It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first.
@@ -144,10 +149,14 @@ Resin, Strongbox and Elixir rankings count ★ Priority characters by default. I
 
 ## Energy Recharge
 
-ER isn't worth a fixed amount per roll: short of what a character needs it matters a lot, past it barely at all. So instead of trusting its weight, the Farm and Reroll tabs treat ER as a requirement:
+ER isn't worth a fixed amount per roll: short of what a character needs it matters, past it not at all. So wherever a character's total ER is known, the Farm, Improve and Reroll tabs treat it as a requirement:
 
 - **Total ER** = 100% + ascension stat + weapon substat (and any unconditional refinement bonus) + ER main stats and lines on the equipped artifacts + 20% per active Emblem, Silken Moon's Serenade or Celestial Gift 2pc. The export says which weapon each character holds; the stats come from [Genshin Optimizer](https://github.com/frzyc/genshin-optimizer)'s data. The dev server downloads it from GitHub on first start, trims it into `data/game-data.json` (not committed), and refreshes that file when it's a week old, so new weapons and characters show up without anything to type in. Until the first download succeeds, ER isn't shown or checked.
-- **The minimum** is the low end of the build's ER target in Builds ("110-130%" → 110%). A target without a percentage ("Low") sets no minimum.
+- **The minimum** is the low end of the build's ER target in Builds ("110-130%" → 110%). Nothing takes a character below it: free upgrades hold such a swap back, and rerolls keep the ER line it needs. A target without a percentage ("Low") sets no minimum, and ER keeps its plain weight.
+- **The cap** is the high end of the target ("110-130%" → 130%), or the one number given ("220%+" → 220%). Building toward it is what ER is for, and past it ER is worth nothing.
+- **Free upgrades and Improve's finished pieces** leave ER lines out of the substat values and count the change in the character's total instead: ER up to the cap is worth the build's ER weight per max roll (6.48%), whether it comes from a line, a main stat or a 2pc bonus, and ER lost under the cap costs the same. ER past the cap adds and costs nothing, so a swap can trade spare ER for better lines. Rows show it as "+0.7 for ER toward 220%" or "−0.4 for ER lost under 130%". Pieces still to level keep ER at its weight, since their ER isn't known yet.
+- **Rerolls** count an ER line as worth nothing when the wearer would still be at their cap without it.
+- Triage and the Roster's ratings keep ER at its weight: they judge pieces without knowing who will wear them.
 - Weapon passives, constellations and team buffs aren't counted. A character whose weapon isn't in the export or the data shows no ER and isn't checked.
 
 Assumptions, all in `src/engine/farm.ts`:
