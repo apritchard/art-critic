@@ -18,6 +18,12 @@
   --w-mid: #c9cdd6;
   --w-lo: #8e94a1;
   --w-zero: #5d6372;
+  /* Leveling priority, 0.5 / 1 / 2 / 3+ rolls: kept clear of gold (weights) and green/red (lock changes). */
+  --heat-1: #67cdec;
+  --heat-2: #2f86e8;
+  --heat-3: #8b5cf6;
+  --heat-4: #e649d8;
+  --heat-text: #ffffff;
   color-scheme: dark;
 }
 
@@ -42,6 +48,10 @@
     --w-mid: #3a3f4a;
     --w-lo: #7a808c;
     --w-zero: #b0b4bc;
+    --heat-1: #137aa3;
+    --heat-2: #1f6fd1;
+    --heat-3: #6d3fe0;
+    --heat-4: #c21fb4;
     color-scheme: light;
   }
 }
@@ -434,7 +444,38 @@ kbd {
 
 .inv-cell:disabled {
   cursor: default;
+}
+
+/* Nothing to change about its lock: faded, but a leveling badge and the substats stay readable. */
+.inv-cell.idle > :not(.inv-up):not(.inv-subs) {
   opacity: 0.55;
+}
+
+/* With substats: wider, as tall as they need. */
+.inv-grid.with-subs {
+  --inv-cell: 80px;
+}
+
+.with-subs .inv-cell {
+  height: auto;
+  min-height: 84px;
+}
+
+.inv-subs {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  margin: 3px 0 2px;
+  padding-top: 3px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.inv-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inv-cell.act-lock {
@@ -461,10 +502,79 @@ kbd {
 }
 
 .inv-owner {
-  position: absolute;
-  top: 2px;
-  right: 3px;
+  font-weight: 400;
   color: var(--muted);
+}
+
+/* Worth leveling (the Level up queue), brighter by expected gain: t0 below 0.5 rolls up to t4 at 3+ (PRIORITY_STEPS). */
+.inv-up {
+  padding: 0 3px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.inv-cell .inv-up {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+}
+
+.inv-up.t1 {
+  border-color: var(--heat-1);
+  color: var(--heat-1);
+}
+
+.inv-up.t2 {
+  background: var(--heat-2);
+  color: var(--heat-text);
+}
+
+.inv-up.t3 {
+  background: var(--heat-3);
+  color: var(--heat-text);
+  font-size: 11px;
+}
+
+.inv-up.t4 {
+  background: var(--heat-4);
+  color: var(--heat-text);
+  font-size: 11px;
+  box-shadow: 0 0 8px 1px var(--heat-4);
+}
+
+/* From high priority up, a stripe across the top of the cell too, so it shows from across the grid. */
+.inv-cell.t2 {
+  box-shadow: inset 0 4px 0 var(--heat-2);
+}
+
+.inv-cell.t3 {
+  box-shadow: inset 0 4px 0 var(--heat-3);
+}
+
+.inv-cell.t4 {
+  box-shadow:
+    inset 0 4px 0 var(--heat-4),
+    0 0 10px -2px var(--heat-4);
+}
+
+.inv-up.leveled {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.c-heat {
+  color: var(--heat-2);
+}
+
+.inv-key .inv-up + .inv-up {
+  margin-left: 4px;
 }
 
 .inv-icon {

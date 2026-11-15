@@ -34,7 +34,8 @@ function verdictLabel(ev: Evaluation): string {
   }
 }
 
-const weightClass = (w: number) => (w >= 0.75 ? 'w-hi' : w >= 0.3 ? 'w-mid' : w > 0 ? 'w-lo' : 'w-zero')
+/** Colors a substat by how much the build weighs it. */
+export const weightClass = (w: number) => (w >= 0.75 ? 'w-hi' : w >= 0.3 ? 'w-mid' : w > 0 ? 'w-lo' : 'w-zero')
 
 /** Upgrade rolls that landed on this line, estimated from its growth since the drop. */
 function rollsInto(s: GoodSubstat): number {
