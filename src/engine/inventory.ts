@@ -16,10 +16,10 @@ export const HIGH_PRIORITY_GAIN = PRIORITY_STEPS[1]
 export interface LevelPriority {
   /** The level to stop at next (+4, +8, …). */
   next: number
-  /** Average improvement once finished over what `char` wears now, counting a miss as 0 (see expectedGainOver). */
+  /** Average improvement once finished over the best `char` has (what they wear, or a better finished spare: the candidate's bar), counting a miss as 0 (see expectedGainOver). */
   gain: number
   char: string
-  /** Chance it ends up beating what `char` wears now. */
+  /** Chance it ends up beating that same bar. */
   chance: number
   star: boolean
   /** How many of PRIORITY_STEPS the gain reaches (0–4); 0 when it's only for characters who aren't ★. */

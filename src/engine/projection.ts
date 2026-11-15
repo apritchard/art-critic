@@ -38,6 +38,11 @@ export function lineScore(a: GoodArtifact, weights: Record<string, number>): num
   return allSubs(a).reduce((sum, s) => sum + (weights[s.key] ?? 0), 0)
 }
 
+/** How many of its lines (the hidden 4th of a 3-liner included) the build gives any weight at all. */
+export function usefulLineCount(a: GoodArtifact, weights: Record<string, number>): number {
+  return allSubs(a).filter((s) => (weights[s.key] ?? 0) > 0).length
+}
+
 /**
  * Best possible starting score: the four highest weights. A piece can't roll its main stat as a
  * substat, so pass `main` to leave it out (Nilou's HP% sands tops out at 1.10, her plume at 2.10).

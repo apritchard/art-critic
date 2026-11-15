@@ -465,8 +465,7 @@
             "critDMG_": 1,
             "def_": 0.8,
             "enerRech_": 0.35,
-            "def": 0.3,
-            "eleMas": 0.25
+            "def": 0.3
           },
           "erTarget": "100-120%",
           "notes": ""
@@ -687,8 +686,7 @@
             "critDMG_": 1,
             "def_": 0.8,
             "enerRech_": 0.35,
-            "def": 0.3,
-            "eleMas": 0.25
+            "def": 0.3
           },
           "erTarget": "130%",
           "notes": ""
@@ -903,8 +901,7 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "hp_"
+              "enerRech_"
             ],
             "goblet": [
               "hp_",
@@ -934,7 +931,7 @@
             "critDMG_": 0.15
           },
           "erTarget": "200-250%",
-          "notes": "Burst buff scales on base ATK; artifact ATK is irrelevant"
+          "notes": "Burst buff scales on base ATK; artifact ATK is irrelevant. ER sands only: KQM quick guide 5.7 says an ER sands is usually necessary for support Bennett (160-255% ER); HP% only if substats alone meet it"
         }
       ]
     },
@@ -962,7 +959,6 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "hp_",
               "enerRech_"
             ],
             "goblet": [
@@ -982,7 +978,7 @@
             "critDMG_": 0.15
           },
           "erTarget": "160-180%",
-          "notes": "CRIT Rate circlet with Favonius"
+          "notes": "CRIT Rate circlet with Favonius. ER sands only: 150-280% ER by team (KQM quick guide Luna I: ER (until requirement) first)"
         }
       ]
     },
@@ -1010,25 +1006,26 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "atk_",
               "enerRech_"
             ],
             "goblet": [
               "atk_"
             ],
             "circlet": [
-              "heal_"
+              "heal_",
+              "critRate_"
             ]
           },
-          "substatPreset": "HEAL_ATK",
+          "substatPreset": "custom",
           "substats": {
             "atk_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "atk": 0.4,
-            "critRate_": 0.2
+            "critDMG_": 0.15
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "CRIT Rate circlet with Favonius Codex, the alternative to Prototype Amber (KQM quick guide 4.7: ER ≥ ATK% > CRIT Rate (Favonius) > CRIT DMG). ER sands only: ~150-230% ER by team and weapon (KQM quick guide 4.7, which allows ATK% only when her ER need is low)"
         }
       ]
     },
@@ -1105,7 +1102,8 @@
             ],
             "circlet": [
               "hp_",
-              "heal_"
+              "heal_",
+              "critRate_"
             ]
           },
           "substatPreset": "ER_HP_SUP",
@@ -1117,7 +1115,7 @@
             "critDMG_": 0.15
           },
           "erTarget": "140-180%",
-          "notes": "Overload teams"
+          "notes": "Overload teams. CRIT Rate circlet with Favonius Lance, the go-to weapon with Energy-hungry teammates (KQM quick guide 5.6: ER > HP% (to 40k) > flat HP > CRIT)"
         },
         {
           "name": "Support and Quickswap DPS",
@@ -1153,16 +1151,18 @@
               "critDMG_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
-            "hp_": 1,
+            "critRate_": 1,
+            "critDMG_": 1,
             "enerRech_": 0.8,
-            "hp": 0.4,
-            "critRate_": 0.3,
-            "critDMG_": 0.15
+            "atk_": 0.7,
+            "hp_": 0.4,
+            "atk": 0.3,
+            "hp": 0.15
           },
           "erTarget": "170-200%",
-          "notes": "Overload teams"
+          "notes": "Overload teams. KQM quick guide 5.6: ER > CRIT > ATK% > HP%"
         }
       ]
     },
@@ -1204,8 +1204,7 @@
             "def_": 0.8,
             "atk_": 0.5,
             "enerRech_": 0.35,
-            "def": 0.3,
-            "eleMas": 0.25
+            "def": 0.3
           },
           "erTarget": "100-120%",
           "notes": "Mixed ATK/DEF scaling"
@@ -1566,19 +1565,20 @@
               "hp_"
             ],
             "circlet": [
-              "hp_"
+              "hp_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.8,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "160%+",
-          "notes": "Not researched in depth"
+          "notes": "Favonius Sword is the general best weapon (high ER needs), so CRIT Rate ranks above HP%. CRIT Rate circlet for steadier procs, at the cost of a smaller Attack SPD buff (KQM quick guide 5.7: ER > CRIT Rate (Favonius) > HP% > flat HP). Sets not re-checked"
         }
       ]
     },
@@ -1761,19 +1761,20 @@
             ],
             "circlet": [
               "hp_",
-              "heal_"
+              "heal_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "Favonius Warbow is the default weapon, hence the CRIT Rate circlet (KQM quick guide 7.1: ER > HP% > CRIT Rate (Favonius) > flat HP)"
         }
       ]
     },
@@ -1797,7 +1798,6 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "hp_",
               "enerRech_"
             ],
             "goblet": [
@@ -1808,16 +1808,16 @@
               "heal_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "Favonius Greatsword is one of the most competitive weapons (KQM quick guide 4.0 builds Dori on EM for Hyperbloom: ER > EM > CRIT Rate (Favonius) > HP%). ER sands only: 140-260% ER by team and constellation (KQM quick guide 4.0; EM sands only once ER is covered)"
         }
       ]
     },
@@ -2038,8 +2038,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "atk": 0.3,
-            "enerRech_": 0.3,
-            "eleMas": 0.2
+            "enerRech_": 0.3
           },
           "erTarget": "120%",
           "notes": ""
@@ -2086,7 +2085,6 @@
             "enerRech_": 1,
             "critRate_": 0.4,
             "atk_": 0.3,
-            "hp_": 0.3,
             "eleMas": 0.2
           },
           "erTarget": "250%+ at C0 (~165% at C6)",
@@ -2222,8 +2220,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "atk": 0.3,
-            "enerRech_": 0.3,
-            "eleMas": 0.2
+            "enerRech_": 0.3
           },
           "erTarget": "120%",
           "notes": ""
@@ -2424,8 +2421,7 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "def_"
+              "enerRech_"
             ],
             "goblet": [
               "def_",
@@ -2444,7 +2440,7 @@
             "critRate_": 0.3
           },
           "erTarget": "180%+",
-          "notes": ""
+          "notes": "ER sands only: KQM quick guide (Luna IV) lists only ER sands; up to 220% ER with Favonius Warbow, 250% without, bursting every rotation"
         }
       ]
     },
@@ -2524,19 +2520,20 @@
               "atk_"
             ],
             "circlet": [
-              "atk_"
+              "atk_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_ATK_SUP",
+          "substatPreset": "custom",
           "substats": {
             "enerRech_": 1,
             "atk_": 0.8,
-            "critRate_": 0.4,
+            "critRate_": 0.5,
             "atk": 0.35,
             "critDMG_": 0.2
           },
           "erTarget": "140%+",
-          "notes": "Not researched in depth"
+          "notes": "Favonius Lance is the best 4★; CRIT Rate circlet only for its procs, since her personal damage is negligible (KQM quick guide Luna II: ER > ATK% > CRIT Rate (Favonius)). Sets not re-checked"
         }
       ]
     },
@@ -2611,17 +2608,18 @@
               "eleMas"
             ],
             "circlet": [
-              "eleMas"
+              "eleMas",
+              "critRate_"
             ]
           },
-          "substatPreset": null,
+          "substatPreset": "custom",
           "substats": {
             "eleMas": 1,
             "enerRech_": 0.9,
-            "critRate_": 0.3
+            "critRate_": 0.5
           },
           "erTarget": "Prioritize ER (mobalytics)",
-          "notes": "Silken Moon's needs C2; otherwise 2pc EM + 2pc EM. 800+ EM (GameWith)",
+          "notes": "Silken Moon's needs C2; otherwise 2pc EM + 2pc EM. 800+ EM (GameWith). CRIT Rate circlet with Favonius Lance (KQM quick guide 7.1: ER > EM > CRIT > DEF% > flat DEF)",
           "avoidMainStats": {
             "goblet": [
               "geo_dmg_"
@@ -2814,8 +2812,7 @@
             "critDMG_": 1,
             "def_": 0.8,
             "enerRech_": 0.35,
-            "def": 0.3,
-            "eleMas": 0.25
+            "def": 0.3
           },
           "erTarget": "140%+",
           "notes": ""
@@ -3160,19 +3157,20 @@
               "hp_"
             ],
             "circlet": [
-              "hp_"
+              "hp_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "140%+",
-          "notes": ""
+          "notes": "CRIT Rate circlet with Favonius Sword, the most recommended weapon (KQM quick guide 4.0: ER > HP% > CRIT Rate (Favonius))"
         }
       ]
     },
@@ -3336,19 +3334,21 @@
               "atk_"
             ],
             "circlet": [
-              "atk_"
+              "atk_",
+              "critRate_",
+              "critDMG_"
             ]
           },
-          "substatPreset": "ER_ATK_SUP",
+          "substatPreset": "custom",
           "substats": {
             "enerRech_": 1,
             "atk_": 0.8,
-            "critRate_": 0.4,
-            "atk": 0.35,
-            "critDMG_": 0.2
+            "critRate_": 0.6,
+            "critDMG_": 0.5,
+            "atk": 0.35
           },
           "erTarget": "140%+",
-          "notes": ""
+          "notes": "KQM quick guide 5.3, off-field build: ER > CRIT > ATK% > EM for damage, but ATK% over CRIT for shield strength; ATK% or CRIT circlet"
         }
       ]
     },
@@ -3465,19 +3465,20 @@
               "hp_"
             ],
             "circlet": [
-              "hp_"
+              "hp_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
-            "critDMG_": 0.15
+            "critDMG_": 0.3
           },
           "erTarget": "140%+",
-          "notes": ""
+          "notes": "KQM quick guide 4.6: ER > HP% ≥ CRIT; HP% or CRIT circlet, CRIT when leaning into her damage (4pc Blizzard in Freeze). Favonius Sword is a strong support option"
         }
       ]
     },
@@ -3853,8 +3854,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "eleMas": 0.6,
-            "atk": 0.3,
-            "enerRech_": 0.3
+            "atk": 0.3
           },
           "erTarget": "100%",
           "notes": "Burst uses Fighting Spirit, not Energy"
@@ -3889,19 +3889,20 @@
             ],
             "circlet": [
               "hp_",
-              "heal_"
+              "heal_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.8,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "Favonius Lance is one of the most recommended weapons, so CRIT Rate ranks above HP% (KQM quick guide 4.6: ER > CRIT Rate (Favonius) > HP%). A Healing Bonus circlet heals more than HP%"
         }
       ]
     },
@@ -4020,8 +4021,7 @@
           ],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "atk_"
+              "enerRech_"
             ],
             "goblet": [
               "hydro_dmg_"
@@ -4040,7 +4040,7 @@
             "eleMas": 0.5
           },
           "erTarget": "180%+",
-          "notes": "Hexerei support: 4pc Celestial Gift (Hexerei only) gives the party +20% DMG of her element after her Skill. Noblesse or Emblem if someone else holds it. ER + ATK pair: a Celestial Gift 2pc with an ATK 2pc"
+          "notes": "Hexerei support: 4pc Celestial Gift (Hexerei only) gives the party +20% DMG of her element after her Skill. Noblesse or Emblem if someone else holds it. ER + ATK pair: a Celestial Gift 2pc with an ATK 2pc. ER sands only: support Mona needs ~150-350% ER depending on weapon and Hydro teammates (KQM quick guide 7.1)"
         }
       ]
     },
@@ -4170,8 +4170,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "atk": 0.3,
-            "enerRech_": 0.3,
-            "eleMas": 0.2
+            "enerRech_": 0.3
           },
           "erTarget": "120-140%",
           "notes": ""
@@ -4468,8 +4467,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "atk": 0.3,
-            "enerRech_": 0.3,
-            "eleMas": 0.2
+            "enerRech_": 0.3
           },
           "erTarget": "110%+",
           "notes": ""
@@ -4508,8 +4506,7 @@
             "critDMG_": 1,
             "def_": 0.8,
             "enerRech_": 0.35,
-            "def": 0.3,
-            "eleMas": 0.25
+            "def": 0.3
           },
           "erTarget": "130%+",
           "notes": ""
@@ -4829,8 +4826,7 @@
             "critDMG_": 1,
             "atk_": 0.75,
             "atk": 0.3,
-            "enerRech_": 0.3,
-            "eleMas": 0.2
+            "enerRech_": 0.3
           },
           "erTarget": "120-130%",
           "notes": "Hexerei status per aggregators, unverified"
@@ -5056,7 +5052,6 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "eleMas",
               "enerRech_"
             ],
             "goblet": [
@@ -5077,7 +5072,7 @@
             "atk_": 0.1
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "ER sands only: off-field Burst Sayu needs 200%+ ER bursting every rotation and heavily favors an ER sands (KQM quick guide 4.0)"
         }
       ]
     },
@@ -5166,17 +5161,20 @@
               "atk_"
             ],
             "circlet": [
-              "atk_"
+              "atk_",
+              "critRate_"
             ]
           },
           "substatPreset": "custom",
           "substats": {
             "atk_": 1,
             "enerRech_": 0.8,
-            "atk": 0.25
+            "critRate_": 0.5,
+            "atk": 0.25,
+            "critDMG_": 0.15
           },
-          "erTarget": "220%+",
-          "notes": "GameWith: Rising Winds is the highest-ATK 4pc even without its CRIT upgrade. 2pc ATK + 2pc ATK when someone else holds Noblesse (KQM). ATK + ER pair: a Celestial Gift 2pc with an ATK 2pc toward her 220% ER target"
+          "erTarget": "180-200%",
+          "notes": "GameWith: Rising Winds is the highest-ATK 4pc even without its CRIT upgrade. 2pc ATK + 2pc ATK when someone else holds Noblesse (KQM). ATK + ER pair: a Celestial Gift 2pc with an ATK 2pc toward her ER target. KQM quick guide 5.6: ER > ATK% > CRIT Rate (Favonius) > flat ATK, with an ATK% or CRIT Rate circlet for Favonius Lance procs. Her Burst DoT triggers her own Icy Quills (additive base DMG, so it crits), hence a little CRIT DMG. ER 180-200% in double Cryo, 165-175% with Favonius Lance; triple Cryo needs ~20% less"
         }
       ]
     },
@@ -5424,26 +5422,26 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "hp_",
               "enerRech_"
             ],
             "goblet": [
               "hp_"
             ],
             "circlet": [
-              "hp_"
+              "hp_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "200%+",
-          "notes": ""
+          "notes": "CRIT Rate circlet with Favonius Lance: ~40% CRIT Rate at R3, ~30% at R5 (KQM quick guide 5.0: ER > HP% > CRIT Rate (Favonius) > flat HP). ER sands only: ~210-220% ER at C0-C3, ~170-175% at C4+, 25%+ more as the only Pyro (KQM quick guide 5.0)"
         },
         {
           "name": "Burgeon",
@@ -5660,9 +5658,7 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "atk_",
-              "eleMas"
+              "enerRech_"
             ],
             "goblet": [
               "dendro_dmg_",
@@ -5684,7 +5680,7 @@
             "atk": 0.3
           },
           "erTarget": "180%+",
-          "notes": ""
+          "notes": "ER sands only: 160-300% ER by team and Skill count (KQM quick guide 4.0)"
         }
       ]
     },
@@ -5708,8 +5704,7 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "atk_"
+              "enerRech_"
             ],
             "goblet": [
               "electro_dmg_"
@@ -5723,11 +5718,10 @@
             "enerRech_": 1,
             "critRate_": 0.4,
             "atk_": 0.3,
-            "hp_": 0.3,
             "eleMas": 0.2
           },
           "erTarget": "200%+",
-          "notes": ""
+          "notes": "ER sands only: battery role at 200%+ ER, and the Abundance Amulet Energy their A4 restores scales with ER (no current KQM quick guide found)"
         }
       ]
     },
@@ -5764,8 +5758,7 @@
             "critDMG_": 1,
             "enerRech_": 0.8,
             "atk_": 0.7,
-            "atk": 0.3,
-            "eleMas": 0.25
+            "atk": 0.3
           },
           "erTarget": "140%+",
           "notes": ""
@@ -6169,14 +6162,16 @@
               "heal_"
             ]
           },
-          "substatPreset": null,
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "hp": 0.5,
-            "enerRech_": 0.4
+            "enerRech_": 0.4,
+            "critRate_": 0.3,
+            "critDMG_": 0.3
           },
           "erTarget": "Optional (Burst not core)",
-          "notes": "Pure HP stacker: nothing works below 40k HP; aim 60k, then 65k (Icy Veins, game8). 2pc Tenacity + 2pc Vourukasha when a teammate holds 4pc Tenacity (GenshinBuilds, allthings.how)"
+          "notes": "Pure HP stacker: nothing works below 40k HP; aim 60k, then 65k (Icy Veins, game8). 2pc Tenacity + 2pc Vourukasha when a teammate holds 4pc Tenacity (GenshinBuilds, allthings.how). KQM quick guide 7.1: HP% > (ER > CRIT) > flat HP, ER and CRIT only when she Bursts every rotation. Her C2/C6 CRIT DMG buff is flat, not scaled by her own CRIT"
         }
       ]
     },
@@ -6292,9 +6287,7 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_",
-              "atk_",
-              "eleMas"
+              "enerRech_"
             ],
             "goblet": [
               "pyro_dmg_"
@@ -6314,7 +6307,7 @@
             "atk": 0.3
           },
           "erTarget": "160-200%",
-          "notes": ""
+          "notes": "ER sands only: ~190-310% ER with most weapons, ~175-290% with Favonius (KQM quick guide 4.5, which allows an EM or ATK% sands with an ER weapon once ER is met)"
         }
       ]
     },
@@ -6350,7 +6343,8 @@
             ],
             "circlet": [
               "atk_",
-              "heal_"
+              "heal_",
+              "critRate_"
             ]
           },
           "substatPreset": "ER_ATK_SUP",
@@ -6362,7 +6356,7 @@
             "critDMG_": 0.2
           },
           "erTarget": "160-200%",
-          "notes": ""
+          "notes": "CRIT Rate circlet with Favonius Codex (KQM quick guide 4.7, which otherwise ranks CRIT last: ER > ATK% ≥ flat ATK >> EM > CRIT)"
         }
       ]
     },
@@ -6545,8 +6539,7 @@
             "critDMG_": 1,
             "enerRech_": 0.8,
             "atk_": 0.7,
-            "atk": 0.3,
-            "eleMas": 0.25
+            "atk": 0.3
           },
           "erTarget": "140-160%",
           "notes": "Low priority"
@@ -6682,16 +6675,16 @@
               "hp_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "150%+",
-          "notes": ""
+          "notes": "Favonius Lance is a flexible pick (KQM quick guide 4.0, pure healer: ER > CRIT Rate (Favonius) > HP%)"
         }
       ]
     },
@@ -6857,25 +6850,25 @@
           "sets2": [],
           "mainStats": {
             "sands": [
-              "def_",
               "enerRech_"
             ],
             "goblet": [
               "def_"
             ],
             "circlet": [
-              "def_"
+              "def_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_DEF_SUP",
+          "substatPreset": "custom",
           "substats": {
             "def_": 1,
             "enerRech_": 0.8,
-            "def": 0.4,
-            "critRate_": 0.3
+            "critRate_": 0.5,
+            "def": 0.4
           },
           "erTarget": "160%+",
-          "notes": ""
+          "notes": "KQM quick guide 5.4: ER > CRIT Rate (Favonius) > DEF% > flat DEF. Favonius Lance mostly at R5 (~45% CRIT Rate); CRIT Rate circlet with a low-refinement one. ER sands only: 160-270% ER without Favonius, 135-210% with it (KQM quick guide 5.4: having enough ER is paramount)"
         }
       ]
     },
@@ -6906,19 +6899,20 @@
               "hp_"
             ],
             "circlet": [
-              "hp_"
+              "hp_",
+              "critRate_"
             ]
           },
-          "substatPreset": "ER_HP_SUP",
+          "substatPreset": "custom",
           "substats": {
             "hp_": 1,
             "enerRech_": 0.8,
+            "critRate_": 0.5,
             "hp": 0.4,
-            "critRate_": 0.3,
             "critDMG_": 0.15
           },
           "erTarget": "100%",
-          "notes": "Shield scales on HP alone: 2pc HP + 2pc HP when someone else holds Tenacity (GenshinBuilds)"
+          "notes": "Shield scales on HP alone: 2pc HP + 2pc HP when someone else holds Tenacity (GenshinBuilds). CRIT Rate circlet and substats only with Favonius Lance (KQM quick guide 7.1: HP% > CRIT Rate (Favonius) > flat HP)"
         },
         {
           "name": "Damage support",
@@ -6952,8 +6946,7 @@
             "atk_": 0.75,
             "atk": 0.3,
             "enerRech_": 0.3,
-            "hp_": 0.3,
-            "eleMas": 0.2
+            "hp_": 0.3
           },
           "erTarget": "120%+",
           "notes": ""

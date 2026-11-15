@@ -46,9 +46,12 @@ export function locksWith(outcome: FitOutcome, piece: Piece, settings: Settings)
 
 const NO_SET_EDIT: Pick<BuildFit, 'setIssue' | 'worn'> & { edits: BuildEdit[] } = { edits: [], setIssue: null, worn: null }
 
-/** The pieces that can move one piece's standing with a build: what's worn, its slot's pool, and the off-set lane (every slot). */
-function relevantTo(piece: Piece, pieces: Piece[], settings: Settings): Piece[] {
-  return pieces.filter((p) => p.id === piece.id || p.owner || p.slotKey === piece.slotKey || offSetAllowed(settings.offSet, p))
+/**
+ * The pieces that can move one piece's standing with a build: what's worn (the bars and the worn set), and the other
+ * pieces of its slot (its cap pool and its slot's off-set lane).
+ */
+function relevantTo(piece: Piece, pieces: Piece[]): Piece[] {
+  return pieces.filter((p) => p.id === piece.id || p.owner || p.slotKey === piece.slotKey)
 }
 
 /** A piece the cap ranks above another for a build, with its candidate there. */
@@ -58,10 +61,10 @@ export interface Ahead {
 }
 
 /**
- * The pieces ranked above one the cap cuts from a build, best first: in the build's off-set lane when that's where
- * it was cut (ranked by gain over what the character wears, across every slot), otherwise in its slot. `ref` is the
- * build the piece was judged against: a fit's `cand.ref`, which has the fit's edits made. Null when the cap didn't
- * cut it.
+ * The pieces of its slot ranked above one the cap cuts from a build, best first: the build's other off-set
+ * candidates when the off-set lane cut it (ranked by gain over what the character wears there), otherwise the slot's
+ * pool (by projected value). `ref` is the build the piece was judged against: a fit's `cand.ref`, which has the fit's
+ * edits made. Null when the cap didn't cut it.
  */
 export function piecesAhead(
   piece: Piece,
@@ -70,7 +73,7 @@ export function piecesAhead(
   config: ArtifactConfig,
   settings: Settings,
 ): { lane: 'off-set' | 'slot'; ahead: Ahead[] } | null {
-  const relevant = relevantTo(piece, pieces, settings)
+  const relevant = relevantTo(piece, pieces)
   const { perPiece } = judge(relevant, [ref], config, settings)
   const own = perPiece[relevant.findIndex((p) => p.id === piece.id)]?.[0]
   if (!own || !own.passChance || own.inCap) return null
@@ -78,10 +81,8 @@ export function piecesAhead(
   const ahead: Ahead[] = []
   relevant.forEach((p, i) => {
     const c = perPiece[i][0]
-    if (!c || p.id === piece.id) return
-    if (lane === 'off-set' ? (c.offRank ?? Infinity) < own.offRank! : p.slotKey === piece.slotKey && (c.rank ?? Infinity) < own.rank!) {
-      ahead.push({ piece: p, cand: c })
-    }
+    if (!c || p.id === piece.id || p.slotKey !== piece.slotKey) return
+    if (lane === 'off-set' ? (c.offRank ?? Infinity) < own.offRank! : (c.rank ?? Infinity) < own.rank!) ahead.push({ piece: p, cand: c })
   })
   const place = (a: Ahead) => (lane === 'off-set' ? a.cand.offRank! : a.cand.rank!)
   return { lane, ahead: ahead.sort((a, b) => place(a) - place(b)) }
@@ -145,7 +146,7 @@ export function fitPiece(
 ): BuildFit[] {
   if (piece.rarity !== 5 || !refs.length) return []
   const key = (r: ActiveBuild) => `${r.char}|${r.buildIdx}`
-  const relevant = relevantTo(piece, pieces, settings)
+  const relevant = relevantTo(piece, pieces)
   const at = relevant.findIndex((p) => p.id === piece.id)
   if (at < 0) return []
   const before = new Map((judged ?? judge(relevant, refs, config, settings).perPiece[at]).map((c) => [key(c.ref), c]))
@@ -196,7 +197,7 @@ function nearness(f: BuildFit, settings: Settings): number {
     case 'chance':
       return c.chance
     case 'cut':
-      // Places past the cap: the slot's, or the off-set lane's when it never reached the slot.
+      // Places past the cap: the slot's, or its off-set lane's when it never reached the slot's pool.
       return c.rank !== undefined ? c.ref.cap - c.rank : settings.capOffSet - (c.offRank ?? Infinity)
     case 'substats': {
       const [got, need] = c.rescore ? [c.expected, c.rescore.bar] : [c.lineScore, c.threshold]

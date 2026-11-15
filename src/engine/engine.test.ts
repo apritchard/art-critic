@@ -304,23 +304,45 @@ describe('evaluate', () => {
     expect(bad.reason).toMatch(/Subs too weak/)
   })
 
-  it('applies the cap, ranking +20 spares alongside fresh pieces', () => {
+  it('applies the cap to pieces still to level', () => {
+    const grades = run([art(), art({ lock: false }), art()]).evaluations.map((e) => e.grade)
+    expect(grades.filter((g) => g === 'keep')).toHaveLength(2)
+    const cut = run([art(), art({ lock: false }), art()]).evaluations.find((e) => e.grade === 'marginal')!
+    expect(cut.reason).toBe('Redundant: #3 of the flowers for Diluc, and only the top 2 are kept (Settings → Keep cap)')
+  })
+
+  it('takes finished spares out of the cap, and measures pieces still to level against the best of them', () => {
     const spare = art({
       level: 20,
       totalRolls: 9,
       substats: [
         { key: 'critRate_', value: 10.5 },
-        { key: 'critDMG_', value: 21.8 },
-        { key: 'atk_', value: 9.9 },
+        { key: 'critDMG_', value: 18.7 },
+        { key: 'atk_', value: 5.8 },
         { key: 'hp', value: 299 },
       ],
     })
-    const evs = run([art(), art({ lock: false }), art(), spare]).evaluations
-    expect(evs[3].verdict).toBe('spare')
-    expect(evs[3].best?.rank).toBe(1)
-    const grades = evs.slice(0, 3).map((e) => e.grade)
-    expect(grades.filter((g) => g === 'keep')).toHaveLength(1)
-    expect(grades.filter((g) => g === 'marginal')).toHaveLength(2)
+    // A little below the spare on average, but with every roll still to come it can end up past it.
+    const close = art({
+      substats: [
+        { key: 'critRate_', value: 3.9 },
+        { key: 'critDMG_', value: 7.8 },
+        { key: 'atk_', value: 5.8 },
+        { key: 'def', value: 23 },
+      ],
+    })
+    const [kept, contender, weak] = run([spare, close, art()], { capNormal: 1 }).evaluations
+    // The spare beats what Diluc wears (nothing), so it's kept, without taking the slot's one place.
+    expect(kept.verdict).toBe('spare')
+    expect(kept.best?.rank).toBeUndefined()
+    // So the one place goes to the piece that could still beat the spare.
+    expect(contender.best!.expected).toBeLessThan(kept.best!.expected)
+    expect(contender.best?.spare).toBe(kept.piece.id)
+    expect(contender.best!.chance).toBeGreaterThan(0.2)
+    expect(contender.grade).toBe('keep')
+    // A weak piece is measured against the spare, not against an empty slot.
+    expect(weak.grade).toBe('toss')
+    expect(weak.reason).toMatch(/chance to beat Diluc's best spare \+20 flower, which already beats what they wear$/)
   })
 
   it('drops pieces that cannot beat the equipped one', () => {
@@ -395,6 +417,34 @@ describe('evaluate', () => {
     const ev = run([borderline]).evaluations[0]
     expect(ev.verdict).toBe('stop')
     expect(ev.reason).toMatch(/Rolls fell short/)
+  })
+
+  it('needs two lines the build uses at +0, however low scaling takes the bar', () => {
+    // An EM support's EM goblet: the main stat blocks its best weight, so the 3-line bar scales to about 0.57.
+    const support = build({
+      mainStats: { goblet: ['eleMas'] },
+      substats: { eleMas: 1, enerRech_: 0.6, critRate_: 0.3, critDMG_: 0.15, atk_: 0.1 },
+    })
+    const cfgEM = config({ Diluc: [support] })
+    const goblet = (lines: GoodArtifact['substats']) =>
+      art({ slotKey: 'goblet', mainStatKey: 'eleMas', substats: lines, unactivatedSubstats: [{ key: 'atk', value: 14 }], totalRolls: 3 })
+    const judge = (piece: GoodArtifact, requireTwoLines = true) => {
+      const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts: [piece] }
+      return evaluate(loadPieces(data), owned, cfgEM, { ...defaultSettings(cfgEM), requireTwoLines }, {}).evaluations[0]
+    }
+    // Only ER counts: 0.60 clears the scaled bar, but one line isn't enough.
+    const erOnly = goblet([
+      { key: 'def_', value: 6.6 },
+      { key: 'enerRech_', value: 4.5 },
+      { key: 'hp', value: 299 },
+    ])
+    const thin = judge(erOnly)
+    expect(thin.best!.lineScore).toBeGreaterThanOrEqual(thin.best!.threshold)
+    expect(thin.verdict).toBe('trash')
+    expect(thin.reason).toBe('Too few useful lines: only ER is a stat Diluc uses (needs 2)')
+    expect(judge(erOnly, false).verdict).toBe('level')
+    // ER and CRIT Rate: two lines, so it passes.
+    expect(judge(goblet([{ key: 'def_', value: 6.6 }, { key: 'enerRech_', value: 4.5 }, { key: 'critRate_', value: 3.1 }])).verdict).toBe('level')
   })
 
   it('lets crit circlets bypass the substat gate', () => {
@@ -473,12 +523,24 @@ describe('evaluate', () => {
       expect(reasonFor([{ ...goblet, mainStatKey: 'def_' }]).reason).toBe('No active character uses 4pc Scarlet Proof')
     })
 
-    it('keeps only the best off-set candidates per build, across slots', () => {
-      const evs = run([goblet, circlet]).evaluations
-      expect(evs.filter((e) => e.grade === 'keep')).toHaveLength(1)
-      const cut = evs.find((e) => e.grade === 'marginal')!
-      expect(cut.reason).toMatch(/#2 off-set piece for Diluc \(keeps 1\)/)
-      expect(run([goblet, circlet], { capOffSet: 2 }).evaluations.every((e) => e.grade === 'keep')).toBe(true)
+    it('keeps only the best off-set candidates per build and slot', () => {
+      // A goblet and a circlet don't compete: each is the best off-set candidate in its slot.
+      expect(run([goblet, circlet]).evaluations.every((e) => e.grade === 'keep')).toBe(true)
+      // Two goblets do, by gain over what's worn: only the better one is kept.
+      const betterGoblet = {
+        ...goblet,
+        substats: [
+          { key: 'critRate_', value: 3.9 },
+          { key: 'critDMG_', value: 7.8 },
+          { key: 'atk_', value: 5.8 },
+          { key: 'hp', value: 299 },
+        ],
+      }
+      const [cut, kept] = run([goblet, betterGoblet]).evaluations
+      expect(kept.grade).toBe('keep')
+      expect(cut.grade).toBe('marginal')
+      expect(cut.reason).toBe('Redundant: #2 of the off-set goblets for Diluc, and only the best one is kept (Settings → Off-set pieces)')
+      expect(run([goblet, betterGoblet], { capOffSet: 2 }).evaluations.every((e) => e.grade === 'keep')).toBe(true)
     })
 
     it('can be turned off', () => {

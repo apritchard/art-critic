@@ -182,7 +182,7 @@ describe('closest build', () => {
     expect(kept.fits[0]).toMatchObject({ outcome: 'keep', edits: [] })
     expect(kept.fits[0].cand.setMatch.kind).toBe('off')
 
-    // The lane keeps one off-set piece per build, ranked by gain: the better circlet goes first, whatever its set.
+    // The lane keeps one off-set piece per build and slot, ranked by gain: the better circlet goes first, whatever its set.
     const { ev, fits, pieces, cfg, settings } = setup({ Diluc: [build()] }, [circlet(14), circlet(7.8)])
     expect(ev.grade).toBe('marginal')
     expect(fits[0]).toMatchObject({ outcome: 'cut', edits: [], setIssue: null })

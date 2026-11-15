@@ -11,8 +11,9 @@ import {
   startLines,
   thresholdScale,
   TYPICAL_CEILING,
+  usefulLineCount,
 } from './projection'
-import { characterName, SLOT_LABEL, setName, slotPlural, statShort } from './stats'
+import { characterName, onlyTopKept, SLOT_LABEL, setName, slotPlural, statShort } from './stats'
 import type {
   ArtifactConfig,
   BuildConfig,
@@ -33,6 +34,7 @@ export function defaultSettings(config: ArtifactConfig): Settings {
     critCircletRule: config.scoringDefaults.alwaysLevelCritCircletWithOtherCritSub,
     scaleForMainStat: true,
     scaleLowBuilds: true,
+    requireTwoLines: true,
     setMatch: '4pc-t12',
     commitToWornSet: true,
     offSet: 'rare',
@@ -44,6 +46,13 @@ export function defaultSettings(config: ArtifactConfig): Settings {
     lockMarginal: false,
   }
 }
+
+/** With Settings → requireTwoLines, how many lines a +0 needs that its build uses at all. */
+export const MIN_USEFUL_LINES = 2
+
+/** The +0 gate failed only because too few of the piece's lines are stats the build uses: the weight was enough. */
+export const tooFewLines = (c: Candidate) =>
+  c.gate === 'fail' && !c.rescore && c.lineScore >= c.threshold - 1e-9 && c.usefulLines < MIN_USEFUL_LINES
 
 /**
  * Owned level 80+ characters count by default, and so do unowned ones while planning for them; everything else
@@ -70,6 +79,8 @@ export interface Candidate {
   setMatch: NonNullable<SetMatch>
   /** Config score: sum of weights over the starting lines. */
   lineScore: number
+  /** How many of its lines the build uses at all; at +0 the gate needs MIN_USEFUL_LINES (Settings → requireTwoLines). */
+  usefulLines: number
   /** The 3- or 4-line threshold, scaled to what this build can reach with this main stat. */
   threshold: number
   /** Why the threshold was lowered, e.g. "HP% main" or "few useful stats". */
@@ -79,14 +90,19 @@ export interface Candidate {
   current: number
   expected: number
   gate: 'pass' | 'crit' | 'fail'
-  /** Equipped piece's value for this build; null when the slot holds nothing usable. */
+  /**
+   * What the piece has to beat for this build: what the character wears, or for a piece still to level, their best
+   * finished spare when that's better (`spare`). Null when there's nothing usable, so any piece is an upgrade.
+   */
   bar: number | null
+  /** Id of the finished spare that sets `bar`, when it beats what's worn. */
+  spare?: string
   chance: number
   passChance: boolean
-  /** 1-based rank among this build/slot's surviving candidates (unequipped pieces only). */
+  /** 1-based rank among this build/slot's surviving candidates (unequipped pieces still to level only). */
   rank?: number
   rankOf?: number
-  /** Off-set candidates only: rank by gain among this build's surviving off-set candidates, all slots. */
+  /** Off-set candidates only: rank by gain among this build's surviving off-set candidates in the same slot. */
   offRank?: number
   inCap: boolean
 }
@@ -166,7 +182,9 @@ function describeKeep(c: Candidate, piece: Piece): string {
     const note = c.scaledFor.length ? ` (${c.scaledFor.join(', ')})` : ''
     parts.push(`${weightedLines(piece, c.ref.build)} ${num(c.lineScore)} ≥ ${num(c.threshold)}${note}`)
   }
-  parts.push(c.bar === null ? `no usable ${piece.slotKey} worn` : `${pct(c.chance)} to beat current`)
+  parts.push(
+    c.bar === null ? `no usable ${piece.slotKey} worn` : `${pct(c.chance)} to beat ${c.spare ? 'their best spare +20' : 'current'}`,
+  )
   if (c.rank) parts.push(`#${c.rank} of ${c.rankOf}`)
   return parts.join(' · ')
 }
@@ -224,7 +242,7 @@ export function evaluate(
     characters.push(summary)
   }
 
-  // 2–5. What each character wears, and every piece judged against every active build.
+  // 2–6. What each character wears, and every piece judged against every active build.
   const { perPiece, usable, barFor, setFor } = judge(pieces, activeBuilds, config, settings)
   for (const summary of characters) {
     for (const b of summary.builds) {
@@ -237,7 +255,7 @@ export function evaluate(
     }
   }
 
-  // 6. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
+  // 7. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
   const spares = pieces.filter((p) => !p.owner && p.rarity === 5)
   const gainFor = (ref: ActiveBuild, p: Piece): number | null =>
     mainStatOk(ref.build, p) ? expectedFinal(p, ref.build.substats) - (barFor(ref.char, ref.build, p.slotKey) ?? 0) : null
@@ -373,7 +391,7 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
     return s
   }
 
-  // 3. Judge every piece against every active build it fits.
+  // 3. Judge every piece against every active build it fits: set, main stat and substat gate.
   const perPiece: Candidate[][] = pieces.map((piece) => {
     if (piece.rarity !== 5) return []
     const out: Candidate[] = []
@@ -390,38 +408,73 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
       const score = lineScore(piece, w)
       const expected = expectedFinal(piece, w)
       const rescore = piece.level >= 4 ? { bar: rescoreBar(threshold, lines) } : null
-      const passesGate = rescore ? expected >= rescore.bar - 1e-9 : score >= threshold - 1e-9
+      const useful = usefulLineCount(piece, w)
+      const passesGate = rescore
+        ? expected >= rescore.bar - 1e-9
+        : score >= threshold - 1e-9 && (!settings.requireTwoLines || useful >= MIN_USEFUL_LINES)
       const gate = passesGate ? 'pass' : crit ? 'crit' : 'fail'
-      const bar = piece.owner === ref.char ? null : barFor(ref.char, ref.build, piece.slotKey)
-      const chance = gate === 'fail' ? 0 : chanceToBeat(piece, w, bar)
       out.push({
         ref,
         setMatch,
         lineScore: score,
+        usefulLines: useful,
         threshold,
         scaledFor: why,
         rescore,
         current: currentValue(piece, w),
         expected,
         gate,
-        bar,
-        chance,
-        passChance: gate !== 'fail' && chance >= settings.minUpgradeChance - 1e-9,
+        // Set in step 4, once the finished spares are known.
+        bar: null,
+        chance: 0,
+        passChance: false,
         inCap: false,
       })
     }
     return out
   })
 
-  // 4. Off-set lane: a build holds one off-set piece, so only its best few off-set candidates (by gain over
-  //    what's worn, across all slots) go on to compete with on-set pieces for a slot.
+  // 4. Upgrade chance. A finished piece is judged against what the character wears. A piece still to level is judged
+  //    against the best they have: what they wear, or their best finished spare for the slot when that's better. A
+  //    good spare thins out weak pieces through their odds, rather than by taking a cap place (step 6).
+  const finished = (p: Piece) => p.level >= 20
+  const spares = new Map<string, { value: number; id: string }>()
+  pieces.forEach((piece, i) => {
+    if (piece.owner || !finished(piece)) return
+    for (const cand of perPiece[i]) {
+      if (cand.gate === 'fail') continue
+      const key = `${cand.ref.char}|${cand.ref.buildIdx}|${piece.slotKey}`
+      const best = spares.get(key)
+      if (!best || cand.expected > best.value) spares.set(key, { value: cand.expected, id: piece.id })
+    }
+  })
+  pieces.forEach((piece, i) => {
+    for (const cand of perPiece[i]) {
+      const { ref } = cand
+      let bar = piece.owner === ref.char ? null : barFor(ref.char, ref.build, piece.slotKey)
+      const spare = piece.owner !== ref.char && !finished(piece) ? spares.get(`${ref.char}|${ref.buildIdx}|${piece.slotKey}`) : undefined
+      if (spare && (bar === null || spare.value > bar + 1e-9)) {
+        bar = spare.value
+        cand.spare = spare.id
+      }
+      cand.bar = bar
+      cand.chance = cand.gate === 'fail' ? 0 : chanceToBeat(piece, ref.build.substats, bar)
+      cand.passChance = cand.gate !== 'fail' && cand.chance >= settings.minUpgradeChance - 1e-9
+      // A finished piece takes no cap place: it's kept if it beats what's worn.
+      if (finished(piece) && !piece.owner) cand.inCap = cand.passChance
+    }
+  })
+
+  // 5. Off-set lane: only a build's best few off-set candidates per slot (by gain over its bar) go on to compete with
+  //    on-set pieces for that slot. Ranked within the slot, since which slot ends up holding the off-set piece is
+  //    open: a Physical DMG goblet competes with other goblets, not with a better circlet. Pieces still to level only.
   const gainOver = (c: Candidate) => c.expected - (c.bar ?? 0)
   const offPools = new Map<string, Candidate[]>()
   pieces.forEach((piece, i) => {
-    if (piece.owner) return
+    if (piece.owner || finished(piece)) return
     for (const cand of perPiece[i]) {
       if (cand.setMatch.kind !== 'off' || !cand.passChance) continue
-      const key = `${cand.ref.char}|${cand.ref.buildIdx}`
+      const key = `${cand.ref.char}|${cand.ref.buildIdx}|${piece.slotKey}`
       let pool = offPools.get(key)
       if (!pool) offPools.set(key, (pool = []))
       pool.push(cand)
@@ -432,10 +485,11 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
     pool.forEach((cand, i) => (cand.offRank = i + 1))
   }
 
-  // 5. Cap: per build and slot, keep only the best few unequipped survivors.
+  // 6. Cap: per build and slot, keep only the best few unequipped pieces still to level. Finished pieces take no
+  //    place: they can't roll any further, and the best of them already raised the bar in step 4.
   const pools = new Map<string, { piece: Piece; cand: Candidate }[]>()
   pieces.forEach((piece, i) => {
-    if (piece.owner) return
+    if (piece.owner || finished(piece)) return
     for (const cand of perPiece[i]) {
       if (!cand.passChance) continue
       if (cand.offRank !== undefined && cand.offRank > settings.capOffSet) continue
@@ -508,24 +562,33 @@ function verdictFor(
     reason = describeKeep(best, piece) + (others > 0 ? ` · +${others} more` : '')
   } else if (best?.passChance) {
     grade = 'marginal'
-    const label = piece.level === 20 ? 'Backup' : 'Redundant'
+    // Only pieces still to level reach here: a finished one takes no cap place.
     const who = characterName(best.ref.char)
+    const slots = slotPlural(piece.slotKey)
     reason =
       best.rank === undefined
-        ? `${label}: #${best.offRank} off-set piece for ${who} (keeps ${settings.capOffSet})`
-        : `${label}: #${best.rank} for ${who}'s ${piece.slotKey} (cap ${best.ref.cap})`
+        ? `Redundant: #${best.offRank} of the off-set ${slots} for ${who}, and ${onlyTopKept(settings.capOffSet)} (Settings → Off-set pieces)`
+        : `Redundant: #${best.rank} of the ${slots} for ${who}, and ${onlyTopKept(best.ref.cap)} (Settings → Keep cap)`
   } else if (best && best.gate !== 'fail' && piece.level === 20) {
     // A finished piece that's decent for someone is a backup, not fodder: only feed what fails the gate.
     grade = 'marginal'
     reason = `Backup: doesn't beat ${characterName(best.ref.char)}'s current ${piece.slotKey} (${num(best.expected)} vs ${num(best.bar ?? 0)})`
   } else if (best && best.gate !== 'fail') {
     grade = 'toss'
-    reason = `${pct(best.chance)} chance to beat ${characterName(best.ref.char)}'s current ${piece.slotKey}`
+    reason = best.spare
+      ? `${pct(best.chance)} chance to beat ${characterName(best.ref.char)}'s best spare +20 ${piece.slotKey}, which already beats what they wear`
+      : `${pct(best.chance)} chance to beat ${characterName(best.ref.char)}'s current ${piece.slotKey}`
   } else if (best) {
     grade = 'toss'
+    const who = characterName(best.ref.char)
+    const used = [...piece.substats, ...(piece.unactivatedSubstats ?? [])]
+      .filter((s) => (best.ref.build.substats[s.key] ?? 0) > 0)
+      .map((s) => statShort(s.key))
     reason = best.rescore
-      ? `Rolls fell short: projected ${num(best.expected)} for ${characterName(best.ref.char)} (need ${num(best.rescore.bar)})`
-      : `Subs too weak: best ${num(best.lineScore)} for ${characterName(best.ref.char)} (need ${num(best.threshold)})`
+      ? `Rolls fell short: projected ${num(best.expected)} for ${who} (need ${num(best.rescore.bar)})`
+      : tooFewLines(best)
+        ? `Too few useful lines: only ${used.join(' + ')} is a stat ${who} uses (needs ${MIN_USEFUL_LINES})`
+        : `Subs too weak: best ${num(best.lineScore)} for ${who} (need ${num(best.threshold)})`
   } else {
     grade = 'toss'
     reason = noFitReason(piece, settings, activeBuilds, config, setFor, offStanding)

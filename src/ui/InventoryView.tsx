@@ -49,7 +49,7 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
   const scrolledFor = useRef<string | null>(null)
   useEffect(() => {
     if (!focus || scrolledFor.current === focus.key) return
-    const cell = document.querySelector('.inv-slot.spot')
+    const cell = document.querySelector('.inv-slot.inv-followed')
     if (!cell) return
     scrolledFor.current = focus.key
     cell.scrollIntoView({ block: 'center', inline: 'center' })
@@ -288,7 +288,7 @@ function Cell({
   const subs = [...p.substats.map((s) => formatStat(s.key, s.value)), ...(p.unactivatedSubstats ?? []).map((s) => `${formatStat(s.key, s.value)} (unactivated)`)]
   const levelLine =
     level &&
-    `${leveled ? 'Marked leveled. ' : ''}Level to +${level.next}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${level.star ? ' ★' : ''}, ${Math.round(level.chance * 100)}% to beat what they wear`
+    `${leveled ? 'Marked leveled. ' : ''}Level to +${level.next}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${level.star ? ' ★' : ''}, ${Math.round(level.chance * 100)}% to beat the best they have`
   const title = [
     `${setName(p.setKey)} ${SLOT_LABEL[p.slotKey].toLowerCase()} · ${statLabel(p.mainStatKey)} · +${p.level}${p.lock ? ' · locked' : ''}`,
     ...subs,
@@ -302,7 +302,7 @@ function Cell({
     .filter(Boolean)
     .join(' ')
   return (
-    <div className={spot ? "inv-slot spot" : "inv-slot"}>
+    <div className={spot ? 'inv-slot inv-followed' : 'inv-slot'}>
       <button className={cls} title={title} onClick={() => e.action && toggle(p.id)} disabled={!e.action}>
         {p.lock && <span className="inv-lock">🔒</span>}
         {level && (

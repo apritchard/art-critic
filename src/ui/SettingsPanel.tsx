@@ -84,7 +84,7 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
 
       <Field
         title="Off-set pieces"
-        help="A 4pc build has one free slot, so a piece from any set can earn its place there. It still has to pass the substat and upgrade checks, and each build keeps only its best few off-set candidates across all slots."
+        help="A 4pc build has one free slot, so a piece from any set can earn its place there. It still has to pass the substat and upgrade checks, and each build keeps only its best few off-set candidates in each slot, ranked by gain over what it wears there."
       >
         <div className="seg">
           {(Object.keys(OFF_SET) as OffSetMode[]).map((m) => (
@@ -95,7 +95,7 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
         </div>
         <p className="hint">{OFF_SET[settings.offSet].help}</p>
         {settings.offSet !== 'off' && (
-          <Slider label="Per build" value={settings.capOffSet} min={1} max={5} step={1} onChange={set('capOffSet')} fmt={String} />
+          <Slider label="Per slot" value={settings.capOffSet} min={1} max={5} step={1} onChange={set('capOffSet')} fmt={String} />
         )}
       </Field>
 
@@ -126,6 +126,14 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
           Builds whose four best weights add up to less than a typical CRIT DPS&apos;s 3.05 (single-stat supports like Nilou,
           Kazuha or Xilonen) need the same share of what they can reach. Nilou&apos;s plume bar goes from 1.75 to 1.75 × 2.10
           / 3.05 = 1.20: HP% + EM passes, flat HP + ER + EM doesn&apos;t. Builds at 3.05 or more, like Skirk, are unchanged.
+        </p>
+        <label className="check">
+          <input type="checkbox" checked={settings.requireTwoLines} onChange={(e) => set('requireTwoLines')(e.target.checked)} />{' '}
+          Need at least two useful lines at +0
+        </label>
+        <p className="hint">
+          Scaling can bring the bar low enough for one line to clear it: an EM goblet for an EM support needs only 0.57,
+          and a single ER line (0.60) gets there. With this on, a +0 also needs two lines the build uses at all.
         </p>
       </Field>
 
@@ -165,7 +173,7 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
 
       <button className="ghost" onClick={resetSettings}>
         Reset to config defaults ({config.scoringDefaults.levelThreshold4Line} / {config.scoringDefaults.levelThreshold3Line}, 20%, cap
-        3/5, 1 off-set, stick to worn set)
+        3/5, 1 off-set per slot, stick to worn set)
       </button>
     </div>
   )

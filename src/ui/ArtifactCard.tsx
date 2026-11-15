@@ -1,4 +1,4 @@
-import type { Candidate, Evaluation } from '../engine/evaluate'
+import { tooFewLines, type Candidate, type Evaluation } from '../engine/evaluate'
 import { describeSetMatch } from '../engine/match'
 import { AVG_TIER, characterName, formatStat, MAX_ROLL, SLOT_LABEL, setName, statLabel } from '../engine/stats'
 import type { LevelPriority } from '../engine/inventory'
@@ -106,7 +106,7 @@ export function ArtifactCard({ ev, leveling, priority, focused, done, expanded, 
       </div>
 
       <div className="reason">
-        {ev.reason}
+        <ReasonText ev={ev} />
         {ev.candidates.length > 0 && (
           <button
             className="link"
@@ -142,6 +142,29 @@ export function ArtifactCard({ ev, leveling, priority, focused, done, expanded, 
 
       {expanded && <BuildTable piece={piece} candidates={ev.candidates} />}
     </div>
+  )
+}
+
+/** A link to a build in the Builds tab, with Closest build open for the piece unless it's worn. */
+const buildHref = (c: Candidate, piece: Piece) => buildsHref({ char: c.ref.char, idx: c.ref.buildIdx, piece: piece.owner ? undefined : piece.id })
+
+/**
+ * The verdict's reason, with the character it names linked to the build that decided it (`ev.best`), as the builds
+ * table links every character. The reason is the engine's text, so the name is found in it rather than rebuilt.
+ */
+export function ReasonText({ ev }: { ev: Evaluation }) {
+  const c = ev.best
+  const name = c ? characterName(c.ref.char) : ''
+  const at = name ? ev.reason.indexOf(name) : -1
+  if (!c || at < 0) return <>{ev.reason}</>
+  return (
+    <>
+      {ev.reason.slice(0, at)}
+      <a className="char-link" href={buildHref(c, ev.piece)} onClick={(e) => e.stopPropagation()} title="Open this build in the Builds tab">
+        {name}
+      </a>
+      {ev.reason.slice(at + name.length)}
+    </>
   )
 }
 
@@ -197,7 +220,7 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
       {gain && (
         <span
           className={`inv-up card-gain t${gain.tier}`}
-          title={`Expected gain once finished: +${gain.gain.toFixed(2)} rolls over what ${characterName(gain.char)} wears now, counting a miss as 0 (${pct(gain.chance)} to beat it). The same number as the Inventory's ⬆ badge; "Expected gain" sorts by it.`}
+          title={`Expected gain once finished: +${gain.gain.toFixed(2)} rolls over the best ${characterName(gain.char)} has (what they wear, or a better spare +20), counting a miss as 0 (${pct(gain.chance)} to beat it). The same number as the Inventory's ⬆ badge; "Expected gain" sorts by it.`}
         >
           ⬆ +{gain.gain.toFixed(2)} {characterName(gain.char)}
           {gain.star && ' ★'}
@@ -208,7 +231,13 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
         const title = [
           c.ref.build.name,
           `at +20 ≈ ${c.expected.toFixed(2)}`,
-          worn ? 'already wearing it' : c.bar === null ? 'nothing usable in that slot now' : `now wears ${c.bar.toFixed(2)}`,
+          worn
+            ? 'already wearing it'
+            : c.bar === null
+              ? 'nothing usable in that slot now'
+              : c.spare
+                ? `best spare +20 ${c.bar.toFixed(2)}, better than what they wear`
+                : `now wears ${c.bar.toFixed(2)}`,
           c.rank ? `#${c.rank} of ${c.rankOf} candidates` : '',
         ]
           .filter(Boolean)
@@ -236,7 +265,9 @@ function BuildTable({ piece, candidates }: { piece: Piece; candidates: Candidate
           <th>Set</th>
           <th title="+0: weight of starting lines vs threshold. Later: projected value vs re-score bar.">Gate</th>
           <th title="Expected value at +20, in weighted max-roll units">At +20</th>
-          <th title="Value of what this character wears in the slot, same units">Now wears</th>
+          <th title="What it has to beat, same units: what this character wears in the slot, or their best spare +20 when that's better">
+            To beat
+          </th>
           <th>Beat</th>
           <th>Rank</th>
         </tr>
@@ -245,11 +276,7 @@ function BuildTable({ piece, candidates }: { piece: Piece; candidates: Candidate
         {candidates.slice(0, 12).map((c) => (
           <tr key={`${c.ref.char}|${c.ref.buildIdx}`} className={c.inCap ? 'in' : c.passChance ? 'cut' : 'out'}>
             <td>
-              <a
-                className="char-link"
-                href={buildsHref({ char: c.ref.char, idx: c.ref.buildIdx, piece: piece.owner ? undefined : piece.id })}
-                title="Open this build in the Builds tab"
-              >
+              <a className="char-link" href={buildHref(c, piece)} title="Open this build in the Builds tab">
                 {characterName(c.ref.char)}
               </a>
               {c.ref.priority === 'priority' && ' ★'}
@@ -265,12 +292,12 @@ function BuildTable({ piece, candidates }: { piece: Piece; candidates: Candidate
                 ? 'crit circlet'
                 : c.rescore
                   ? `${c.expected.toFixed(2)} / ${c.rescore.bar.toFixed(2)}`
-                  : `${c.lineScore.toFixed(2)} / ${c.threshold.toFixed(2)}`}
+                  : `${c.lineScore.toFixed(2)} / ${c.threshold.toFixed(2)}${tooFewLines(c) ? ` · ${c.usefulLines} useful line` : ''}`}
             </td>
             <td>{c.expected.toFixed(2)}</td>
-            <td>{c.bar === null ? 'nothing usable' : c.bar.toFixed(2)}</td>
+            <td>{c.bar === null ? 'nothing usable' : c.spare ? `${c.bar.toFixed(2)} (spare +20)` : c.bar.toFixed(2)}</td>
             <td className={c.gate !== 'fail' && !c.passChance ? 'bad' : ''}>{c.gate === 'fail' ? '–' : pct(c.chance)}</td>
-            <td>{c.rank ? `#${c.rank}/${c.rankOf} (cap ${c.ref.cap})` : '–'}</td>
+            <td>{c.rank ? `#${c.rank}/${c.rankOf}, ${c.ref.cap >= 99 ? 'all' : `top ${c.ref.cap}`} kept` : '–'}</td>
           </tr>
         ))}
       </tbody>

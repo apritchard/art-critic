@@ -18,6 +18,7 @@ import {
   type Swap,
   type ToLevel,
 } from '../engine/farm'
+import { CRAFT_INPUTS, FEED_EXP, planFeedOrBox, type FeedOrBox } from '../engine/fodder'
 import { applyEquips, type Piece } from '../engine/load'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
 import { SLOTS, type SlotKey } from '../engine/types'
@@ -50,11 +51,15 @@ const shortSubs = (p: Piece) =>
   p.substats.map((s) => `${statShort(s.key)} ${isPercent(s.key) ? s.value.toFixed(1) : Math.round(s.value)}`).join(' · ')
 
 export function FarmPage({ result }: { result: EvaluationResult }) {
-  const { pieces, config, domains, er, strongboxSets, done, toggleDone, equip } = useStore()
+  const { pieces, config, domains, er, strongboxSets, done, toggleDone, equip, data, settings } = useStore()
   const [scope, setScope] = useLocal<FarmScope>('farm:scope', 'priority')
   const plan = useMemo(
     () => planFarming(result, pieces, config, domains, scope, er, strongboxSets),
     [result, pieces, config, domains, scope, er, strongboxSets],
+  )
+  const feedOrBox = useMemo(
+    () => planFeedOrBox(result, plan, data.materials, settings.minUpgradeChance),
+    [result, plan, data.materials, settings.minUpgradeChance],
   )
   const worn: WornAt = useMemo(
     () => new Map(pieces.filter((p) => p.owner).map((p) => [`${p.owner}|${p.slotKey}`, p])),
@@ -138,6 +143,13 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
       </Section>
 
       <Section
+        title="Feed or box"
+        note={`Whether the +0 pieces marked to unlock do more as EXP for the Level up queue or as Strongbox input, for ${scopeLabel}. A crafted piece has to be leveled too, so both are compared by expected gain per EXP, counting a craft's ${CRAFT_INPUTS} pieces as the EXP they'd give. Pieces past +0 marked to unlock are always fed: they carry the EXP spent on them.`}
+      >
+        <FeedOrBoxPanel f={feedOrBox} />
+      </Section>
+
+      <Section
         title="Strongbox"
         note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%). "Level first" flags pieces of the set you already have to level for those characters.`}
       >
@@ -168,6 +180,93 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
       >
         <Beneficiaries rows={plan.characters} domainOf={domainOf} />
       </Section>
+    </div>
+  )
+}
+
+/** EXP as "9.2M", "186k" or "940". */
+const expText = (x: number) => (x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : x >= 1e3 ? `${Math.round(x / 1e3)}k` : `${Math.round(x)}`)
+/** Gain per EXP, in rolls per 100k EXP. */
+const per100k = (rate: number) => (rate * 1e5).toFixed(2)
+/** The bar runs to 2^BAR_SPAN (8×) each way. */
+const BAR_SPAN = 3
+
+/** Where the +0 tosses do more, as a marker between feeding and boxing, and how many of each. */
+function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
+  if (!f.tosses) return <p className="sub-note">No +0 pieces are marked to unlock, so there&apos;s nothing to feed or box.</p>
+  const times = (r: number) => (r >= 10 ? `${Math.round(r)}` : r.toFixed(1))
+  const { ratio } = f
+  const lean = ratio === null ? 0 : Math.min(BAR_SPAN, Math.max(-BAR_SPAN, Math.log2(Math.max(ratio, 2 ** -BAR_SPAN))))
+  const pos = 50 + (lean / BAR_SPAN) * 50
+  const label =
+    ratio === null
+      ? 'even'
+      : ratio === Infinity
+        ? 'box: EXP to spare'
+        : ratio === 0
+          ? 'feed'
+          : ratio >= 1
+            ? `${times(ratio)}× box`
+            : `${times(1 / ratio)}× feed`
+  const align = pos < 12 ? 'start' : pos > 88 ? 'end' : ''
+  const title = [
+    f.bestCraft
+      ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)} rolls per 100k EXP (its ${CRAFT_INPUTS} pieces count as the ${expText(CRAFT_INPUTS * FEED_EXP)} EXP they'd give, and leveling what comes out takes ${expText(f.bestCraft.levelExp)} on average, since most are dropped at +0 or +4).`
+      : 'No Strongbox craft would gain anything.',
+    f.price > 0
+      ? `The best use your EXP can't pay for: ${per100k(f.price)} rolls per 100k EXP.`
+      : 'Your EXP covers everything worth leveling.',
+  ].join(' ')
+  const crafts = f.box / CRAFT_INPUTS
+  const sets = f.crafts.map((c) => `${c.count} ${setName(c.set)}`).join(', ')
+  return (
+    <div className="feedbox">
+      <div className="feedbox-bar" title={title} role="img" aria-label={`Feed or box: ${label}`}>
+        <span className="feedbox-mid" />
+        <span className={`feedbox-label ${align}`} style={{ left: `${pos}%` }}>
+          {label}
+        </span>
+        <span className="feedbox-marker" style={{ left: `${pos}%` }} />
+      </div>
+      <div className="feedbox-scale">
+        <span>Feed: 8×</span>
+        <span>even</span>
+        <span>Box: 8×</span>
+      </div>
+      <p className="feedbox-advice">
+        {f.box ? (
+          <>
+            Box <b>{f.box.toLocaleString()}</b> of the {f.tosses.toLocaleString()} ({crafts} craft{crafts === 1 ? '' : 's'}: {sets})
+            {f.feed > 0 && (
+              <>
+                , then feed the other <b>{f.feed.toLocaleString()}</b>
+              </>
+            )}
+            .{' '}
+            {f.feed >= CRAFT_INPUTS &&
+              (f.price > 0
+                ? 'Past that, a craft gains less than the EXP it would take from the Level up queue.'
+                : 'Past that, more crafts would add almost nothing.')}
+          </>
+        ) : (
+          <>
+            Feed all <b>{f.tosses.toLocaleString()}</b>:{' '}
+            {f.bestCraft
+              ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the Level up queue.`
+              : 'no Strongbox craft would gain anything.'}
+          </>
+        )}
+      </p>
+      <p className="sub-note">
+        EXP on hand: {f.materials === null ? 'materials aren’t in this export, so they’re not counted' : `${expText(f.materials)} in materials`},{' '}
+        {expText(f.leveled.exp)} from {f.leveled.count} leveled piece{f.leveled.count === 1 ? '' : 's'} marked to unlock, and{' '}
+        {expText(f.tosses * FEED_EXP)} if every +0 is fed.
+        {f.committed > 0 && ` Finishing equipped pieces takes ${expText(f.committed)} of it first.`} The Level up queue&apos;s{' '}
+        {f.queue.count} pieces would take about {expText(f.queue.exp)} to play out
+        {f.queue.funded < f.queue.count
+          ? `; this split pays for the ${f.queue.funded} that gain most per EXP (${expText(f.queue.fundedExp)}).`
+          : `, and this split pays for all of them${f.left >= 1000 ? `, with ${expText(f.left)} to spare` : ''}.`}
+      </p>
     </div>
   )
 }

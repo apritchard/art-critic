@@ -95,6 +95,10 @@ export interface SimPiece {
   main: string
   keys: string[]
   units: number[]
+  /** Each line's roll value at +0, a 3-liner's 4th line (added at +4) included. */
+  start: number[]
+  /** Lines it dropped with. */
+  lines: 3 | 4
 }
 
 function mulberry32(seed: number): () => number {
@@ -137,6 +141,7 @@ export function simulatePieces({ n, seed, fourLine, slot, main, chosen = [], gua
       pool = pool.filter(([x]) => x !== k)
     }
     const units = keys.map(tier)
+    const start = [...units]
     // A 3-liner's first upgrade only adds its 4th line, so it gets 4 upgrades instead of 5.
     const hits = Array.from({ length: rnd() < fourLine ? 5 : 4 }, () => Math.floor(rnd() * 4))
     let short = chosen.length ? guaranteed - hits.filter((h) => h < chosen.length).length : 0
@@ -146,7 +151,7 @@ export function simulatePieces({ n, seed, fourLine, slot, main, chosen = [], gua
       short--
     }
     for (const h of hits) units[h] += tier()
-    out.push({ slot: s, main: m, keys, units })
+    out.push({ slot: s, main: m, keys, units, start, lines: hits.length === 5 ? 4 : 3 })
   }
   return out
 }

@@ -37,6 +37,7 @@ describe.skipIf(!exportFile)('real export', () => {
       setMatch: 'config' as const,
       scaleForMainStat: false,
       scaleLowBuilds: false,
+      requireTwoLines: false,
       commitToWornSet: false,
       offSet: 'off' as const,
       minUpgradeChance: 0,
@@ -50,9 +51,13 @@ describe.skipIf(!exportFile)('real export', () => {
     // Kokomi's EM bloom-healer build adds 9 more, Nilou's C6 hybrid build 2 more, and Dehya's C6 burst build 1 more
     // (1,213). On 2026-11-15 the config dropped 2pc pairs from every build not commonly run 2pc + 2pc, so far fewer
     // off-set pieces match a pair's category (878). Mona's Hexerei support and Shenhe's Celestial Gift edits, with their
-    // ATK + ER pairs, add 25 more (903).
+    // ATK + ER pairs, add 25 more (903). Dropping weights kits can't use (EM on Physical and Geo DPS, HP% on Faruzan
+    // and Electro Traveler, ER on Mavuika) takes off 4 (899). CRIT Rate for Favonius on supports (CRIT Rate circlets
+    // and higher CRIT weights per KQM, Chevreuse's quickswap build on CRIT weights) adds 5 more (904). ER-only sands
+    // for supports whose ER needs make one effectively mandatory (Xiangling, Bennett, Mona and nine others) takes off 6
+    // (898).
     if (exportFile === PROTOTYPE_EXPORT) {
-      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(903)
+      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(898)
     }
     const unequippedPassing = plusZero.filter((e) => !e.piece.owner && e.candidates.some((c) => c.passChance))
     expect(plusZero.filter((e) => e.grade === 'keep').length).toBe(unequippedPassing.length)

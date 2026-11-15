@@ -1,14 +1,14 @@
 import { Fragment, useDeferredValue, useMemo, type ReactNode } from 'react'
 import { applyEdits, type BuildEdit } from '../engine/builds'
-import { defaultRosterEntry, type ActiveBuild, type Evaluation, type EvaluationResult } from '../engine/evaluate'
+import { defaultRosterEntry, MIN_USEFUL_LINES, tooFewLines, type ActiveBuild, type Evaluation, type EvaluationResult } from '../engine/evaluate'
 import { fitPiece, locksWith, piecesAhead, type Ahead, type BuildFit } from '../engine/fit'
 import type { Piece } from '../engine/load'
-import { describeSetMatch } from '../engine/match'
+import { describeSetMatch, offSetAllowed } from '../engine/match'
 import { allSubs } from '../engine/projection'
-import { characterName, formatStat, SLOT_LABEL, setName, slotPlural, statLabel, statShort } from '../engine/stats'
+import { characterName, formatStat, onlyTopKept, SLOT_LABEL, setName, slotPlural, statLabel, statShort } from '../engine/stats'
 import type { BuildConfig, Settings } from '../engine/types'
 import { useStore } from '../state/store'
-import { SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
+import { ReasonText, SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
 import { useLocal } from './local'
 import { buildsHref, inventoryHref } from './routes'
 
@@ -48,7 +48,7 @@ const gateOf = (f: BuildFit) =>
     ? { what: 'Projected +20 value', got: f.cand.expected, need: f.cand.rescore.bar }
     : { what: 'Weight of its lines', got: f.cand.lineScore, need: f.cand.threshold }
 
-/** "keeps it · 1 edit", "#4 for their sands, keeps 3": one fit in a few words. */
+/** "keeps it · 1 edit", "#4 for their sands, top 3 kept": one fit in a few words. */
 function outcomeText(f: BuildFit, piece: Piece, settings: Settings): string {
   const c = f.cand
   const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
@@ -57,10 +57,10 @@ function outcomeText(f: BuildFit, piece: Piece, settings: Settings): string {
       ? 'keeps it'
       : f.outcome === 'cut'
         ? c.rank !== undefined
-          ? `#${c.rank} for their ${slot}, keeps ${c.ref.cap}`
-          : `#${c.offRank} off-set pick, keeps ${settings.capOffSet}`
+          ? `#${c.rank} for their ${slot}, top ${c.ref.cap} kept`
+          : `#${c.offRank} off-set ${slot}, top ${settings.capOffSet} kept`
         : f.outcome === 'chance'
-          ? `${pct(c.chance)} to beat what they wear`
+          ? `${pct(c.chance)} to beat ${c.spare ? 'their best spare' : 'what they wear'}`
           : `substats ${n2(gateOf(f).got)} of ${n2(gateOf(f).need)}`
   return f.edits.length ? `${what} · ${plural(f.edits.length, 'edit')}` : what
 }
@@ -168,7 +168,9 @@ export function FitPanel({ fitting, char, idx, build, save, onPick }: Props) {
         ) : (
           <span className="muted">{ev.recommendLock ? 'stays locked' : 'stays unlocked'}</span>
         )}
-        <span className="reason">{ev.reason}</span>
+        <span className="reason">
+          <ReasonText ev={ev} />
+        </span>
       </div>
 
       {piece.owner ? (
@@ -240,6 +242,8 @@ interface Layer {
   ok: boolean | null
   text: ReactNode
   fix?: { label: string; edits: BuildEdit[] }
+  /** A line under the row, when a setting rather than the build is what the row hinges on. */
+  note?: string
 }
 
 /** The build on screen, layer by layer, with buttons for the edits that fit the piece's set and main stat. */
@@ -256,6 +260,8 @@ function Layers(props: {
   const { fit: f, piece, build, save, settings, who, inactive, byId } = props
   const { pieces, config } = useStore()
   const c = f.cand
+  // The finished spare it's measured against, when that beats what's worn.
+  const spare = c.spare ? byId.get(c.spare) : undefined
   const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
   const set = setName(piece.setKey)
   const rows: Layer[] = []
@@ -288,7 +294,14 @@ function Layers(props: {
     const label = setEdits
       .map((e) => (e.set !== piece.setKey ? `${setName(e.set)} to tier ${e.to}` : e.from === null ? `add at tier ${e.to}` : `make it tier ${e.to}`))
       .join(', ')
-    rows.push({ label: 'Set', ok: false, text: why, fix: { label: label[0].toUpperCase() + label.slice(1), edits: setEdits } })
+    // The set only needs listing because the Off-set setting keeps this piece out of the build's free slot.
+    const what = piece.slotKey === 'flower' || piece.slotKey === 'plume' ? `A ${slot}` : `A ${statShort(piece.mainStatKey)} ${slot}`
+    const note = offSetAllowed(settings.offSet, piece)
+      ? undefined
+      : settings.offSet === 'off'
+        ? 'Off-set pieces are switched off (Settings → Off-set pieces → Off). With Any slot, it could fill the free slot without listing its set.'
+        : `${what} can't be its off-set piece with Settings → Off-set pieces on Rare main stats. With Any slot, it could fill the free slot without listing its set.`
+    rows.push({ label: 'Set', ok: false, text: why, fix: { label: label[0].toUpperCase() + label.slice(1), edits: setEdits }, note })
   }
 
   const mainEdits = f.edits.filter((e) => e.kind === 'main')
@@ -308,11 +321,17 @@ function Layers(props: {
       ? { label: 'Substats', ok: true, text: 'CRIT circlet with the other CRIT stat, which always passes' }
       : c.gate === 'pass'
         ? { label: 'Substats', ok: true, text: `${gate.what} ${n2(gate.got)} ≥ ${n2(gate.need)}${scaled}` }
-        : {
-            label: 'Substats',
-            ok: false,
-            text: `${gate.what} ${n2(gate.got)}, needs ${n2(gate.need)}${scaled}. Its lines weigh ${lines}: raise the weights below to keep pieces like it.`,
-          },
+        : tooFewLines(c)
+          ? {
+              label: 'Substats',
+              ok: false,
+              text: `${gate.what} ${n2(gate.got)} ≥ ${n2(gate.need)}${scaled}, but only ${c.usefulLines} of its lines ${c.usefulLines === 1 ? 'is a stat' : 'are stats'} this build uses, and a +0 needs ${MIN_USEFUL_LINES} (Settings → Substat thresholds). Its lines weigh ${lines}.`,
+            }
+          : {
+              label: 'Substats',
+              ok: false,
+              text: `${gate.what} ${n2(gate.got)}, needs ${n2(gate.need)}${scaled}. Its lines weigh ${lines}: raise the weights below to keep pieces like it.`,
+            },
   )
 
   rows.push(
@@ -322,25 +341,39 @@ function Layers(props: {
           label: 'Upgrade',
           ok: c.passChance,
           text:
-            c.bar === null
-              ? `Nothing usable worn in the ${slot}, so anything is an upgrade`
-              : `${pct(c.chance)} to beat what they wear (${n2(c.bar)} now, ${n2(c.expected)} expected at +20)${c.passChance ? '' : `; needs ${pct(settings.minUpgradeChance)}`}`,
+            c.bar === null ? (
+              `Nothing usable worn in the ${slot}, so anything is an upgrade`
+            ) : spare ? (
+              <>
+                {pct(c.chance)} to beat their best spare,{' '}
+                <a href={inventoryHref(spare.piece.id)} title="Show it in the Inventory grid">
+                  {setName(spare.piece.setKey)} {slot} +{spare.piece.level}
+                </a>{' '}
+                ({n2(c.bar)}), which already beats what they wear, so it&apos;s ready to equip. This one is {n2(c.expected)}{' '}
+                expected at +20{c.passChance ? '.' : `; it needs ${pct(settings.minUpgradeChance)}.`}
+              </>
+            ) : (
+              `${pct(c.chance)} to beat what they wear (${n2(c.bar)} now, ${n2(c.expected)} expected at +20)${c.passChance ? '' : `; needs ${pct(settings.minUpgradeChance)}`}`
+            ),
         },
   )
 
   rows.push(
     !c.passChance
       ? { label: 'Cap', ok: null, text: 'Not ranked until it passes the rest' }
-      : c.rank === undefined
+      : piece.level >= 20
+        ? // judge() gives finished pieces no rank in either pool: inCap is just passChance.
+          { label: 'Cap', ok: true, text: "Finished +20s take no place, since they can't roll any further: one that beats what they wear is kept as a spare" }
+        : c.rank === undefined
         ? {
             label: 'Cap',
             ok: false,
-            text: `#${c.offRank} of its off-set candidates, which rank by gain over what they wear (+${n2(c.expected - (c.bar ?? 0))} for this one), and it keeps ${settings.capOffSet} (Settings → Off-set pieces)`,
+            text: `#${c.offRank} of its off-set ${slotPlural(piece.slotKey)}, which rank by gain over what they wear (+${n2(c.expected - (c.bar ?? 0))} for this one), and ${onlyTopKept(settings.capOffSet)} (Settings → Off-set pieces → Per slot)`,
           }
         : {
             label: 'Cap',
             ok: c.inCap,
-            text: `#${c.rank} of ${c.rankOf} for their ${slot}, and it keeps ${c.ref.cap}${!c.inCap && c.ref.priority !== 'priority' ? ` (${settings.capPriority} as ★ Priority)` : ''}`,
+            text: `#${c.rank} of ${c.rankOf} for their ${slot}, and ${onlyTopKept(c.ref.cap)}${!c.inCap && c.ref.priority !== 'priority' ? ` (${settings.capPriority} as ★ Priority)` : ''}`,
           },
   )
 
@@ -350,9 +383,9 @@ function Layers(props: {
     cut: !cut
       ? 'it passes, but the cap cuts it'
       : cut.lane === 'off-set'
-        ? `it passes, but ${plural(ahead, 'other off-set candidate')} would gain them more`
+        ? `it passes, but ${ahead} other off-set ${ahead === 1 ? slot : slotPlural(piece.slotKey)} would gain them more`
         : `it passes, but ${ahead} other ${ahead === 1 ? slot : slotPlural(piece.slotKey)} rank above it`,
-    chance: "it isn't likely enough to beat what they wear",
+    chance: `it isn't likely enough to beat ${c.spare ? 'their best spare +20' : 'what they wear'}`,
     substats: 'its substats fall short',
   }[f.outcome]
   const backup = f.outcome !== 'keep' && locksWith(f.outcome, piece, settings) ? ', so it stays locked as a backup' : ''
@@ -376,6 +409,7 @@ function Layers(props: {
                   {r.fix.label}
                 </button>
               )}
+              {r.note && <span className="sub-note fit-note">{r.note}</span>}
             </span>
           </div>
         ))}
@@ -398,35 +432,27 @@ function Layers(props: {
 const AHEAD_SHOWN = 6
 
 /**
- * The pieces the cap ranks above this one for the build. Unfinished ones link to the Inventory grid, since leveling
- * them settles whether they really belong ahead: one that rolls badly drops back, and this piece moves up.
+ * The pieces the cap ranks above this one for the build, in rank order, each a link to the Inventory grid. They're all
+ * still to level (finished pieces take no cap place; the best of them is the bar instead), so they're worth leveling
+ * first: one that rolls badly drops back, and this piece moves up.
  */
 function RankedAhead({ cut, byId }: { cut: NonNullable<ReturnType<typeof piecesAhead>>; byId: Map<string, Evaluation> }) {
   const offSet = cut.lane === 'off-set'
-  const unfinished = cut.ahead.filter((a) => a.piece.level < 20)
-  const finished = cut.ahead.length - unfinished.length
   return (
     <div className="fit-ahead">
-      {unfinished.length > 0 && (
-        <>
-          <p className="hint">
-            Ranked above it and not finished yet: level these first, and if they roll badly it moves up. Each opens
-            in the Inventory grid, outlined, so you can find it in-game.
-          </p>
-          <div className="fit-list">
-            {unfinished.slice(0, AHEAD_SHOWN).map((a) => (
-              <AheadLink key={a.piece.id} a={a} offSet={offSet} ev={byId.get(a.piece.id)} />
-            ))}
-            {unfinished.length > AHEAD_SHOWN && <span className="muted">+{unfinished.length - AHEAD_SHOWN} more</span>}
-          </div>
-        </>
-      )}
-      {finished > 0 && (
-        <p className="hint">
-          {plural(finished, 'finished +20')} rank{finished === 1 ? 's' : ''} above it
-          {unfinished.length ? '.' : ': it only moves up once one of them is equipped or fed, or the cap is raised.'}
-        </p>
-      )}
+      <p className="hint">
+        Ranked above it, still to level:{' '}
+        {cut.ahead.length === 1
+          ? 'level it first. If it rolls badly, it drops back and this piece moves up.'
+          : 'level them first. Each one that rolls badly drops back, and this piece moves up.'}{' '}
+        Each opens in the Inventory grid, outlined.
+      </p>
+      <div className="fit-list">
+        {cut.ahead.slice(0, AHEAD_SHOWN).map((a) => (
+          <AheadLink key={a.piece.id} a={a} offSet={offSet} ev={byId.get(a.piece.id)} />
+        ))}
+        {cut.ahead.length > AHEAD_SHOWN && <span className="muted">+{cut.ahead.length - AHEAD_SHOWN} more</span>}
+      </div>
     </div>
   )
 }
@@ -434,10 +460,10 @@ function RankedAhead({ cut, byId }: { cut: NonNullable<ReturnType<typeof piecesA
 function AheadLink({ a, offSet, ev }: { a: Ahead; offSet: boolean; ev?: Evaluation }) {
   const p = a.piece
   const place = offSet ? a.cand.offRank : a.cand.rank
-  // The off-set lane ranks by gain over what's worn (in any slot); a slot's cap by projected value.
+  // A slot's off-set lane ranks by gain over its bar; its cap by projected value.
   const worth = offSet ? `+${n2(a.cand.expected - (a.cand.bar ?? 0))} gain` : `${n2(a.cand.expected)} at +20`
   return (
-    <a className="fit-row" href={inventoryHref(p.id)} title={`Show it in the Inventory grid${ev ? `. ${verdictLabel(ev)}: ${ev.reason}` : ""}`}>
+    <a className="fit-row" href={inventoryHref(p.id)} title={`Show it in the Inventory grid${ev ? `. ${verdictLabel(ev)}: ${ev.reason}` : ''}`}>
       <span className="fit-who">
         #{place} {SLOT_ICON[p.slotKey]} {statShort(p.mainStatKey)} +{p.level} <small>{setName(p.setKey)}</small>
       </span>

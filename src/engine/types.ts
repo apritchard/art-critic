@@ -48,6 +48,8 @@ export interface GoodExport {
   characters: GoodCharacter[]
   artifacts: GoodArtifact[]
   weapons?: GoodWeapon[]
+  /** Item counts by key ("SanctifyingUnction": 473). Irminsul writes them; GOOD lets a scanner leave them out. */
+  materials?: Record<string, number>
 }
 
 // genshin_artifact_config.json
@@ -123,11 +125,13 @@ export interface Settings {
   scaleForMainStat: boolean
   /** Judge builds with few useful stats (best four weights under a typical build's) by the share of their own best. */
   scaleLowBuilds: boolean
+  /** At +0, a piece also needs at least two lines the build uses (any weight), whatever the scaled bar. */
+  requireTwoLines: boolean
   setMatch: SetMatchMode
   /** Once a build's character wears one of its 4pc sets, other sets count only if ranked a better tier. */
   commitToWornSet: boolean
   offSet: OffSetMode
-  /** Off-set candidates kept per character build, across all slots. */
+  /** Off-set candidates kept per character build and slot. */
   capOffSet: number
   /** 0-1; a candidate must have at least this chance of beating the equipped piece. */
   minUpgradeChance: number
