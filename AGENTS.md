@@ -45,6 +45,7 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
   - **`projection.ts`** is the roll maths: remaining rolls, exact final-value distributions on a 0.05 grid, `chanceToBeat`, and threshold scaling (`lineCeiling`, `thresholdScale`).
   - **`er.ts`** totals Energy Recharge from ascension, weapon, artifacts and 2pc bonuses. A build's `erTarget` gives a minimum (`erNeed`, the low end) and a cap (`erCap`, the high end, or the one number). Free swaps and rerolls won't take a character below the minimum. Where the total and target are known, free swaps and Improve's finished pieces value pieces with `withoutER` weights plus `erChangeValue`: the change in the total, at the build's ER weight up to the cap and 0 past it. Don't also count ER lines by weight there, or ER is counted twice. Rerolls drop the ER weight only when the line is all spare (`rerollTerms`). Triage and Roster ratings keep the plain weight.
 - **`src/ui/`** holds one view per tab. `App.tsx` routes by URL hash, as `#tab` or `#tab/arg` (for example `#improve/Columbina`).
+- **`src/engine/inventory.ts`** `inventoryOrder` is the game's inventory order, which the Inventory tab mirrors cell for cell. It was inferred from in-game screenshots of one set against an export, matching the order on export order (`idx`) and the export's lock states. Check any change against a real screenshot.
 
 ## Easy to get wrong
 

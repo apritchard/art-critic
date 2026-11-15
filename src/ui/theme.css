@@ -384,6 +384,120 @@ kbd {
   color: var(--muted);
 }
 
+/* Inventory: one set in the game's order, as a grid as wide as the game's */
+
+.inventory-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.inventory-pane > .hint,
+.inventory-pane > .sub-note {
+  padding: 0 16px;
+}
+
+.cols-input {
+  width: 4em;
+}
+
+.inv-grid {
+  --inv-cell: 68px;
+  display: grid;
+  gap: 6px;
+  padding: 4px 16px 16px;
+  width: max-content;
+}
+
+.inv-row {
+  align-self: center;
+  justify-self: end;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 84px;
+  padding: 16px 2px 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.inv-cell:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.inv-cell.act-lock {
+  border-color: var(--keep);
+  background: var(--keep-bg);
+}
+
+.inv-cell.act-unlock {
+  border-color: var(--toss);
+  background: var(--toss-bg);
+}
+
+.inv-cell.done {
+  border-style: dashed;
+  background: var(--panel);
+  opacity: 0.5;
+}
+
+.inv-lock {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 11px;
+}
+
+.inv-owner {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  color: var(--muted);
+}
+
+.inv-icon {
+  font-size: 20px;
+}
+
+.inv-main {
+  color: var(--muted);
+}
+
+.inv-level {
+  font-weight: 600;
+}
+
+.inv-act {
+  margin-top: auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.act-lock .inv-act {
+  color: var(--keep);
+}
+
+.act-unlock .inv-act {
+  color: var(--toss);
+}
+
+.done .inv-act {
+  color: var(--muted);
+}
+
 .keys {
   padding: 4px 16px;
   font-size: 12px;

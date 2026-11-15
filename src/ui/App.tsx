@@ -4,6 +4,7 @@ import { useStore } from '../state/store'
 import { BuildsPage } from './BuildsPage'
 import { FarmPage } from './FarmPage'
 import { ImprovePage } from './ImprovePage'
+import { InventoryView } from './InventoryView'
 import { doneKey, ListView, type ListTab } from './ListView'
 import { LoadExportButton } from './LoadExportButton'
 import { useLocal } from './local'
@@ -11,7 +12,7 @@ import { RerollPage } from './RerollPage'
 import { RosterPage } from './RosterPage'
 import { SettingsPanel } from './SettingsPanel'
 
-type Tab = ListTab | 'reroll' | 'farm' | 'roster' | 'improve' | 'builds' | 'settings'
+type Tab = ListTab | 'inventory' | 'reroll' | 'farm' | 'roster' | 'improve' | 'builds' | 'settings'
 
 export const SCOPES: Record<ListTab, (e: Evaluation) => boolean> = {
   triage: (e) => e.piece.level === 0,
@@ -26,6 +27,7 @@ const TAB_LABEL: Record<Tab, string> = {
   progress: 'In progress',
   review: '+20 review',
   level: 'Level up',
+  inventory: 'Inventory',
   reroll: 'Reroll',
   farm: 'Farm',
   roster: 'Roster',
@@ -138,6 +140,8 @@ export function App() {
           <RerollPage result={result} />
         ) : tab === 'farm' ? (
           <FarmPage result={result} />
+        ) : tab === 'inventory' ? (
+          <InventoryView result={result} />
         ) : tab === 'improve' ? (
           <ImprovePage result={result} initial={hashArg && decodeURIComponent(hashArg)} />
         ) : tab === 'builds' ? (
