@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { applyOverrides, type BuildOverrides } from '../engine/builds'
 import { erModel, type ErModel, type GameData } from '../engine/er'
-import { defaultSettings } from '../engine/evaluate'
+import { defaultRosterEntry, defaultSettings } from '../engine/evaluate'
 import { STRONGBOX_SETS, type DomainsFile } from '../engine/farm'
 import { addEquip, applyEquips, loadPieces, parseExport, type Equip, type Piece } from '../engine/load'
 import type { ArtifactConfig, BuildConfig, GoodExport, Roster, RosterEntry, Settings } from '../engine/types'
@@ -27,6 +27,8 @@ interface PersistedState {
   /** Equips made in-game since each export, by export file name, in order. */
   equips?: Record<string, Equip[]>
   sort?: SortMode
+  /** Characters on the Building list (who the user is working on now), in the order they were added. */
+  building?: string[]
 }
 
 interface ExportInfo {
@@ -69,6 +71,10 @@ interface Store {
   saveError: string | null
   settings: Settings
   roster: Roster
+  /** The Building list: characters sorted first everywhere, and what farming can be ranked for. */
+  building: string[]
+  /** Adds a character to the Building list or takes them off; adding an Ignored character sets them to Normal. */
+  toggleBuilding: (char: string, on?: boolean) => void
   done: Set<string>
   sort: SortMode
   /** An export that appeared in imports/ (or changed there) since this one was loaded; null once it's loaded. */
@@ -270,6 +276,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
   const roster = useMemo(() => persisted.roster ?? {}, [persisted.roster])
   const overrides = useMemo(() => persisted.builds ?? {}, [persisted.builds])
+  const building = useMemo(() => persisted.building ?? [], [persisted.building])
   const config = useMemo(() => (loaded ? applyOverrides(loaded.config, overrides) : null), [loaded?.config, overrides])
   const strongboxSets = useMemo(() => new Set(persisted.strongbox ?? STRONGBOX_SETS), [persisted.strongbox])
   const er = useMemo(
@@ -323,6 +330,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveError,
       settings,
       roster,
+      building,
+      toggleBuilding: (char, value) =>
+        update((p) => {
+          const list = p.building ?? []
+          const on = value ?? !list.includes(char)
+          if (on === list.includes(char)) return p
+          if (!on) return { ...p, building: list.filter((c) => c !== char) }
+          // Someone you're building should count: an Ignored character becomes Normal.
+          const owned = loaded.data.characters.find((c) => c.key === char)
+          const entry = p.roster?.[char] ?? defaultRosterEntry(owned, settings.includeUnowned)
+          const roster = entry.priority === 'ignore' ? { ...p.roster, [char]: { ...entry, priority: 'normal' as const } } : p.roster
+          return { ...p, roster, building: [...list, char] }
+        }),
       done,
       sort: persisted.sort ?? 'newest',
       newExport: unseenExport,
@@ -344,7 +364,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshExports,
       loadExportFile,
     }
-  }, [loaded, config, er, strongboxSets, persisted.strongbox, overrides, pieces, exportPieces, equips, saveError, settings, roster, persisted.done, persisted.sort, unseenExport, selectExport, refreshExports, loadExportFile])
+  }, [loaded, config, er, strongboxSets, persisted.strongbox, overrides, pieces, exportPieces, equips, saveError, settings, roster, building, persisted.done, persisted.sort, unseenExport, selectExport, refreshExports, loadExportFile])
 
   if (error) return <div className="fatal">{error}</div>
   if (empty) {

@@ -95,8 +95,8 @@ describe('level priority', () => {
       }),
     ],
   })
-  const cand = (char: string, priority: 'priority' | 'normal', bar: number | null, inCap = true) =>
-    ({ ref: { char, priority, build: { substats: CRIT } }, bar, chance: 0.9, inCap, expected: 5.7, current: 2.75 }) as unknown as Candidate
+  const cand = (char: string, priority: 'priority' | 'normal', bar: number | null, inCap = true, building = false) =>
+    ({ ref: { char, priority, building, build: { substats: CRIT } }, bar, chance: 0.9, inCap, expected: 5.7, current: 2.75 }) as unknown as Candidate
   const ev = (candidates: Candidate[], over: Partial<Evaluation> = {}) =>
     ({ piece: fresh, candidates, best: candidates[0] ?? null, nextStop: 4, ...over }) as Evaluation
 
@@ -113,6 +113,11 @@ describe('level priority', () => {
     expect(levelPriority(ev([cand('Thoma', 'normal', 2)]), false)).toMatchObject({ char: 'Thoma', high: true })
     // Only the builds triage keeps it for count.
     expect(levelPriority(ev([cand('Yelan', 'priority', 2, false)]), true)?.high).toBe(false)
+  })
+
+  it('prefers a Building reason over a ★ one, and counts it when the character is not ★', () => {
+    const both = ev([cand('Yelan', 'priority', 0), cand('Thoma', 'normal', 2, true, true)])
+    expect(levelPriority(both, true)).toMatchObject({ char: 'Thoma', building: true, star: false, high: true })
   })
 
   it('steps up at fixed gains, the same in every set', () => {

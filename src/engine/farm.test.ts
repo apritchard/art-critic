@@ -522,6 +522,11 @@ describe('planFarming', () => {
     expect(swaps.map((s) => `${s.char} ${s.slot}`)).toEqual(['HuTao circlet', 'Bennett flower'])
     const gain = (s: (typeof swaps)[number]) => s.to - (s.from ?? 0)
     expect(gain(swaps[1])).toBeGreaterThan(gain(swaps[0]))
+    // On the Building list, Bennett picks before the ★ character, and is listed first.
+    const building = evaluate(pieces, data.characters, dps, defaultSettings(dps), roster, new Set(['Bennett']))
+    const picked = planFarming(building, pieces, dps, domains, 'priority').swaps
+    expect(picked.find((s) => s.slot === 'circlet')?.char).toBe('Bennett')
+    expect(picked.every((s) => s.char === 'Bennett')).toBe(true)
   })
 
   it("doesn't let swaps that are each set-safe break a bonus together", () => {
@@ -576,6 +581,15 @@ describe('planFarming', () => {
     expect(plan.strongbox.find((s) => s.key === 'CrimsonWitchOfFlames')?.toLevel).toEqual([{ piece, chars: ['HuTao'] }])
     // Bennett's domain doesn't help Hu Tao, so it doesn't flag her piece.
     expect(plan.domains.find((d) => d.key === 'Clear Pool')?.toLevel).toEqual([])
+  })
+
+  it('ranks for the Building list, falling back to ★ Priority when it is empty', () => {
+    const building = evaluate(pieces, data.characters, config, defaultSettings(config), roster, new Set(['Bennett']))
+    const plan = planFarming(building, pieces, config, domains, 'building')
+    expect(plan.scope).toBe('building')
+    expect(plan.domains[0].key).toBe('Clear Pool')
+    expect(plan.domains.find((d) => d.key === 'Hidden Palace')?.value).toBe(0)
+    expect(planFarming(result, pieces, config, domains, 'building').scope).toBe('priority')
   })
 
   it('falls back to every active character when nobody is Priority', () => {

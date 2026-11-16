@@ -7,6 +7,7 @@ import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { ErChange } from './FarmPage'
 import { useLocal } from './local'
+import { marks } from './marks'
 import { inventoryHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
@@ -36,7 +37,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
   const spareCount = listed.filter((o) => o.spare).length
   const rows = useMemo(() => {
     const key = (o: RerollOption) => (sort === 'gain' ? o.gain / o.cost : o.chance)
-    const prio = (o: RerollOption) => Number(priorityFirst && o.ref.priority === 'priority')
+    const prio = (o: RerollOption) => (priorityFirst ? (o.ref.building ? 2 : o.ref.priority === 'priority' ? 1 : 0) : 0)
     return listed
       .filter((o) => (which === 'all' || (which === 'spare') === !!o.spare) && characterName(o.ref.char).toLowerCase().includes(query.toLowerCase()))
       .sort((a, b) => prio(b) - prio(a) || key(b) - key(a) || b.gain - a.gain)
@@ -44,6 +45,8 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
   const shown = all ? rows : rows.slice(0, 30)
   // The Inventory's ⟳ badge: the expected gain on the leveling badge's steps, for a ★ character while anyone is ★.
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
+  const anyBuilding = result.activeBuilds.some((r) => r.building)
+  const firstPick = [anyBuilding && '📌 Building', anyStar && '★ Priority'].filter(Boolean).join(', then ')
   const badges = useMemo(() => new Map(plan.options.map((o) => [o.piece.id, rerollPriority(o, anyStar)] as const)), [plan, anyStar])
   const highLeft = plan.options.filter((o) => badges.get(o.piece.id)?.high && !done.has(`reroll:${o.piece.id}`)).length
 
@@ -57,14 +60,15 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
         no change, and the pick may include ER.
       </p>
       <p className="hint">
-        <b>Spare</b> +20s are listed too, each for the character it would gain most{anyStar ? ' (★ Priority first)' : ''}:
+        <b>Spare</b> +20s are listed too, each for the character it would gain most
+        {firstPick ? ` (${firstPick} first)` : ''}:
         one whose main stat their build takes and whose set keeps their set bonuses. Its reroll has to beat the piece it
         would replace, without taking them below their ER minimum. The Farm tab&apos;s free upgrades are left out, both
         their spares and the slots they fill: equip those first, and they&apos;re judged here as worn pieces.
       </p>
       <p className="hint">
-        A gain of {PRIORITY_STEPS[0]} rolls or more gets the Inventory grid&apos;s ⟳ badge, shaded the same way
-        {anyStar ? ' for a ★ Priority character' : ''}; from {HIGH_PRIORITY_GAIN} it&apos;s high priority
+        A gain of {PRIORITY_STEPS[0]} rolls or more gets the Artifacts grid&apos;s ⟳ badge, shaded the same way
+        {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}; from {HIGH_PRIORITY_GAIN} it&apos;s high priority
         {highLeft > 0 ? ` (${highLeft} not yet rerolled)` : ''}.
       </p>
       <div className="roster-tools">
@@ -96,7 +100,8 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
           </button>
         </div>
         <label className="check">
-          <input type="checkbox" checked={priorityFirst} onChange={(e) => setPriorityFirst(e.target.checked)} /> ★ Priority first
+          <input type="checkbox" checked={priorityFirst} onChange={(e) => setPriorityFirst(e.target.checked)} /> 📌 Building, ★
+          Priority first
         </label>
         <input placeholder="Search characters…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
@@ -130,7 +135,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                 <td>
                   <span className="char-name">
                     {characterName(o.ref.char)}
-                    {o.ref.priority === 'priority' && ' ★'}
+                    {marks(o.ref)}
                   </span>
                   <div className="sub-note">{o.ref.build.name}</div>
                 </td>
@@ -140,9 +145,9 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   <a
                     className="link"
                     href={inventoryHref(o.piece.id)}
-                    title="Show this piece in the Inventory tab's grid, outlined, at its row and place in the row"
+                    title="Show this piece in the Artifacts grid, outlined, at its row and place in the row"
                   >
-                    find in inventory
+                    find in grid
                   </a>
                   <Lines o={o} />
                   {o.spare && <SpareNote o={o} feed={evaluations.get(o.piece.id)?.recommendLock === false} />}
@@ -169,7 +174,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   {badge ? (
                     <span
                       className={`inv-up card-gain t${badge.tier}`}
-                      title={`${badge.high ? 'High priority: the' : 'The'} Inventory grid marks this piece ⟳, shaded by this gain${badge.tier === 0 ? " (grey: the character isn't ★)" : ''}`}
+                      title={`${badge.high ? 'High priority: the' : 'The'} Artifacts grid marks this piece ⟳, shaded by this gain${badge.tier === 0 ? " (grey: the character isn't ★ or 📌)" : ''}`}
                     >
                       ⟳ {o.gain.toFixed(2)}
                     </span>

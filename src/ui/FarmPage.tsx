@@ -25,6 +25,8 @@ import { SLOTS, type SlotKey } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { useLocal } from './local'
+import { marks } from './marks'
+import { artifactsHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 const num = (x: number) => x.toFixed(2)
@@ -52,7 +54,9 @@ const shortSubs = (p: Piece) =>
 
 export function FarmPage({ result }: { result: EvaluationResult }) {
   const { pieces, config, domains, er, strongboxSets, done, toggleDone, equip, data, settings } = useStore()
-  const [scope, setScope] = useLocal<FarmScope>('farm:scope', 'priority')
+  // Building by default: farming is usually for whoever you're working on. With nobody on the list it's ★ Priority,
+  // as the old default was, so the choice moved to a new key for the new default to apply.
+  const [scope, setScope] = useLocal<FarmScope>('farm:for', 'building')
   const plan = useMemo(
     () => planFarming(result, pieces, config, domains, scope, er, strongboxSets),
     [result, pieces, config, domains, scope, er, strongboxSets],
@@ -78,7 +82,9 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
     }
   }, [plan.swaps, done, equip, toggleDone])
   const priorityCount = plan.characters.filter((c) => c.ref.priority === 'priority').length
-  const scopeLabel = plan.scope === 'priority' ? '★ Priority characters' : 'every active character'
+  const buildingCount = plan.characters.filter((c) => c.ref.building).length
+  const scopeLabel =
+    plan.scope === 'building' ? '📌 Building characters' : plan.scope === 'priority' ? '★ Priority characters' : 'every active character'
   const resinDrops = (RESIN_SHOWN / RESIN_PER_RUN) * DROPS_PER_RUN
 
   return (
@@ -90,7 +96,7 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
 
       <Section
         title="Free upgrades"
-        note="Spare +20s that beat what someone wears without breaking a set bonus or dropping their Energy Recharge below their build's minimum. ★ Priority characters come first and get first pick of a spare two people want; then everyone else, biggest gain first. Tick one once you've equipped it in-game: every tab then treats it as worn until your next export."
+        note="Spare +20s that beat what someone wears without breaking a set bonus or dropping their Energy Recharge below their build's minimum. 📌 Building characters come first and get first pick of a spare two people want, then ★ Priority characters, then everyone else, biggest gain first. Tick one once you've equipped it in-game: every tab then treats it as worn until your next export."
         count={plan.swaps.length}
       >
         <EquipLog />
@@ -106,6 +112,13 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
       <div className="scope-bar">
         <span className="muted">Rank resin, Strongbox and Elixirs for</span>
         <div className="seg small">
+          <button
+            className={scope === 'building' ? 'on' : ''}
+            onClick={() => setScope('building')}
+            title="Who you're building now: pin characters with 📌 in Roster or Improve"
+          >
+            📌 Building ({buildingCount})
+          </button>
           <button className={scope === 'priority' ? 'on' : ''} onClick={() => setScope('priority')}>
             ★ Priority ({priorityCount})
           </button>
@@ -113,6 +126,12 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
             All active ({plan.characters.length})
           </button>
         </div>
+        {scope === 'building' && plan.scope !== 'building' && (
+          <span className="muted">
+            Nobody is on the Building list (📌 in Roster or Improve), so{' '}
+            {plan.scope === 'priority' ? '★ Priority characters count' : 'everyone counts'}.
+          </span>
+        )}
         {scope === 'priority' && plan.scope === 'all' && (
           <span className="warn">No ★ Priority characters yet (set them in Roster), so everyone counts.</span>
         )}
@@ -469,7 +488,11 @@ function ToLevelNote({ list, named }: { list: ToLevel[]; named: boolean }) {
     <div className="sub-note warn" title={title}>
       {pending.length > 0 && (
         <>
-          Level first: {what} on hand for them (<a href="#level">Level up</a>)
+          Level first: {what} on hand for them (
+          <a href={artifactsHref({ view: 'list', show: 'level', level: 'any', set: bySet.size === 1 ? [...bySet.keys()][0] : 'all' })}>
+            to level
+          </a>
+          )
         </>
       )}
       {pending.length > 0 && marked > 0 && ' · '}
@@ -608,12 +631,15 @@ function Beneficiaries({ rows, domainOf }: { rows: CharacterFarm[]; domainOf: Ma
     () =>
       rows
         .filter((c) => characterName(c.char).toLowerCase().includes(query.toLowerCase()))
-        .sort((a, b) =>
-          sort === 'name'
-            ? characterName(a.char).localeCompare(characterName(b.char))
-            : sort === 'chance'
-              ? b.odds.chance - a.odds.chance
-              : b.odds.gain - a.odds.gain,
+        // Who you're building comes first, as everywhere.
+        .sort(
+          (a, b) =>
+            Number(!!b.ref.building) - Number(!!a.ref.building) ||
+            (sort === 'name'
+              ? characterName(a.char).localeCompare(characterName(b.char))
+              : sort === 'chance'
+                ? b.odds.chance - a.odds.chance
+                : b.odds.gain - a.odds.gain),
         ),
     [rows, query, sort],
   )
@@ -724,11 +750,11 @@ export function ErChange({ er, approx }: { er: ErTotals | null; approx?: boolean
   )
 }
 
-function CharName({ c }: { c: { char: string; ref: { priority: string } } }) {
+function CharName({ c }: { c: { char: string; ref: { priority: string; building?: boolean } } }) {
   return (
     <span className="char-name">
       {characterName(c.char)}
-      {c.ref.priority === 'priority' && ' ★'}
+      {marks(c.ref)}
     </span>
   )
 }

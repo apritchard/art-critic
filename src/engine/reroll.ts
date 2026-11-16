@@ -1,6 +1,6 @@
 // Dust of Enlightenment: which +20 pieces are most likely to come out better from a reroll, worn or spare.
 import { erCap, erNeed, totalER, withoutER, type ErModel } from './er'
-import type { ActiveBuild, EvaluationResult } from './evaluate'
+import { standing, type ActiveBuild, type EvaluationResult } from './evaluate'
 import { freeSwaps, swapSetFit, wearing } from './farm'
 import type { Piece } from './load'
 import { mainStatOk } from './match'
@@ -82,7 +82,7 @@ const MIN_MOVE_GAIN = 1
 const MIN_MOVE_EDGE = 2
 
 export interface RerollPlan {
-  /** Worn +20s, then spare +20s (each for the character it would gain most, ★ Priority first). */
+  /** Worn +20s, then spare +20s (each for the character it would gain most, Building then ★ Priority first). */
   options: RerollOption[]
   /** Worn +20s skipped because their main stat doesn't fit the build: a reroll can't fix that. */
   wrongMain: number
@@ -310,10 +310,11 @@ export function planRerolls(
 
   // Spare +20s: rerolled, would one beat what someone wears? Each is judged for every character it could go to
   // (main stat allowed, sets still fit) against the piece it would replace, and listed for the one it gains most,
-  // ★ Priority first while anyone is ★ (as levelPriority picks a piece's reason). The Farm tab's free upgrades are
-  // left out, both the spares and the slots they fill: it says to equip those first, and they're then judged as worn.
+  // Building characters first, then ★ Priority while anyone is ★ (`standing`, as levelPriority picks a piece's
+  // reason). The Farm tab's free upgrades are left out, both the spares and the slots they fill: it says to equip
+  // those first, and they're then judged as worn.
   const anyStar = current.some((r) => r.priority === 'priority')
-  const counts = (o: RerollOption) => o.ref.priority === 'priority' || !anyStar
+  const rank = (o: RerollOption) => standing(o.ref, anyStar)
   const spares = pieces.filter((p) => !p.owner && p.rarity === 5 && p.level === 20)
   const { swaps } = freeSwaps(current, spares, worn, equipped, barsOf, erModel, config)
   const swapped = new Set(swaps.map((s) => s.piece.id))
@@ -333,7 +334,7 @@ export function planRerolls(
       if (!swapSetFit(sets, replaces.setKey, piece.setKey, ref.build, config)) continue
       const option = spareReroll(piece, ref, replaces, mine, total, erModel, guaranteed)
       if (!option) continue
-      if (!best || Number(counts(option)) - Number(counts(best)) > 0 || (counts(option) === counts(best) && option.gain > best.gain)) {
+      if (!best || rank(option) > rank(best) || (rank(option) === rank(best) && option.gain > best.gain)) {
         best = option
       }
     }

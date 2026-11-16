@@ -32,7 +32,16 @@ interface Pick {
   n: number
 }
 
-export function BuildsPage({ result, focus }: { result: EvaluationResult; focus?: BuildsFocus }) {
+export function BuildsPage({
+  result,
+  focus,
+  back,
+}: {
+  result: EvaluationResult
+  focus?: BuildsFocus
+  /** The page you came from, to go back to (the Artifacts grid as you left it, say). */
+  back?: { href: string; label: string }
+}) {
   const { config, overrides, data } = useStore()
   const [query, setQuery] = useState('')
   const [showUnowned, setShowUnowned] = useLocal('builds:unowned', false)
@@ -84,7 +93,7 @@ export function BuildsPage({ result, focus }: { result: EvaluationResult; focus?
         ))}
       </aside>
       {char ? (
-        <Editor key={char} char={char} result={result} fitting={fitting} pick={pick?.char === char ? pick : null} onPick={select} />
+        <Editor key={char} char={char} result={result} fitting={fitting} pick={pick?.char === char ? pick : null} onPick={select} back={back} />
       ) : (
         <div className="empty">No characters match.</div>
       )}
@@ -98,8 +107,9 @@ function Editor(props: {
   fitting: Fitting | null
   pick: Pick | null
   onPick: (char: string, idx: number) => void
+  back?: { href: string; label: string }
 }) {
-  const { char, result, fitting, pick, onPick } = props
+  const { char, result, fitting, pick, onPick, back } = props
   const { config, baseConfig, overrides, setCharacterBuilds, data, pieces, er, roster, setRosterEntry, settings } = useStore()
   const cc = config.characters[char]
   const builds = cc.builds
@@ -145,6 +155,11 @@ function Editor(props: {
 
   return (
     <div className="editor">
+      {back && (
+        <a className="link back-link" href={back.href} title="Where you were, as you left it">
+          ← Back to {back.label}
+        </a>
+      )}
       {fitting && <FitPanel fitting={fitting} char={char} idx={i} build={build} save={save} onPick={onPick} />}
       <div className="editor-head">
         <h2>{characterName(char)}</h2>
@@ -152,6 +167,9 @@ function Editor(props: {
           {cc.element} · {cc.confidence} · {owned ? `Lv ${owned.level}` : 'not owned'}
           {!summary?.active && ' · not counted (see Roster)'}
         </span>
+        <a className="link" href={`#improve/${encodeURIComponent(char)}`} title="Every way to improve what they wear">
+          Improve →
+        </a>
         {overrides[char] && (
           <button className="ghost" onClick={reset}>
             Reset to research config

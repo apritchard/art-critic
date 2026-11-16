@@ -7,6 +7,7 @@ import {
   expectedBestOf,
   FOUR_LINE,
   gainHistograms,
+  inFarmScope,
   simulatePieces,
   type CharacterFarm,
   type FarmPlan,
@@ -315,7 +316,7 @@ export function planFeedOrBox(
   materials: Record<string, number> | undefined,
   minChance: number,
 ): FeedOrBox {
-  const inScope = (ref: ActiveBuild) => plan.scope === 'all' || ref.priority === 'priority'
+  const inScope = (ref: ActiveBuild) => inFarmScope(plan.scope, ref)
   let tosses = 0
   const leveled = { count: 0, exp: 0 }
   let committed = 0

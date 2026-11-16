@@ -388,7 +388,15 @@ export function swapSetFit(
   return setsFit(worn, swapSets(worn, outgoing, incoming), build, config)
 }
 
-export type FarmScope = 'priority' | 'all'
+/**
+ * Whose gains the resin, Strongbox and Elixir rankings sum: the Building list, ★ Priority characters, or every active
+ * character. One with nobody in it falls back to the next.
+ */
+export type FarmScope = 'building' | 'priority' | 'all'
+
+/** Whether a build is among those a FarmPlan's `scope` (the one used, after any fallback) sums over. */
+export const inFarmScope = (scope: FarmScope, ref: Pick<ActiveBuild, 'priority' | 'building'>) =>
+  scope === 'all' || (scope === 'building' ? !!ref.building : ref.priority === 'priority')
 
 export interface ElixirPick {
   char: string
@@ -586,9 +594,11 @@ export function planFarming(
   characters.sort((a, b) => b.odds.gain - a.odds.gain)
 
   // 3. Rank sources for the characters in scope.
+  const anyBuilding = characters.some((c) => c.ref.building)
   const anyPriority = characters.some((c) => c.ref.priority === 'priority')
-  const used: FarmScope = scope === 'priority' && anyPriority ? 'priority' : 'all'
-  const inScope = characters.filter((c) => used === 'all' || c.ref.priority === 'priority')
+  const used: FarmScope =
+    scope === 'building' && anyBuilding ? 'building' : scope !== 'all' && anyPriority ? 'priority' : 'all'
+  const inScope = characters.filter((c) => inFarmScope(used, c.ref))
 
   // The Level up queue by set, with who each piece is kept for (its wearer, if equipped).
   const queued = new Map<string, ToLevel[]>()
@@ -894,10 +904,10 @@ export function freeSwaps(
       options.push({ char: ref.char, ref, slot: piece.slotKey, piece, from, to, mainFrom, er: null, erGain, trade: null })
     }
   }
-  // ★ Priority characters pick first, biggest gain first; the list keeps that order.
+  // Building characters pick first, then ★ Priority ones, biggest gain first; the list keeps that order.
   const gain = (s: Swap) => s.to - (s.from ?? 0) + s.erGain
-  const starred = (s: Swap) => Number(s.ref.priority === 'priority')
-  options.sort((a, b) => starred(b) - starred(a) || gain(b) - gain(a))
+  const first = (s: Swap) => (s.ref.building ? 2 : s.ref.priority === 'priority' ? 1 : 0)
+  options.sort((a, b) => first(b) - first(a) || gain(b) - gain(a))
   const usedPieces = new Set<string>()
   const usedSlots = new Set<string>()
   const held = new Set<string>()

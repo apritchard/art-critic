@@ -10,6 +10,8 @@ import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { EquipLog, ErChange, ErGainNote, erTargetText, runs, TradeNote } from './FarmPage'
 import { useLocal } from './local'
+import { BuildingToggle, marks } from './marks'
+import { buildsHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 const qualityClass = (q: number | null) => (q === null ? 'q-none' : q >= 0.85 ? 'q-good' : q >= 0.6 ? 'q-ok' : 'q-weak')
@@ -91,6 +93,7 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
         .filter((c) => characterName(c.char).toLowerCase().includes(query.toLowerCase()))
         .sort(
           (a, b) =>
+            Number(b.building) - Number(a.building) ||
             Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
             (ratings.get(a.char)?.[sortBy] ?? 0) - (ratings.get(b.char)?.[sortBy] ?? 0),
         ),
@@ -126,7 +129,7 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
             <button key={c.char} className={c.char === char ? 'rail-item active' : 'rail-item'} onClick={() => pick(c.char)}>
               <span className={`rail-name${c.active ? '' : ' muted'}`}>
                 {characterName(c.char)}
-                {c.priority === 'priority' && ' ★'}
+                {marks(c)}
               </span>
               <span className={`counts ${qualityClass(q)}`} title={RAIL_SORT[sortBy].title}>
                 {Math.round(q * 100)}%
@@ -165,8 +168,9 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
       <div className="editor-head">
         <h2>
           {characterName(char)}
-          {ref.priority === 'priority' && ' ★'}
+          {marks({ priority: ref.priority })}
         </h2>
+        <BuildingToggle char={char} label />
         <span className="sub-note">
           {owned ? `Lv ${owned.level}` : 'not owned'}
           {plan.er !== null && (
@@ -177,6 +181,9 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
           )}
           {ref.priority === 'ignore' && ' · ignored in Roster'}
         </span>
+        <a className="link" href={buildsHref({ char, idx: ref.buildIdx })} title="Change this build's sets, main stats, weights or ER target in the Builds tab">
+          Edit build →
+        </a>
       </div>
       {refs.length > 1 && (
         <div className="build-tabs">
@@ -402,7 +409,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
         <>
           {pieceLine(o)}
           <div className={`sub-note${listed ? '' : ' warn'}`}>
-            {listed ? 'On the Level up list' : `Triage marks it to unlock: lock it if you level it for ${name}`}
+            {listed ? 'In the To level queue' : `Marked to unlock: lock it if you level it for ${name}`}
           </div>
         </>
       ),

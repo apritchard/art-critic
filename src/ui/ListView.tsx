@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Evaluation, EvaluationResult } from '../engine/evaluate'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { standing, type Evaluation, type EvaluationResult } from '../engine/evaluate'
 import { levelPriority, type LevelPriority } from '../engine/inventory'
 import { characterName, SLOT_LABEL, setName, statLabel } from '../engine/stats'
 import { SLOTS, type SlotKey } from '../engine/types'
 import { useStore, type SortMode } from '../state/store'
 import { ArtifactCard, SLOT_ICON } from './ArtifactCard'
 import { useLocal } from './local'
+import type { LevelFilter, ShowFilter } from './routes'
 
 const SORT_LABEL: Record<SortMode, string> = {
   newest: 'Newest first',
@@ -17,8 +18,31 @@ const SORT_LABEL: Record<SortMode, string> = {
   gain: 'Expected gain',
 }
 
-/** Sorts only the Level up tab offers. */
+/** Sorts only the Level up queue offers. */
 const LEVEL_ONLY: SortMode[] = ['gain']
+
+export const SHOW_LABEL: Record<ShowFilter, { label: string; title: string }> = {
+  changes: { label: 'Lock changes', title: 'Pieces whose lock should change: LOCK to keep, UNLOCK to feed' },
+  level: { label: 'To level', title: 'The Level up queue: every piece worth leveling, locked or not, plus equipped pieces worth finishing' },
+  all: { label: 'Everything', title: 'Every piece, whatever its verdict' },
+}
+
+export const LEVEL_LABEL: Record<LevelFilter, { label: string; title: string }> = {
+  any: { label: 'Any', title: 'Any level' },
+  fresh: { label: '+0', title: 'Pieces still at +0 (the old Triage tab)' },
+  started: { label: '+1–19', title: 'Pieces partly leveled (the old In progress tab)' },
+  spare20: { label: '+20 spare', title: 'Unequipped +20s (the old +20 review tab)' },
+}
+
+const levelOk: Record<LevelFilter, (e: Evaluation) => boolean> = {
+  any: () => true,
+  fresh: (e) => e.piece.level === 0,
+  started: (e) => e.piece.level > 0 && e.piece.level < 20,
+  spare20: (e) => e.piece.level === 20 && !e.piece.owner,
+}
+
+/** In the Level up queue: worth leveling, locked or not, plus equipped pieces worth finishing. */
+export const toLevel = (e: Evaluation) => e.piece.level < 20 && e.nextStop !== null
 
 /** A piece's expected gain once finished from its leveling priority, 0 when it isn't worth leveling. */
 const gainOf = (priorities: Map<string, LevelPriority | null>) => (e: Evaluation) => priorities.get(e.piece.id)?.gain ?? 0
@@ -29,14 +53,19 @@ const GRADE_ORDER = { keep: 0, equipped: 1, marginal: 2, toss: 3, skip: 4 }
 export const topChance = (e: Evaluation) =>
   Math.max(0, ...e.candidates.filter((c) => c.gate !== 'fail').map((c) => c.chance))
 
-/** Best chance for a ★ Priority character, or -1 when it isn't headed to one. */
-const priorityChance = (e: Evaluation) =>
-  Math.max(
-    -1,
-    ...e.candidates
-      .filter((c) => c.ref.priority === 'priority' && c.gate !== 'fail' && (c.chance > 0 || c.ref.char === e.piece.owner))
-      .map((c) => c.chance),
-  )
+/**
+ * Who a piece is headed to, as lists rank it: the best `standing` among the builds it could beat what they wear for
+ * (or is worn by), and that build's chance. -1 when it isn't headed anywhere.
+ */
+const headedTo = (e: Evaluation, anyStar: boolean) => {
+  let top = { rank: -1, chance: 0 }
+  for (const c of e.candidates) {
+    if (c.gate === 'fail' || !(c.chance > 0 || c.ref.char === e.piece.owner)) continue
+    const rank = standing(c.ref, anyStar)
+    if (rank > top.rank || (rank === top.rank && c.chance > top.chance)) top = { rank, chance: c.chance }
+  }
+  return top
+}
 
 /**
  * `gainOf` is a piece's expected gain once finished, as the Inventory's ⬆ badge rates it (levelPriority), or 0 when
@@ -73,54 +102,61 @@ function sorter(mode: SortMode, gainOf: (e: Evaluation) => number): (a: Evaluati
   }
 }
 
-export type ListTab = 'triage' | 'progress' | 'review' | 'level'
-
 /** Rail entry for pieces whose verdict rests on being someone's off-set piece, whatever their set. */
-const OFF_SET = '__offset'
+export const OFF_SET = '__offset'
 const isOffSetPick = (e: Evaluation) => e.best?.setMatch.kind === 'off' && e.grade !== 'toss'
 
 /** Done marks for leveling are kept apart from lock/unlock marks on the same piece. */
-export const doneKey = (tab: ListTab, e: Evaluation) => (tab === 'level' ? `lvl:${e.piece.id}` : e.piece.id)
-
-type LevelFilter = 'all' | 'fresh' | 'started'
+export const levelKey = (id: string) => `lvl:${id}`
+export const doneKey = (leveling: boolean, e: Evaluation) => (leveling ? levelKey(e.piece.id) : e.piece.id)
 
 /**
- * Pieces headed to a ★ Priority character first, then the rest. By expected gain, that's pieces whose gain is for a ★
- * character (`starOf`, as the Inventory badge counts it); by chance, any ★ character it could beat, ranked by that
- * chance.
+ * Pieces headed to a Building character first, then a ★ Priority one, then the rest. By expected gain, that's whose
+ * the gain is (`rankOf`, as the Inventory badge picks it); by chance, anyone it could beat, ranked by that chance.
  */
 function priorityThen(
   mode: SortMode,
   gainOf: (e: Evaluation) => number,
-  starOf: (e: Evaluation) => boolean,
+  rankOf: (e: Evaluation) => number,
+  anyStar: boolean,
 ): (a: Evaluation, b: Evaluation) => number {
   const base = sorter(mode, gainOf)
-  if (mode === 'gain') return (a, b) => Number(starOf(b)) - Number(starOf(a)) || base(a, b)
+  if (mode === 'gain') return (a, b) => rankOf(b) - rankOf(a) || base(a, b)
   return (a, b) => {
-    const pa = priorityChance(a)
-    const pb = priorityChance(b)
-    return Number(pb >= 0) - Number(pa >= 0) || (mode === 'chance' ? pb - pa : 0) || base(a, b)
+    const pa = headedTo(a, anyStar)
+    const pb = headedTo(b, anyStar)
+    return pb.rank - pa.rank || (mode === 'chance' ? pb.chance - pa.chance : 0) || base(a, b)
   }
 }
 
 interface Props {
-  tab: ListTab
   result: EvaluationResult
-  scope: (e: Evaluation) => boolean
+  /** The set picked in the rail (shared with the grid), 'all', or OFF_SET. */
+  set: string
+  onSet: (set: string) => void
+  show: ShowFilter
+  onShow: (show: ShowFilter) => void
+  level: LevelFilter
+  onLevel: (level: LevelFilter) => void
+  /** The piece open in the inspector, outlined. */
+  inspected: string | null
+  onInspect: (id: string) => void
+  /** Controls the page puts first in the filter bar (the view switch). */
+  toolbar: ReactNode
 }
 
-export function ListView({ tab, result, scope }: Props) {
+/**
+ * The Artifacts tab's list: one card per piece, filtered to lock changes, the Level up queue or everything, at any
+ * level. The old Triage +0, In progress, +20 review and Level up tabs are its filter combinations.
+ */
+export function ListView({ result, set, onSet, show, onShow, level, onLevel, inspected, onInspect, toolbar }: Props) {
   const store = useStore()
   const { done, toggleDone } = store
-  const leveling = tab === 'level'
-  const [set, setSet] = useLocal<string>(`${tab}:set`, 'all')
-  const [slot, setSlot] = useLocal<SlotKey | 'all'>(`${tab}:slot`, 'all')
-  const [main, setMain] = useLocal<string>(`${tab}:main`, 'all')
-  const [show, setShow] = useLocal<'actions' | 'all'>(`${tab}:show`, 'actions')
-  const [levels, setLevels] = useLocal<LevelFilter>('level:levels', 'all')
+  const leveling = show === 'level'
+  const [slot, setSlot] = useLocal<SlotKey | 'all'>('list:slot', 'all')
+  const [main, setMain] = useLocal<string>('list:main', 'all')
   const [hideDone, setHideDone] = useLocal<boolean>('hideDone', false)
-  // The level queue keeps its own sort (expected gain by default); the lock tabs share one. Stored under a new key
-  // since expected gain became the default, so browsers that saved the old default ('chance') pick it up too.
+  // The level queue keeps its own sort (expected gain by default); the lock lists share one.
   const [levelSort, setLevelSort] = useLocal<SortMode>('level:sortBy', 'gain')
   const [priorityFirst, setPriorityFirst] = useLocal('level:priorityFirst', true)
   const sort = leveling ? levelSort : store.sort === 'gain' ? 'newest' : store.sort
@@ -129,19 +165,14 @@ export function ListView({ tab, result, scope }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const undo = useRef<string[]>([])
 
-  const keyOf = (e: Evaluation) => doneKey(tab, e)
+  const keyOf = (e: Evaluation) => doneKey(leveling, e)
   const isDone = (e: Evaluation) => done.has(keyOf(e))
   // Every piece in the level queue is work to do; elsewhere only lock-state changes are.
   const needsWork = (e: Evaluation) => leveling || e.action !== null
 
   const inScope = useMemo(
-    () =>
-      result.evaluations.filter(
-        (e) =>
-          scope(e) &&
-          (!leveling || levels === 'all' || (levels === 'fresh' ? e.piece.level === 0 : e.piece.level > 0)),
-      ),
-    [result, scope, leveling, levels],
+    () => result.evaluations.filter((e) => levelOk[level](e) && (!leveling || toLevel(e))),
+    [result, level, leveling],
   )
 
   // What each piece is worth leveling, as the Inventory's ⬆ badge rates it: sorts by expected gain, and breaks ties.
@@ -150,14 +181,18 @@ export function ListView({ tab, result, scope }: Props) {
     () => new Map(inScope.map((e) => [e.piece.id, levelPriority(e, anyStar)] as const)),
     [inScope, anyStar],
   )
+  const rankOf = (e: Evaluation) => {
+    const p = priorities.get(e.piece.id)
+    return p ? (p.building ? 2 : p.star ? 1 : 0) : -1
+  }
 
   const sets = useMemo(() => {
     const m = new Map<string, { lock: number; unlock: number; level: number; total: number }>()
     for (const e of inScope) {
       const c = m.get(e.piece.setKey) ?? { lock: 0, unlock: 0, level: 0, total: 0 }
       c.total++
-      if (!done.has(doneKey(tab, e))) {
-        if (tab === 'level') c.level++
+      if (!done.has(doneKey(leveling, e))) {
+        if (leveling) c.level++
         else if (e.action === 'lock') c.lock++
         else if (e.action === 'unlock') c.unlock++
       }
@@ -165,12 +200,12 @@ export function ListView({ tab, result, scope }: Props) {
     }
     const pending = (c: { lock: number; unlock: number; level: number }) => c.lock + c.unlock + c.level
     return [...m.entries()].sort((a, b) => pending(b[1]) - pending(a[1]) || setName(a[0]).localeCompare(setName(b[0])))
-  }, [inScope, done, tab])
+  }, [inScope, done, leveling])
 
   const offSetCount = useMemo(() => {
     const picks = inScope.filter(isOffSetPick)
-    return { total: picks.length, pending: picks.filter((e) => (tab === 'level' || e.action) && !done.has(doneKey(tab, e))).length }
-  }, [inScope, done, tab])
+    return { total: picks.length, pending: picks.filter((e) => (leveling || e.action) && !done.has(doneKey(leveling, e))).length }
+  }, [inScope, done, leveling])
 
   const inSet = useMemo(
     () => inScope.filter((e) => set === 'all' || (set === OFF_SET ? isOffSetPick(e) : e.piece.setKey === set)),
@@ -190,14 +225,14 @@ export function ListView({ tab, result, scope }: Props) {
             (slot === 'all' || e.piece.slotKey === slot) &&
             (main === 'all' || e.piece.mainStatKey === main) &&
             (leveling || show === 'all' || e.action !== null) &&
-            !(hideDone && done.has(doneKey(tab, e))),
+            !(hideDone && done.has(doneKey(leveling, e))),
         )
         .sort(
           leveling && priorityFirst
-            ? priorityThen(sort, gainOf(priorities), (e) => !!priorities.get(e.piece.id)?.star)
+            ? priorityThen(sort, gainOf(priorities), rankOf, anyStar)
             : sorter(sort, gainOf(priorities)),
         ),
-    [inSet, slot, main, show, hideDone, done, sort, leveling, tab, priorityFirst, priorities],
+    [inSet, slot, main, show, hideDone, done, sort, leveling, priorityFirst, priorities, anyStar],
   )
 
   const focusIdx = Math.min(focus, Math.max(0, list.length - 1))
@@ -245,12 +280,12 @@ export function ListView({ tab, result, scope }: Props) {
   }
 
   const pickSet = (s: string) => {
-    setSet(s)
+    onSet(s)
     setMain('all')
     setFocus(0)
   }
 
-  const users = set !== 'all' ? (result.setUsers[set] ?? []) : []
+  const users = set !== 'all' && set !== OFF_SET ? (result.setUsers[set] ?? []) : []
 
   return (
     <div className="listview">
@@ -290,6 +325,7 @@ export function ListView({ tab, result, scope }: Props) {
 
       <section className="list-pane">
         <div className="filters">
+          {toolbar}
           <select className="rail-select" value={set} onChange={(e) => pickSet(e.target.value)}>
             <option value="all">All sets</option>
             {offSetCount.total > 0 && <option value={OFF_SET}>◇ Off-set picks ({offSetCount.total})</option>}
@@ -299,6 +335,20 @@ export function ListView({ tab, result, scope }: Props) {
               </option>
             ))}
           </select>
+          <div className="seg" role="group" aria-label="Show">
+            {(Object.keys(SHOW_LABEL) as ShowFilter[]).map((s) => (
+              <button key={s} className={show === s ? 'on' : ''} title={SHOW_LABEL[s].title} onClick={() => (onShow(s), setFocus(0))}>
+                {SHOW_LABEL[s].label}
+              </button>
+            ))}
+          </div>
+          <div className="seg" role="group" aria-label="Level">
+            {(Object.keys(LEVEL_LABEL) as LevelFilter[]).map((l) => (
+              <button key={l} className={level === l ? 'on' : ''} title={LEVEL_LABEL[l].title} onClick={() => (onLevel(l), setFocus(0))}>
+                {LEVEL_LABEL[l].label}
+              </button>
+            ))}
+          </div>
           <div className="seg">
             <button className={slot === 'all' ? 'on' : ''} onClick={() => (setSlot('all'), setMain('all'), setFocus(0))}>
               All
@@ -329,28 +379,10 @@ export function ListView({ tab, result, scope }: Props) {
               </option>
             ))}
           </select>
-          {leveling ? (
-            <div className="seg">
-              {(['all', 'fresh', 'started'] as const).map((l) => (
-                <button key={l} className={levels === l ? 'on' : ''} onClick={() => (setLevels(l), setFocus(0))}>
-                  {l === 'all' ? 'Any level' : l === 'fresh' ? '+0' : '+1–19'}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="seg">
-              <button className={show === 'actions' ? 'on' : ''} onClick={() => setShow('actions')}>
-                Needs action
-              </button>
-              <button className={show === 'all' ? 'on' : ''} onClick={() => setShow('all')}>
-                All
-              </button>
-            </div>
-          )}
           {leveling && (
-            <label className="check" title="Pieces that could go to a ★ Priority character come first">
-              <input type="checkbox" checked={priorityFirst} onChange={(e) => (setPriorityFirst(e.target.checked), setFocus(0))} /> ★
-              Priority first
+            <label className="check" title="Pieces that could go to a 📌 Building character come first, then ★ Priority ones">
+              <input type="checkbox" checked={priorityFirst} onChange={(e) => (setPriorityFirst(e.target.checked), setFocus(0))} /> 📌
+              ★ first
             </label>
           )}
           <label className="check">
@@ -385,7 +417,7 @@ export function ListView({ tab, result, scope }: Props) {
         <div className="cards">
           {list.length === 0 && (
             <div className="empty">
-              {leveling ? 'Nothing to level here.' : show === 'actions' ? 'Nothing to change here. 🎉' : 'No artifacts match.'}
+              {leveling ? 'Nothing to level here.' : show === 'changes' ? 'Nothing to change here. 🎉' : 'No artifacts match.'}
             </div>
           )}
           {list.map((e, i) => (
@@ -395,17 +427,20 @@ export function ListView({ tab, result, scope }: Props) {
               leveling={leveling}
               priority={leveling ? priorities.get(e.piece.id) : undefined}
               focused={i === focusIdx}
+              inspected={inspected === e.piece.id}
               done={isDone(e)}
               expanded={expanded === e.piece.id}
               onFocus={() => setFocus(i)}
               onDone={() => markDone(e, i)}
               onToggleExpand={() => setExpanded(expanded === e.piece.id ? null : e.piece.id)}
+              onInspect={() => (setFocus(i), onInspect(e.piece.id))}
             />
           ))}
         </div>
         <div className="keys">
           <kbd>↑</kbd>
-          <kbd>↓</kbd> move · <kbd>Space</kbd> {leveling ? 'leveled' : 'done'} &amp; next · <kbd>Z</kbd> undo
+          <kbd>↓</kbd> move · <kbd>Space</kbd> {leveling ? 'leveled' : 'done'} &amp; next · <kbd>Z</kbd> undo · a card&apos;s
+          &quot;inspect&quot; opens it beside the list
         </div>
       </section>
     </div>

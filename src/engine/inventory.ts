@@ -1,6 +1,6 @@
 // The order the game's artifact inventory lists pieces in, so the Inventory tab can mirror it cell for cell, and how
 // much each piece there is worth leveling or rerolling.
-import type { Evaluation } from './evaluate'
+import { standing, type Evaluation } from './evaluate'
 import type { Piece } from './load'
 import { expectedGainOver, startLines } from './projection'
 import type { RerollOption } from './reroll'
@@ -26,35 +26,36 @@ export interface LevelPriority {
   /** Chance it ends up beating that same bar. */
   chance: number
   star: boolean
-  /** How many of PRIORITY_STEPS the gain reaches (0–4); 0 when it's only for characters who aren't ★. */
+  /** `char` is on the Building list. */
+  building: boolean
+  /** How many of PRIORITY_STEPS the gain reaches (0–4); 0 when it's only for characters who aren't ★ or Building. */
   tier: number
   /** Tier 2 or more: a gain of at least HIGH_PRIORITY_GAIN. */
   high: boolean
 }
 
 /**
- * Why a piece in the Level up queue is worth leveling: the ★ Priority character it's kept for with the biggest
- * expected gain, or else anyone it's kept for. Its tier counts the PRIORITY_STEPS that gain reaches, for a ★
- * character (for anyone, when `anyStar` says nobody is ★). For an equipped piece, the gain is what finishing it adds
- * for its wearer. Null for pieces not in the queue.
+ * Why a piece in the Level up queue is worth leveling: the Building character it's kept for with the biggest expected
+ * gain, or else the ★ Priority one, or else anyone it's kept for (`standing`). Its tier counts the PRIORITY_STEPS that
+ * gain reaches, for a Building or ★ character (for anyone, when `anyStar` says nobody is ★). For an equipped piece,
+ * the gain is what finishing it adds for its wearer. Null for pieces not in the queue.
  */
 export function levelPriority(e: Evaluation, anyStar: boolean): LevelPriority | null {
   if (e.piece.level >= 20 || e.nextStop === null) return null
   const kept = e.piece.owner ? (e.best ? [e.best] : []) : e.candidates.filter((c) => c.inCap)
-  let top: { gain: number; char: string; chance: number; star: boolean; counts: boolean } | null = null
+  let top: { gain: number; char: string; chance: number; star: boolean; building: boolean; rank: number } | null = null
   for (const c of kept) {
     const gain = e.piece.owner ? Math.max(0, c.expected - c.current) : expectedGainOver(e.piece, c.ref.build.substats, c.bar)
-    const star = c.ref.priority === 'priority'
-    const counts = star || !anyStar
-    // A reason that counts toward the tier wins, then the biggest gain.
-    if (!top || Number(counts) - Number(top.counts) > 0 || (counts === top.counts && gain > top.gain)) {
-      top = { gain, char: c.ref.char, chance: c.chance, star, counts }
+    const rank = standing(c.ref, anyStar)
+    // A Building character's reason wins, then one that counts toward the tier, then the biggest gain.
+    if (!top || rank > top.rank || (rank === top.rank && gain > top.gain)) {
+      top = { gain, char: c.ref.char, chance: c.chance, star: c.ref.priority === 'priority', building: !!c.ref.building, rank }
     }
   }
-  if (!top) return { next: e.nextStop, gain: 0, char: e.piece.owner ?? '', chance: 0, star: false, tier: 0, high: false }
-  const { gain, char, chance, star, counts } = top
-  const tier = counts ? gainTier(gain) : 0
-  return { next: e.nextStop, gain, char, chance, star, tier, high: tier >= 2 }
+  if (!top) return { next: e.nextStop, gain: 0, char: e.piece.owner ?? '', chance: 0, star: false, building: false, tier: 0, high: false }
+  const { gain, char, chance, star, building, rank } = top
+  const tier = rank > 0 ? gainTier(gain) : 0
+  return { next: e.nextStop, gain, char, chance, star, building, tier, high: tier >= 2 }
 }
 
 export interface RerollPriority {
@@ -67,11 +68,13 @@ export interface RerollPriority {
   /** For a spare: the value of the piece it would replace, which the gain is measured over. Null for a worn piece. */
   bar: number | null
   star: boolean
+  /** `char` is on the Building list. */
+  building: boolean
   /** The two lines to pick. */
   chosen: string[]
   /** Dust of Enlightenment per reroll. */
   cost: number
-  /** How many of PRIORITY_STEPS the gain reaches (1–4); 0 when the wearer isn't ★ and someone else is. */
+  /** How many of PRIORITY_STEPS the gain reaches (1–4); 0 when the wearer isn't ★ or Building and someone else is ★. */
   tier: number
   /** Tier 2 or more: a gain of at least HIGH_PRIORITY_GAIN. */
   high: boolean
@@ -87,14 +90,14 @@ export interface RerollPriority {
  */
 export function rerollPriority(o: RerollOption, anyStar: boolean): RerollPriority | null {
   if (o.elsewhere || o.gain < PRIORITY_STEPS[0] - 1e-9) return null
-  const star = o.ref.priority === 'priority'
-  const tier = star || !anyStar ? gainTier(o.gain) : 0
+  const tier = standing(o.ref, anyStar) > 0 ? gainTier(o.gain) : 0
   return {
     gain: o.gain,
     chance: o.chance,
     char: o.ref.char,
     bar: o.spare?.bar ?? null,
-    star,
+    star: o.ref.priority === 'priority',
+    building: !!o.ref.building,
     chosen: o.chosen,
     cost: o.cost,
     tier,

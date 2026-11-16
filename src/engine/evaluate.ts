@@ -71,6 +71,21 @@ export interface ActiveBuild {
   confidence: Confidence
   cap: number
   owned: boolean
+  /**
+   * On the user's Building list: who they're working on right now. It changes no verdict, only order: these come
+   * first in lists, get first pick of a spare two characters want, and can be what farming is ranked for.
+   */
+  building?: boolean
+}
+
+/**
+ * Who a reason or a pick is for, as lists rank them: 2 for a character on the Building list, 1 for a ★ Priority
+ * character (or anyone, when `anyStar` says nobody is ★), 0 otherwise. Building characters count whether or not they're
+ * ★, so a piece for one gets its leveling badge's heat.
+ */
+export function standing(ref: Pick<ActiveBuild, 'priority' | 'building'>, anyStar: boolean): 0 | 1 | 2 {
+  if (ref.building) return 2
+  return ref.priority === 'priority' || !anyStar ? 1 : 0
 }
 
 /** One artifact judged against one build whose set and main stat it fits. */
@@ -137,6 +152,8 @@ export interface CharacterSummary {
   owned: boolean
   level: number | null
   priority: Priority
+  /** On the user's Building list. */
+  building: boolean
   active: boolean
   confidence: Confidence
   builds: { idx: number; name: string; enabled: boolean; slots: Record<SlotKey, SlotQuality> }[]
@@ -234,6 +251,8 @@ export function evaluate(
   config: ArtifactConfig,
   settings: Settings,
   roster: Roster,
+  /** Characters on the user's Building list: they sort first, but are judged like anyone else. */
+  building: ReadonlySet<string> = new Set(),
 ): EvaluationResult {
   const ownedMap = new Map(ownedChars.map((c) => [c.key, c]))
 
@@ -250,6 +269,7 @@ export function evaluate(
       owned: !!owned,
       level: owned?.level ?? null,
       priority: entry.priority,
+      building: building.has(char),
       active,
       confidence: cc.confidence,
       builds: [],
@@ -267,6 +287,7 @@ export function evaluate(
         confidence: cc.confidence,
         cap: entry.priority === 'priority' ? settings.capPriority : settings.capNormal,
         owned: !!owned,
+        building: building.has(char),
       })
     })
     characters.push(summary)

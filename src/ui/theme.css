@@ -446,7 +446,7 @@ kbd {
   cursor: default;
 }
 
-/* The grid item: a cell, plus its Closest build link in the corner (a link can't sit inside the cell's button). */
+/* The grid item: a cell, plus its lock bar along the bottom (a button can't sit inside the cell's button). */
 .inv-slot {
   position: relative;
   display: flex;
@@ -457,29 +457,8 @@ kbd {
   min-width: 0;
 }
 
-.inv-fit {
-  position: absolute;
-  right: 2px;
-  bottom: 1px;
-  padding: 0 3px;
-  border-radius: 3px;
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-  opacity: 0;
-}
-
-.inv-slot:hover .inv-fit,
-.inv-fit:focus-visible {
-  opacity: 1;
-}
-
-.inv-fit:hover {
-  background: var(--panel-2);
-}
-
-/* The piece an #inventory?piece= link points at (from Closest build): outlined over its own border, so no gap shows
-   between the two, with a short pulse on arrival that thickens the outline outward. */
+/* The piece a link points at (from Closest build, say): outlined over its own border, so no gap shows between the
+   two, with a short pulse on arrival that thickens the outline outward. */
 .inv-slot.inv-followed > .inv-cell {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
@@ -1787,4 +1766,283 @@ table.builds .char-link:hover {
 a.chip {
   text-decoration: none;
   color: inherit;
+}
+
+/* Artifacts tab: the grid or list, with the inspector docked beside or under it */
+
+.artifacts {
+  --inspector-w: 460px;
+  --inspector-h: 380px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+}
+
+.artifacts.inspecting.dock-side {
+  grid-template-columns: minmax(0, 1fr) min(var(--inspector-w), calc(100vw - 320px));
+}
+
+.artifacts.inspecting.dock-bottom {
+  grid-template-rows: minmax(0, 1fr) min(var(--inspector-h), calc(100% - 160px));
+}
+
+.artifacts > .listview {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The set list folded away: the dropdown in the filter bar picks the set instead. */
+.artifacts.rail-off .listview {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.artifacts.rail-off .rail {
+  display: none;
+}
+
+.artifacts.rail-off .rail-select {
+  display: block;
+  max-width: 280px;
+}
+
+.rail-toggle {
+  padding: 3px 8px;
+  font-size: 13px;
+}
+
+.inspector {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.inspector.side {
+  border-left: 1px solid var(--border);
+}
+
+.inspector.bottom {
+  border-top: 1px solid var(--border);
+}
+
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* The inner edge: drag it to resize the inspector. */
+.inspector-grip {
+  position: absolute;
+  z-index: 2;
+}
+
+.inspector.side > .inspector-grip {
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 7px;
+  cursor: col-resize;
+}
+
+.inspector.bottom > .inspector-grip {
+  left: 0;
+  right: 0;
+  top: -3px;
+  height: 7px;
+  cursor: row-resize;
+}
+
+.inspector-grip:hover,
+.inspector-grip.dragging {
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.inspector .fit-panel {
+  margin-bottom: 0;
+}
+
+/* At the bottom there's width to spare: the piece and its nearest builds beside the build on screen's layers. */
+.inspector.bottom .fit-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 20px;
+  align-items: start;
+}
+
+.fit-tools {
+  margin-left: auto;
+}
+
+.fit-tools + .ghost {
+  margin-left: 0;
+}
+
+/* Waiting on Closest build for the piece just picked. */
+.inspector.stale {
+  opacity: 0.6;
+}
+
+.inspector-actions {
+  margin: 8px 0 2px;
+}
+
+.inspector-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspector-actions .sub-note {
+  margin: 4px 0 0;
+}
+
+.fit-edit {
+  font-weight: 400;
+}
+
+/* A narrow window with the inspector at the side: it slides over the grid instead of squeezing it. */
+@media (max-width: 900px) {
+  .artifacts.inspecting.dock-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inspector.side {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(460px, 92vw);
+    z-index: 20;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* The piece open in the inspector. */
+.inv-slot.inv-selected > .inv-cell {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.card.inspected {
+  box-shadow: inset -3px 0 0 var(--accent);
+}
+
+/* A piece with a lock change: its bottom bar marks it done, so clicking the rest of the cell can open it. */
+.inv-cell.has-act {
+  padding-bottom: 18px;
+}
+
+.inv-slot > .inv-act {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 5px 5px;
+  background: transparent;
+  line-height: 15px;
+}
+
+.inv-slot > .inv-act:hover {
+  background: var(--panel-2);
+}
+
+.inv-slot.act-lock > .inv-act {
+  color: var(--keep);
+  border-top-color: var(--keep);
+}
+
+.inv-slot.act-unlock > .inv-act {
+  color: var(--toss);
+  border-top-color: var(--toss);
+}
+
+.inv-slot.done > .inv-act {
+  color: var(--muted);
+  border-top-color: var(--border);
+  opacity: 0.7;
+}
+
+.inv-keys {
+  border-top: 0;
+  padding: 0 16px 4px;
+}
+
+/* The Building list: who you're working on now */
+
+.pin {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.pin:hover {
+  opacity: 0.9;
+}
+
+.pin.on {
+  filter: none;
+  opacity: 1;
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.building-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.chip.building {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+  border: 1px solid var(--accent);
+}
+
+.chip.building a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.chip-x {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.chip-x:hover {
+  color: var(--toss);
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .inspector.bottom .fit-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

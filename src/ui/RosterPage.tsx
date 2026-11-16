@@ -6,6 +6,7 @@ import { characterName, SLOT_LABEL } from '../engine/stats'
 import { SLOTS, type Priority } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
+import { BuildingToggle } from './marks'
 
 const PRIORITY_LABEL: Record<Priority, string> = { priority: '★ Priority', normal: 'Normal', ignore: 'Ignore' }
 const PRIORITY_ORDER: Record<Priority, number> = { priority: 0, normal: 1, ignore: 2 }
@@ -32,6 +33,7 @@ export function RosterPage({ result }: { result: EvaluationResult }) {
         .filter((c) => characterName(c.char).toLowerCase().includes(query.toLowerCase()))
         .sort(
           (a, b) =>
+            Number(b.building) - Number(a.building) ||
             PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
             Number(b.owned) - Number(a.owned) ||
             (b.level ?? 0) - (a.level ?? 0) ||
@@ -117,6 +119,7 @@ function Row({
           {i === 0 && (
             <>
               <td rowSpan={span}>
+                <BuildingToggle char={c.char} />{' '}
                 <a className="char-name char-link" href={`#improve/${encodeURIComponent(c.char)}`} title="All the ways to improve their pieces">
                   {characterName(c.char)}
                 </a>

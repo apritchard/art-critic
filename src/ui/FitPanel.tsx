@@ -10,6 +10,7 @@ import type { BuildConfig, Settings } from '../engine/types'
 import { useStore } from '../state/store'
 import { ReasonText, SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
 import { useLocal } from './local'
+import { marks } from './marks'
 import { buildsHref, inventoryHref } from './routes'
 
 /** A piece opened with Closest build: its evaluation, and every active build's fit for it, closest first. */
@@ -124,18 +125,31 @@ interface Props {
   build: BuildConfig
   save: (b: BuildConfig) => void
   onPick: (char: string, idx: number) => void
+  /** Closes the panel; by default it goes back to the build without the piece. */
+  onClose?: () => void
+  /** Shown under the verdict: the inspector's buttons to mark the piece done, leveled or rerolled. */
+  actions?: ReactNode
+  /** The panel's heading: "Closest build" in the Builds editor. */
+  title?: string
+  /** Under Layers' heading: where to edit the build on screen in full. */
+  editLink?: ReactNode
+  /** Controls in the heading, before ✕: the inspector's dock switch. */
+  tools?: ReactNode
 }
 
 /**
- * Closest build, at the top of the Builds editor: the piece, its verdict now (live, so edits show their effect at
- * once), the active builds nearest to keeping it, and layer by layer what stands in the way for the build on screen.
+ * Closest build, at the top of the Builds editor and in the Artifacts tab's inspector: the piece, its verdict now
+ * (live, so edits show their effect at once), the active builds nearest to keeping it, and layer by layer what stands
+ * in the way for the build on screen.
  */
-export function FitPanel({ fitting, char, idx, build, save, onPick }: Props) {
+export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, actions, title = 'Closest build', editLink, tools }: Props) {
   const { settings, config, pieces, roster, data } = useStore()
   const [showOffSet, setShowOffSet] = useLocal('builds:fit:off-set', false)
-  const close = () => {
-    location.hash = buildsHref({ char, idx })
-  }
+  const close =
+    onClose ??
+    (() => {
+      location.hash = buildsHref({ char, idx })
+    })
   const { ev, fits } = fitting
   const piece = ev?.piece ?? null
 
@@ -170,14 +184,15 @@ export function FitPanel({ fitting, char, idx, build, save, onPick }: Props) {
 
   const head = (
     <div className="fit-head">
-      <b>Closest build</b>
+      <b>{title}</b>
       {piece && (
         <span className="fit-piece">
           {SLOT_ICON[piece.slotKey]} {setName(piece.setKey)} · {statLabel(piece.mainStatKey)} · +{piece.level}{' '}
           <span title={piece.lock ? 'Locked now' : 'Unlocked now'}>{piece.lock ? '🔒' : '🔓'}</span>
         </span>
       )}
-      <button className="ghost small" onClick={close} title="Close Closest build">
+      {tools && <span className="fit-tools">{tools}</span>}
+      <button className="ghost small" onClick={close} title={`Close ${title}`}>
         ✕
       </button>
     </div>
@@ -209,77 +224,85 @@ export function FitPanel({ fitting, char, idx, build, save, onPick }: Props) {
       ? `They don't run ${set}, and off-set pieces are switched off (Settings → Off-set pieces), so each needs ${set} added to count it at all.`
       : `They don't run ${set}. ${what} can't be an off-set piece with Settings → Off-set pieces on Rare main stats, so each needs ${set} added to count it at all.`
   const rows = { piece, settings, isOn, onPick, byId: fitting.byId }
+  // Two blocks, stacked unless there's room side by side (the inspector docked at the bottom): the piece and the
+  // builds nearest to keeping it, then the build on screen layer by layer.
   return (
     <div className="fit-panel">
       {head}
-      <div className="subs fit-subs">
-        {allSubs(piece).map((s) => (
-          <span key={s.key} className={`sub ${weightClass(weights[s.key] ?? 0)}${piece.substats.includes(s) ? '' : ' hidden-line'}`}>
-            {formatStat(s.key, s.value)}
-          </span>
-        ))}
-      </div>
-      <div className="fit-now">
-        <span className="muted">Now:</span>
-        <span className={`verdict v-${ev.grade}`}>{verdictLabel(ev)}</span>
-        {ev.action ? (
-          <span className={`fit-act ${ev.action}`}>{ev.action === 'lock' ? '🔒 LOCK' : '🔓 UNLOCK'}</span>
-        ) : (
-          <span className="muted">{ev.recommendLock ? 'stays locked' : 'stays unlocked'}</span>
-        )}
-        <span className="reason">
-          <ReasonText ev={ev} />
-        </span>
-      </div>
-
-      {piece.owner ? (
-        <p className="hint">Equipped on {characterName(piece.owner)}, so it&apos;s kept whatever the builds say.</p>
-      ) : (
-        <>
-          <h4>Nearest to keeping it</h4>
-          <p className="hint">
-            Active builds, as if they counted it: its main stat allowed, and its set listed if it can&apos;t be their
-            off-set piece. Builds that take its main stat come first, those that would keep it first; each says what
-            stands in the way. The number is its average gain at +20 over what they wear, and ▲ marks who it gains most,
-            kept or not. Pick one to edit it here.
-          </p>
-          {!fits.length && <p className="muted">No active build has this slot.</p>}
-          {fits.length > 0 && (
-            <div className="fit-section">
-              <span className="fit-section-head">
-                Builds that run {set} <span className="muted">· {onSet.length}</span>
-                {onBest && (
-                  <span className="fit-best">
-                    {' '}
-                    · ▲ most gain: {characterName(onBest.ref.char)} {signed(gainOf(onBest))}
-                  </span>
-                )}
+      <div className="fit-body">
+        <div className="fit-main">
+          <div className="subs fit-subs">
+            {allSubs(piece).map((s) => (
+              <span key={s.key} className={`sub ${weightClass(weights[s.key] ?? 0)}${piece.substats.includes(s) ? '' : ' hidden-line'}`}>
+                {formatStat(s.key, s.value)}
               </span>
-              {onSet.length ? <FitRows fits={onSet} store="builds:fit:all" {...rows} /> : <p className="muted">No active build runs {set}.</p>}
-            </div>
-          )}
-          {offSet.length > 0 && (
-            <div className="fit-section">
-              {offForced ? (
-                <span className="fit-section-head">
-                  As an off-set piece <span className="muted">· {offSet.length}</span>
-                </span>
-              ) : (
-                <button className="link fit-section-head" onClick={() => setShowOffSet(!showOffSet)} aria-expanded={offOpen}>
-                  {offOpen ? '▾' : '▸'} As an off-set piece for {plural(offSet.length, 'other build')}
-                  {offKeeps > 0 && `, ${offKeeps} would keep it`}
-                </button>
-              )}
-              {offOpen && (
-                <>
-                  <p className="hint">{offSetHint}</p>
-                  <FitRows fits={offSet} store="builds:fit:off-set:all" {...rows} />
-                </>
-              )}
-            </div>
-          )}
+            ))}
+          </div>
+          <div className="fit-now">
+            <span className="muted">Now:</span>
+            <span className={`verdict v-${ev.grade}`}>{verdictLabel(ev)}</span>
+            {ev.action ? (
+              <span className={`fit-act ${ev.action}`}>{ev.action === 'lock' ? '🔒 LOCK' : '🔓 UNLOCK'}</span>
+            ) : (
+              <span className="muted">{ev.recommendLock ? 'stays locked' : 'stays unlocked'}</span>
+            )}
+            <span className="reason">
+              <ReasonText ev={ev} />
+            </span>
+          </div>
+          {actions}
 
-          {fit && (
+          {piece.owner ? (
+            <p className="hint">Equipped on {characterName(piece.owner)}, so it&apos;s kept whatever the builds say.</p>
+          ) : (
+            <>
+              <h4>Nearest to keeping it</h4>
+              <p className="hint">
+                Active builds, as if they counted it: its main stat allowed, and its set listed if it can&apos;t be their
+                off-set piece. Builds that take its main stat come first, those that would keep it first; each says what
+                stands in the way. The number is its average gain at +20 over what they wear, and ▲ marks who it gains most,
+                kept or not. Pick one to edit it here.
+              </p>
+              {!fits.length && <p className="muted">No active build has this slot.</p>}
+              {fits.length > 0 && (
+                <div className="fit-section">
+                  <span className="fit-section-head">
+                    Builds that run {set} <span className="muted">· {onSet.length}</span>
+                    {onBest && (
+                      <span className="fit-best">
+                        {' '}
+                        · ▲ most gain: {characterName(onBest.ref.char)} {signed(gainOf(onBest))}
+                      </span>
+                    )}
+                  </span>
+                  {onSet.length ? <FitRows fits={onSet} store="builds:fit:all" {...rows} /> : <p className="muted">No active build runs {set}.</p>}
+                </div>
+              )}
+              {offSet.length > 0 && (
+                <div className="fit-section">
+                  {offForced ? (
+                    <span className="fit-section-head">
+                      As an off-set piece <span className="muted">· {offSet.length}</span>
+                    </span>
+                  ) : (
+                    <button className="link fit-section-head" onClick={() => setShowOffSet(!showOffSet)} aria-expanded={offOpen}>
+                      {offOpen ? '▾' : '▸'} As an off-set piece for {plural(offSet.length, 'other build')}
+                      {offKeeps > 0 && `, ${offKeeps} would keep it`}
+                    </button>
+                  )}
+                  {offOpen && (
+                    <>
+                      <p className="hint">{offSetHint}</p>
+                      <FitRows fits={offSet} store="builds:fit:off-set:all" {...rows} />
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {!piece.owner && fit && (
+          <div className="fit-aside">
             <Layers
               fit={fit}
               piece={piece}
@@ -287,12 +310,13 @@ export function FitPanel({ fitting, char, idx, build, save, onPick }: Props) {
               save={save}
               settings={settings}
               who={`${characterName(char)}${build.name ? ` · ${build.name}` : ''}`}
+              editLink={editLink}
               inactive={inactive}
               byId={fitting.byId}
             />
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -343,7 +367,7 @@ function FitRows(props: {
             >
               <span className="fit-who">
                 {characterName(f.ref.char)}
-                {f.ref.priority === 'priority' && ' ★'} <small>{f.ref.build.name}</small>
+                {marks(f.ref)} <small>{f.ref.build.name}</small>
                 <span className={`fit-gain${f === top ? ' best' : ''}`} title={`${gainTitle}${f === top ? '. The most it gains any build here.' : ''}`}>
                   {f === top && '▲ '}
                   {signed(gainOf(f))}
@@ -393,8 +417,9 @@ function Layers(props: {
   who: string
   inactive: string | null
   byId: Map<string, Evaluation>
+  editLink?: ReactNode
 }) {
-  const { fit: f, piece, build, save, settings, who, inactive, byId } = props
+  const { fit: f, piece, build, save, settings, who, inactive, byId, editLink } = props
   const { pieces, config } = useStore()
   const c = f.cand
   // The finished spare it's measured against, when that beats what's worn.
@@ -494,7 +519,7 @@ function Layers(props: {
   // What it's measured against: their best finished spare when that beats what they wear, or what they wear.
   const rival = c.bar === null ? null : (spare?.piece ?? pieces.find((p) => p.owner === c.ref.char && p.slotKey === piece.slotKey) ?? null)
   const rivalLink = rival && (
-    <a href={inventoryHref(rival.id)} title="Show it in the Inventory grid">
+    <a href={inventoryHref(rival.id)} title="Show it in the Artifacts grid">
       {statShort(rival.mainStatKey)} {setName(rival.setKey)} {slot}
       {spare ? ` +${rival.level}` : ''}
     </a>
@@ -504,7 +529,7 @@ function Layers(props: {
   const beatsWorn = c.bar === null || c.expected > c.bar + 1e-9
   const rivalSpare = other && (c.bar === null || other.cand.expected > c.bar + 1e-9) ? other : null
   const rivalSpareLink = rivalSpare && (
-    <a href={inventoryHref(rivalSpare.piece.id)} title="Show it in the Inventory grid">
+    <a href={inventoryHref(rivalSpare.piece.id)} title="Show it in the Artifacts grid">
       {statShort(rivalSpare.piece.mainStatKey)} {setName(rivalSpare.piece.setKey)} {slot} +20
     </a>
   )
@@ -602,7 +627,10 @@ function Layers(props: {
 
   return (
     <div className="fit-layers-box">
-      <h4>For {who}</h4>
+      <h4>
+        For {who}
+        {editLink}
+      </h4>
       <div className="fit-layers">
         {rows.map((r) => (
           <div key={r.label} className="fit-layer">
@@ -640,7 +668,7 @@ function Layers(props: {
 const AHEAD_SHOWN = 6
 
 /**
- * The pieces the cap ranks above this one for the build, in rank order, each a link to the Inventory grid. They're all
+ * The pieces the cap ranks above this one for the build, in rank order, each a link to the Artifacts grid. They're all
  * still to level (finished pieces take no cap place; the best of them is the bar instead), so they're worth leveling
  * first: one that rolls badly drops back, and this piece moves up.
  */
@@ -653,7 +681,7 @@ function RankedAhead({ cut, byId }: { cut: NonNullable<ReturnType<typeof piecesA
         {cut.ahead.length === 1
           ? 'level it first. If it rolls badly, it drops back and this piece moves up.'
           : 'level them first. Each one that rolls badly drops back, and this piece moves up.'}{' '}
-        Each opens in the Inventory grid, outlined.
+        Each opens in the Artifacts grid, outlined.
       </p>
       <div className="fit-list">
         {cut.ahead.slice(0, AHEAD_SHOWN).map((a) => (
@@ -671,7 +699,7 @@ function AheadLink({ a, offSet, ev }: { a: Ahead; offSet: boolean; ev?: Evaluati
   // A slot's off-set lane ranks by gain over its bar; its cap by projected value.
   const worth = offSet ? `+${n2(a.cand.expected - (a.cand.bar ?? 0))} gain` : `${n2(a.cand.expected)} at +20`
   return (
-    <a className="fit-row" href={inventoryHref(p.id)} title={`Show it in the Inventory grid${ev ? `. ${verdictLabel(ev)}: ${ev.reason}` : ''}`}>
+    <a className="fit-row" href={inventoryHref(p.id)} title={`Show it in the Artifacts grid${ev ? `. ${verdictLabel(ev)}: ${ev.reason}` : ''}`}>
       <span className="fit-who">
         #{place} {SLOT_ICON[p.slotKey]} {statShort(p.mainStatKey)} +{p.level} <small>{setName(p.setKey)}</small>
       </span>
