@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Candidate, Evaluation } from './evaluate'
-import { inventoryOrder, levelPriority } from './inventory'
+import { inventoryOrder, levelPriority, rerollPriority } from './inventory'
 import { loadPieces } from './load'
+import type { RerollOption } from './reroll'
 import type { GoodArtifact } from './types'
 
 const art = (over: Partial<GoodArtifact>): GoodArtifact => ({
@@ -135,5 +136,27 @@ describe('level priority', () => {
   it('counts what finishing an equipped piece adds for its wearer', () => {
     const worn = { ...fresh, owner: 'Yelan' }
     expect(levelPriority(ev([cand('Yelan', 'priority', 2.75)], { piece: worn }), true)).toMatchObject({ gain: 5.7 - 2.75, high: true })
+  })
+})
+
+describe('reroll priority', () => {
+  const opt = (gain: number, priority: 'priority' | 'normal' = 'priority', over: Partial<RerollOption> = {}) =>
+    ({ gain, chance: 0.8, chosen: ['critRate_', 'critDMG_'], cost: 1, elsewhere: null, ref: { char: 'Mona', priority }, ...over }) as unknown as RerollOption
+
+  it('steps up at the same gains as leveling', () => {
+    expect([0.5, 0.99, 1, 1.5, 2, 3.2].map((g) => rerollPriority(opt(g), true)?.tier)).toEqual([1, 1, 2, 2, 3, 4])
+    expect(rerollPriority(opt(1.2), true)).toMatchObject({ char: 'Mona', star: true, high: true, chance: 0.8, cost: 1 })
+    expect(rerollPriority(opt(0.7), true)?.high).toBe(false)
+  })
+
+  it('skips small gains and pieces worth moving instead', () => {
+    // Nearly every worn +20 gains something from a reroll: below the first step isn't worth a badge.
+    expect(rerollPriority(opt(0.49), true)).toBeNull()
+    expect(rerollPriority(opt(1.5, 'priority', { elsewhere: { char: 'Xilonen', from: 1, to: 4 } }), true)).toBeNull()
+  })
+
+  it('counts only ★ wearers while someone is ★', () => {
+    expect(rerollPriority(opt(1.5, 'normal'), true)).toMatchObject({ tier: 0, high: false })
+    expect(rerollPriority(opt(1.5, 'normal'), false)).toMatchObject({ tier: 2, high: true })
   })
 })

@@ -429,6 +429,32 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
       cost: `${r.cost} Dust`,
     })
   }
+  for (const o of s.spareRerolls) {
+    rows.push({
+      key: `spare-reroll-${o.piece.id}`,
+      what: <span className="opt">Reroll a spare</span>,
+      detail: (
+        <>
+          {' '}
+          {setName(o.piece.setKey)} · <b>{statShort(o.piece.mainStatKey)}</b> ({o.current.toFixed(1)} now), pick{' '}
+          {o.chosen.map(statShort).join(' + ')}
+          <div className="sub-note">{shortSubs(o.piece)}</div>
+          {s.now !== null && o.bar < s.now - 0.05 && (
+            <div className="sub-note" title="Their ER is past their target without it, so neither piece's ER line counts, as for a reroll of the worn piece">
+              vs {o.bar.toFixed(1)} worn, not counting ER past their target
+            </div>
+          )}
+          <FitNote o={o} plan={plan} />
+          {o.erBound && <div className="sub-note">keeps needed ER</div>}
+          <ErChange er={o.er} approx />
+          {o.claimedBy && <div className="sub-note warn">Free upgrades gives it to {characterName(o.claimedBy)}</div>}
+        </>
+      ),
+      chance: o.chance,
+      gain: o.gain,
+      cost: `${o.cost} Dust`,
+    })
+  }
   if (s.elixir && s.elixir.gain > 0.005) {
     const e = s.elixir
     rows.push({

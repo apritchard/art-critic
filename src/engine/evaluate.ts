@@ -177,16 +177,46 @@ function describeKeep(c: Candidate, piece: Piece): string {
   const who = `${characterName(c.ref.char)}${c.ref.build.name ? ` (${c.ref.build.name})` : ''}`
   const parts = [who, describeSetMatch(c.setMatch)]
   if (c.gate === 'crit') parts.push('crit circlet')
-  else if (c.rescore) parts.push(`projected ${num(c.expected)} ≥ ${num(c.rescore.bar)}`)
+  else if (c.rescore) parts.push(`${piece.level >= 20 ? 'value' : 'projected'} ${num(c.expected)} ≥ ${num(c.rescore.bar)}`)
   else {
     const note = c.scaledFor.length ? ` (${c.scaledFor.join(', ')})` : ''
     parts.push(`${weightedLines(piece, c.ref.build)} ${num(c.lineScore)} ≥ ${num(c.threshold)}${note}`)
   }
   parts.push(
-    c.bar === null ? `no usable ${piece.slotKey} worn` : `${pct(c.chance)} to beat ${c.spare ? 'their best spare +20' : 'current'}`,
+    c.bar === null
+      ? `no usable ${piece.slotKey} worn`
+      : piece.level >= 20
+        ? // A finished piece has no rolls left: it beats what's worn or it doesn't.
+          `beats current (${num(c.expected)} vs ${num(c.bar)})`
+        : `${pct(c.chance)} to beat ${c.spare ? 'their best spare +20' : 'current'}`,
   )
   if (c.rank) parts.push(`#${c.rank} of ${c.rankOf}`)
   return parts.join(' · ')
+}
+
+/**
+ * Which of a character's builds a reason means, when they have more than one active build: the name up to any
+ * bracket ("C6 hybrid" for "C6 hybrid (Bloom + Hydro DMG)"), or all of it if two of their builds share that much.
+ * Null for a character with one active build, where the name is enough.
+ */
+function buildLabel(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string | null {
+  const theirs = activeBuilds.filter((r) => r.char === ref.char)
+  if (theirs.length < 2 || !ref.build.name) return null
+  const short = (name: string) => name.replace(/\s*\(.*\)\s*$/, '') || name
+  const name = short(ref.build.name)
+  return theirs.some((r) => r.buildIdx !== ref.buildIdx && short(r.build.name) === name) ? ref.build.name : name
+}
+
+/** "Nilou's C6 hybrid build" for a character with several active builds, or just "Diluc". */
+function whoFor(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string {
+  const build = buildLabel(ref, activeBuilds)
+  return build ? `${characterName(ref.char)}'s ${build} build` : characterName(ref.char)
+}
+
+/** What follows a possessive ("Nilou's current circlet") to say which build: " for their C6 hybrid build", or nothing. */
+function forBuild(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string {
+  const build = buildLabel(ref, activeBuilds)
+  return build ? ` for their ${build} build` : ''
 }
 
 /** Threshold multiplier for a build and main stat, with the reasons it's below 1. */
@@ -272,16 +302,19 @@ export function evaluate(
     if (!gains) spareGains.set(ref, (gains = spares.flatMap((p) => gainFor(ref, p) ?? [])))
     return {
       char: ref.char,
+      build: buildLabel(ref, activeBuilds),
       gain,
       bar: barFor(ref.char, ref.build, piece.slotKey),
       better: gains.filter((g) => g > gain + 1e-9).length,
     }
   }
 
+  // Reasons name the spare a piece is measured against.
+  const byId = new Map(pieces.map((p) => [p.id, p]))
   const keptBy = new Map<string, number>()
   const evaluations = pieces.map((piece, i): Evaluation => {
     const candidates = perPiece[i].sort(compareCandidates)
-    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding)
+    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding, (id) => byId.get(id))
     if (ev.grade === 'keep' && ev.best) keptBy.set(ev.best.ref.char, (keptBy.get(ev.best.ref.char) ?? 0) + 1)
     return ev
   })
@@ -530,6 +563,7 @@ function verdictFor(
   config: ArtifactConfig,
   setFor: (ref: ActiveBuild, piece: Piece) => SetMatch,
   offStanding: (piece: Piece) => OffStanding | null,
+  pieceById: (id: string) => Piece | undefined,
 ): Evaluation {
   const base = { piece, candidates, nextStop: null as number | null }
   if (piece.rarity !== 5) {
@@ -563,7 +597,7 @@ function verdictFor(
   } else if (best?.passChance) {
     grade = 'marginal'
     // Only pieces still to level reach here: a finished one takes no cap place.
-    const who = characterName(best.ref.char)
+    const who = whoFor(best.ref, activeBuilds)
     const slots = slotPlural(piece.slotKey)
     reason =
       best.rank === undefined
@@ -572,15 +606,17 @@ function verdictFor(
   } else if (best && best.gate !== 'fail' && piece.level === 20) {
     // A finished piece that's decent for someone is a backup, not fodder: only feed what fails the gate.
     grade = 'marginal'
-    reason = `Backup: doesn't beat ${characterName(best.ref.char)}'s current ${piece.slotKey} (${num(best.expected)} vs ${num(best.bar ?? 0)})`
+    reason = `Backup: doesn't beat ${characterName(best.ref.char)}'s current ${piece.slotKey}${forBuild(best.ref, activeBuilds)} (${num(best.expected)} vs ${num(best.bar ?? 0)})`
   } else if (best && best.gate !== 'fail') {
     grade = 'toss'
+    const whose = `${characterName(best.ref.char)}'s`
+    const spare = best.spare ? pieceById(best.spare) : undefined
     reason = best.spare
-      ? `${pct(best.chance)} chance to beat ${characterName(best.ref.char)}'s best spare +20 ${piece.slotKey}, which already beats what they wear`
-      : `${pct(best.chance)} chance to beat ${characterName(best.ref.char)}'s current ${piece.slotKey}`
+      ? `${pct(best.chance)} chance to beat ${whose} best spare${forBuild(best.ref, activeBuilds)}, a +20 ${spare ? `${setName(spare.setKey)} ` : ''}${piece.slotKey}, which already beats what they wear`
+      : `${pct(best.chance)} chance to beat ${whose} current ${piece.slotKey}${forBuild(best.ref, activeBuilds)}`
   } else if (best) {
     grade = 'toss'
-    const who = characterName(best.ref.char)
+    const who = whoFor(best.ref, activeBuilds)
     const used = [...piece.substats, ...(piece.unactivatedSubstats ?? [])]
       .filter((s) => (best.ref.build.substats[s.key] ?? 0) > 0)
       .map((s) => statShort(s.key))
@@ -652,6 +688,8 @@ function noFitReason(
  */
 export interface OffStanding {
   char: string
+  /** Which of `char`'s builds, when they have more than one active (`buildLabel`). */
+  build: string | null
   gain: number
   /** What `char` wears in that slot now; null if nothing usable. */
   bar: number | null
@@ -661,10 +699,11 @@ export interface OffStanding {
 function describeOffStanding(s: OffStanding | null, slot: string): string {
   if (!s) return ''
   if (s.gain < 0.05) return ` · as an off-set ${slot} it wouldn't beat what anyone wears`
-  const who = characterName(s.char)
+  const name = characterName(s.char)
+  const who = s.build ? `${name}'s ${s.build} build` : name
   const from = s.bar === null ? 'nothing usable' : num(s.bar)
   const rest = s.better
-    ? `, but ${s.better} other spare${s.better === 1 ? '' : 's'} would gain ${who} more`
+    ? `, but ${s.better} other spare${s.better === 1 ? '' : 's'} would gain ${s.build ? 'that build' : name} more`
     : `, more than any other spare would: Settings → Off-set "Any" keeps it`
   return ` · as an off-set ${slot}: +${num(s.gain)} for ${who} (${from} → ${num((s.bar ?? 0) + s.gain)})${rest}`
 }

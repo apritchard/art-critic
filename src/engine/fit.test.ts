@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { applyEdits } from './builds'
 import { defaultSettings, evaluate } from './evaluate'
-import { fitPiece, piecesAhead, type BuildFit } from './fit'
+import { bestOtherSpare, fitPiece, piecesAhead, type BuildFit } from './fit'
 import { loadPieces } from './load'
 import { mainStatOk } from './match'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodCharacter, Settings } from './types'
@@ -211,10 +211,12 @@ describe('closest build', () => {
 
   it('puts builds that keep the piece first, then the ones nearest the substat bar', () => {
     const support = (name: string, substats: Record<string, number>) => build({ name, substats, sets4: [{ set: 'ScarletProof', tier: 1 }] })
+    // Diluc runs ScarletProof too, at tier 3: he'd keep it once that's tier 2.
+    const diluc = build({ sets4: [...build().sets4, { set: 'ScarletProof', tier: 3 }] })
     const { fits } = setup(
       {
         Bennett: [support('Healer', { hp_: 1, enerRech_: 1, hp: 0.3 })],
-        Diluc: [build()],
+        Diluc: [diluc],
         Xiangling: [support('Sub-DPS', { enerRech_: 1, critRate_: 0.5, critDMG_: 0.5, eleMas: 0.5 })],
       },
       [art()],
@@ -226,6 +228,30 @@ describe('closest build', () => {
     ])
   })
 
+  it("puts builds that run the piece's set before builds that could only take it off-set", () => {
+    // Diluc would keep it once ScarletProof is listed; Bennett runs ScarletProof, but its substats miss his bar.
+    const bennett = build({ name: 'Healer', sets4: [{ set: 'ScarletProof', tier: 1 }], substats: { hp_: 1, enerRech_: 1, hp: 0.3 } })
+    const { fits } = setup({ Diluc: [build()], Bennett: [bennett] }, [art()], { offSet: 'off' })
+    expect(fits.map((f) => [f.ref.char, f.onSet, f.outcome])).toEqual([
+      ['Bennett', true, 'substats'],
+      ['Diluc', false, 'keep'],
+    ])
+  })
+
+  it("says why a build that runs the piece's set counts it only as its off-set piece", () => {
+    const circlet = (setKey: string) =>
+      art({ setKey, slotKey: 'circlet', mainStatKey: 'critRate_', substats: [{ key: 'critDMG_', value: 14 }, ...CRIT_LINES.slice(2), { key: 'atk_', value: 5.8 }] })
+    // Wearing tier-1 Gladiator, which outranks Shimenawa (tier 2).
+    const worn = setup({ Diluc: [build()] }, [...wornSet('GladiatorsFinale', 'Diluc'), circlet('ShimenawasReminiscence')])
+    expect(worn.fits[0]).toMatchObject({ onSet: true, edits: [], sidelined: { issue: 'worn', tier: 2, worn: { set: 'GladiatorsFinale', tier: 1 } } })
+    expect(worn.fits[0].cand.setMatch.kind).toBe('off')
+    // Crimson Witch is listed at tier 3, and only tiers 1–2 count by default.
+    const tier = setup({ Diluc: [build()] }, [circlet('CrimsonWitchOfFlames')])
+    expect(tier.fits[0]).toMatchObject({ onSet: true, edits: [], sidelined: { issue: 'tier', tier: 3 } })
+    // Counted as one of its sets, it isn't sidelined.
+    expect(setup({ Diluc: [build()] }, [circlet('GladiatorsFinale')]).fits[0]).toMatchObject({ onSet: true, sidelined: null })
+  })
+
   it('puts builds that would need the main stat allowed after every build that takes it', () => {
     // Diluc would keep an Anemo DMG goblet if he took one; Sucrose takes them, but its substats miss her bar.
     const goblet = art({ slotKey: 'goblet', mainStatKey: 'anemo_dmg_' })
@@ -235,6 +261,24 @@ describe('closest build', () => {
       ['Sucrose', 'substats', false],
       ['Diluc', 'keep', true],
     ])
+  })
+
+  it("names the build's best other finished spare for the slot", () => {
+    const flower = (level: number, substats: GoodArtifact['substats'], location = '') => art({ setKey: 'GladiatorsFinale', level, substats, location })
+    const worn = flower(20, CRIT_LINES, 'Diluc')
+    const better = flower(20, [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 21 }, { key: 'atk_', value: 5.8 }, { key: 'hp', value: 299 }])
+    // Better still, but still to level.
+    const leveling = flower(16, [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 28 }, { key: 'atk_', value: 5.8 }, { key: 'hp', value: 299 }])
+    // Finished, but its substats miss the bar.
+    const junk = flower(20, [{ key: 'def', value: 46 }, { key: 'hp', value: 598 }, { key: 'def_', value: 14.6 }, { key: 'eleMas', value: 40 }])
+    const good = flower(20, [{ key: 'critRate_', value: 7.8 }, { key: 'critDMG_', value: 15.5 }, ...CRIT_LINES.slice(2)])
+    const { fits, pieces, cfg, settings } = setup({ Diluc: [build()] }, [worn, better, leveling, junk, good])
+    const ref = fits[0].cand.ref
+    expect(fits[0].outcome).toBe('keep')
+    expect(bestOtherSpare(pieces[4], pieces, ref, cfg, settings)?.piece.id).toBe(pieces[1].id)
+    // The better spare's best other is the good one: not itself, what's worn, the one still to level or the junk.
+    expect(bestOtherSpare(pieces[1], pieces, ref, cfg, settings)?.piece.id).toBe(pieces[4].id)
+    expect(bestOtherSpare(pieces[4], pieces.slice(0, 1).concat(pieces[4]), ref, cfg, settings)).toBeNull()
   })
 
   it('judges builds that are switched off when no evaluation is passed', () => {

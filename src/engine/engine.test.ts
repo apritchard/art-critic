@@ -342,7 +342,15 @@ describe('evaluate', () => {
     expect(contender.grade).toBe('keep')
     // A weak piece is measured against the spare, not against an empty slot.
     expect(weak.grade).toBe('toss')
-    expect(weak.reason).toMatch(/chance to beat Diluc's best spare \+20 flower, which already beats what they wear$/)
+    expect(weak.reason).toMatch(/chance to beat Diluc's best spare, a \+20 Gladiator's Finale flower, which already beats what they wear$/)
+  })
+
+  it('names the build in a reason when the character has more than one', () => {
+    const two = config({ Diluc: [build(), build({ name: 'Vape (EM hybrid)' })] })
+    const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts: [art(), art({ lock: false }), art()] }
+    const cut = evaluate(loadPieces(data), owned, two, { ...defaultSettings(two), capNormal: 2 }, {}).evaluations.find((e) => e.grade === 'marginal')!
+    // The bracket is left out: the rest of the name tells the builds apart.
+    expect(cut.reason).toMatch(/^Redundant: #3 of the flowers for Diluc's (DPS|Vape) build, and only the top 2 are kept/)
   })
 
   it('drops pieces that cannot beat the equipped one', () => {

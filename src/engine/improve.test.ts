@@ -136,6 +136,43 @@ describe('improveCharacter', () => {
     expect(flower.spares[0].fit).toEqual({ kind: 'breaks', set: 'CrimsonWitchOfFlames' })
   })
 
+  it('lists spares a reroll could lift past the worn piece', () => {
+    // Worth 0.7 against the worn circlet's 1.0, with every upgrade on DEF. Rerolled, one upgrade on CRIT DMG beats it;
+    // the guarantee lands on the pair picked (CRIT DMG and a dead line), so that's likely but not certain.
+    const rerollable = art({
+      slotKey: 'circlet',
+      totalRolls: 9,
+      substats: [
+        { key: 'critDMG_', value: 5.4, initialValue: 5.4 },
+        { key: 'def', value: 138, initialValue: 23 },
+        { key: 'hp', value: 299, initialValue: 299 },
+        { key: 'def_', value: 7.3, initialValue: 7.3 },
+      ],
+    })
+    const ps = loadPieces({ ...data, artifacts: [...data.artifacts, rerollable] })
+    const res = evaluate(ps, data.characters, config, defaultSettings(config), roster)
+    const hutao = res.activeBuilds.find((r) => r.char === 'HuTao')!
+    const p = improveCharacter({ result: res, pieces: ps, config, domains, er: null, ref: hutao, guarantee: 2, claimed: new Map(), strongboxSets: null })
+    const circlet = p.slots.find((s) => s.slot === 'circlet')!
+    // The other spares have no starting values, and the one past the worn piece is a spare as it is.
+    expect(circlet.spareRerolls).toHaveLength(1)
+    const [o] = circlet.spareRerolls
+    expect(o).toMatchObject({ fit: { kind: 'keeps' }, cost: 2, claimedBy: null })
+    expect(o.piece.substats[1].value).toBe(138)
+    expect(o.chosen).toContain('critDMG_')
+    expect(o.current).toBeCloseTo(0.7, 1)
+    expect(o.bar).toBeCloseTo(circlet.now!, 6)
+    expect(o.chance).toBeGreaterThan(0.75)
+    expect(o.chance).toBeLessThan(0.9)
+    // Measured against the worn circlet: a miss counts as 0, so the gain is at least the average's lead over it.
+    expect(o.gain).toBeGreaterThanOrEqual(o.value - circlet.now! - 1e-9)
+    expect(o.gain).toBeLessThan(o.value - o.current)
+    // A spare the Farm tab gives someone else says so.
+    const claimed = new Map([[o.piece.id, 'Bennett']])
+    const again = improveCharacter({ result: res, pieces: ps, config, domains, er: null, ref: hutao, guarantee: 2, claimed, strongboxSets: null })
+    expect(again.slots.find((s) => s.slot === 'circlet')!.spareRerolls[0].claimedBy).toBe('Bennett')
+  })
+
   it("doesn't count Strongbox crafts of sets it can't make", () => {
     const circlet = plan(new Set(['Lavawalker'])).slots[0]
     expect(circlet.strongbox).toMatchObject({ chance: 0, sets: [], missing: ['CrimsonWitchOfFlames'] })

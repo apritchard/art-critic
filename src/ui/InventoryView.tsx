@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { Evaluation, EvaluationResult } from '../engine/evaluate'
-import { HIGH_PRIORITY_GAIN, inventoryOrder, levelPriority, PRIORITY_STEPS, type LevelPriority } from '../engine/inventory'
+import {
+  HIGH_PRIORITY_GAIN,
+  inventoryOrder,
+  levelPriority,
+  PRIORITY_STEPS,
+  rerollPriority,
+  type LevelPriority,
+  type RerollPriority,
+} from '../engine/inventory'
 import type { Piece } from '../engine/load'
+import { planRerolls } from '../engine/reroll'
 import { characterName, formatStat, isPercent, SLOT_LABEL, setName, statLabel, statShort } from '../engine/stats'
 import type { GoodSubstat } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON, weightClass } from './ArtifactCard'
 import { useLocal } from './local'
+import { GUARANTEE, useGuarantee } from './RerollPage'
 import { buildsHref } from './routes'
 
 /** The game's inventory shows 8 pieces per row on PC. */
@@ -16,6 +26,8 @@ const MAX_COLS = 16
 
 /** Level up queue marks are kept apart from lock marks on the same piece (see doneKey in ListView). */
 const levelKey = (id: string) => `lvl:${id}`
+/** The Reroll tab's "Rerolled it" marks. */
+const rerollKey = (id: string) => `reroll:${id}`
 
 /** The suffix of an ordinal: 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st. */
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'))
@@ -29,7 +41,8 @@ const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s
  * through in-game in one pass.
  */
 export function InventoryView({ result, focus }: { result: EvaluationResult; focus?: { piece?: string; key: string } }) {
-  const { done, toggleDone } = useStore()
+  const { done, toggleDone, pieces, er, config } = useStore()
+  const [guarantee] = useGuarantee()
   const [setPick, setSet] = useLocal<string>('inventory:set', '')
   const [colsPick, setCols] = useLocal<number>('inventory:cols', DEFAULT_COLS)
   const [withEquipped, setWithEquipped] = useLocal('inventory:equipped', false)
@@ -66,19 +79,33 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
     [shown, anyStar],
   )
   const highToLevel = (e: Evaluation) => !!priorities.get(e.piece.id)?.high && !done.has(levelKey(e.piece.id))
+  // +20s worth a reroll, worn or spare, as the Reroll tab judges them.
+  const rerolls = useMemo(() => {
+    const m = new Map<string, RerollPriority>()
+    for (const o of planRerolls(result, pieces, guarantee, er, config).options) {
+      const r = rerollPriority(o, anyStar)
+      if (r) m.set(o.piece.id, r)
+    }
+    return m
+  }, [result, pieces, guarantee, er, config, anyStar])
+  const toRerollNow = (e: Evaluation) => rerolls.has(e.piece.id) && !done.has(rerollKey(e.piece.id))
+  const highToReroll = (e: Evaluation) => toRerollNow(e) && !!rerolls.get(e.piece.id)?.high
 
-  // Sets with lock changes still to make first, then by name.
+  // Sets with lock changes still to make first, then by name. Rerolls are scarcer than pieces to level, so the rail
+  // counts every one worth a look (tier 1 up), not only high priority as for leveling.
   const sets = useMemo(() => {
-    const m = new Map<string, { lock: number; unlock: number; high: number; total: number }>()
+    const m = new Map<string, { lock: number; unlock: number; high: number; reroll: number; rerollHigh: number; total: number }>()
     for (const e of shown) {
-      const c = m.get(e.piece.setKey) ?? { lock: 0, unlock: 0, high: 0, total: 0 }
+      const c = m.get(e.piece.setKey) ?? { lock: 0, unlock: 0, high: 0, reroll: 0, rerollHigh: 0, total: 0 }
       c.total++
       if (pending(e)) c[e.action!]++
       if (highToLevel(e)) c.high++
+      if (toRerollNow(e) && rerolls.get(e.piece.id)!.tier > 0) c.reroll++
+      if (highToReroll(e)) c.rerollHigh++
       m.set(e.piece.setKey, c)
     }
     return [...m].sort((a, b) => b[1].lock + b[1].unlock - (a[1].lock + a[1].unlock) || setName(a[0]).localeCompare(setName(b[0])))
-  }, [shown, done, priorities])
+  }, [shown, done, priorities, rerolls])
   const set = sets.some(([k]) => k === setPick) ? setPick : (sets[0]?.[0] ?? '')
 
   // The export's lock states, unless asked to follow the done marks: the game re-sorts only when reopened.
@@ -98,6 +125,12 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
   const left = ordered.filter(pending)
   const toLevel = ordered.filter((e) => priorities.get(e.piece.id) && !done.has(levelKey(e.piece.id)))
   const high = toLevel.filter(highToLevel)
+  const toReroll = ordered.filter(toRerollNow)
+  const highReroll = toReroll.filter(highToReroll)
+  // Worn ones are left out while equipped pieces are hidden: say how many there are.
+  const hiddenRerolls = withEquipped
+    ? 0
+    : result.evaluations.filter((e) => e.piece.setKey === set && e.piece.owner && toRerollNow(e)).length
   const markAll = (value: boolean) => {
     for (const e of ordered) if (e.action) toggleDone(e.piece.id, value)
   }
@@ -120,7 +153,15 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
                   ⬆{c.high}
                 </span>
               )}
-              {c.lock + c.unlock + c.high === 0 && <span className="muted">{c.total}</span>}
+              {c.reroll > 0 && (
+                <span
+                  className={c.rerollHigh > 0 ? 'c-heat' : 'c-heat-1'}
+                  title={`Worth rerolling: ${c.reroll}${c.rerollHigh > 0 ? `, ${c.rerollHigh} high priority` : ''}`}
+                >
+                  ⟳{c.reroll}
+                </span>
+              )}
+              {c.lock + c.unlock + c.high + c.reroll === 0 && <span className="muted">{c.total}</span>}
             </span>
           </button>
         ))}
@@ -174,6 +215,23 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
                 ⬆ level {toLevel.length}
                 {high.length > 0 && `, ${high.length} high priority`}
               </span>
+              {toReroll.length > 0 && (
+                <>
+                  {' · '}
+                  <span className="c-heat">
+                    ⟳ reroll {toReroll.length}
+                    {highReroll.length > 0 && `, ${highReroll.length} high priority`}
+                  </span>
+                </>
+              )}
+              {hiddenRerolls > 0 && (
+                <>
+                  {' · '}
+                  <button className="link" onClick={() => setWithEquipped(true)} title="Include equipped pieces">
+                    ⟳ {hiddenRerolls} equipped worth rerolling
+                  </button>
+                </>
+              )}
               . Click a piece once you&apos;ve changed its lock; its ↗ (on hover) opens the build closest to keeping it.{' '}
               {spotAt >= 0 && (
                 <b className="inv-spot-note">
@@ -199,7 +257,17 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
               style={{ gridTemplateColumns: `2.5em repeat(${cols}, var(--inv-cell))` }}
             >
               {rows.map((row, r) => (
-                <Row key={r} n={r + 1} row={row} done={done} toggle={toggleDone} priorities={priorities} showSubs={showSubs} spot={spot} />
+                <Row
+                  key={r}
+                  n={r + 1}
+                  row={row}
+                  done={done}
+                  toggle={toggleDone}
+                  priorities={priorities}
+                  rerolls={rerolls}
+                  showSubs={showSubs}
+                  spot={spot}
+                />
               ))}
             </div>
             <p className="sub-note inv-key">
@@ -214,6 +282,13 @@ export function InventoryView({ result, focus }: { result: EvaluationResult; foc
               ))}
               . From {HIGH_PRIORITY_GAIN} it counts as high priority. Re-export after leveling; mark it leveled on the Level up
               tab.
+            </p>
+            <p className="sub-note inv-key">
+              <span className="inv-up t2">⟳</span> a +20 worth a Dust of Enlightenment reroll, with the {GUARANTEE[guarantee]}{' '}
+              guarantee picked on the Reroll tab: a worn piece, or a spare that rerolled could beat what someone wears.
+              It&apos;s shaded the same way by the expected gain from one reroll{anyStar ? ' for a ★ Priority character' : ''},
+              from {PRIORITY_STEPS[0]}. A worn piece worth more moved to someone else gets none. Mark it rerolled on the
+              Reroll tab.
             </p>
             <p className="sub-note">
               The order is level, then flower → circlet, then locked first, then pieces that started with 4 lines,
@@ -235,6 +310,7 @@ function Row({
   done,
   toggle,
   priorities,
+  rerolls,
   showSubs,
   spot,
 }: {
@@ -243,6 +319,7 @@ function Row({
   done: Set<string>
   toggle: (id: string) => void
   priorities: Map<string, LevelPriority | null>
+  rerolls: Map<string, RerollPriority>
   showSubs: boolean
   spot: string | undefined
 }) {
@@ -257,6 +334,8 @@ function Row({
           toggle={toggle}
           level={priorities.get(e.piece.id) ?? null}
           leveled={done.has(levelKey(e.piece.id))}
+          reroll={rerolls.get(e.piece.id) ?? null}
+          rerolled={done.has(rerollKey(e.piece.id))}
           showSubs={showSubs}
           spot={e.piece.id === spot}
         />
@@ -271,6 +350,8 @@ function Cell({
   toggle,
   level,
   leveled,
+  reroll,
+  rerolled,
   showSubs,
   spot,
 }: {
@@ -279,6 +360,9 @@ function Cell({
   toggle: (id: string) => void
   level: LevelPriority | null
   leveled: boolean
+  /** A +20 worth rerolling. Never alongside `level`, which is only for pieces below +20. */
+  reroll: RerollPriority | null
+  rerolled: boolean
   showSubs: boolean
   /** The piece a link pointed at: outlined. */
   spot: boolean
@@ -289,16 +373,21 @@ function Cell({
   const levelLine =
     level &&
     `${leveled ? 'Marked leveled. ' : ''}Level to +${level.next}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${level.star ? ' ★' : ''}, ${Math.round(level.chance * 100)}% to beat the best they have`
+  const rerollLine =
+    reroll &&
+    `${rerolled ? 'Marked rerolled. ' : ''}Reroll${reroll.high ? ' (high priority)' : ''}: +${reroll.gain.toFixed(2)} rolls expected for ${characterName(reroll.char)}${reroll.star ? ' ★' : ''}, ${Math.round(reroll.chance * 100)}% to ${reroll.bar === null ? 'come out better' : `beat the ${reroll.bar.toFixed(1)} they wear`}. Pick ${reroll.chosen.map(statShort).join(' + ')}; ${reroll.cost} Dust`
   const title = [
     `${setName(p.setKey)} ${SLOT_LABEL[p.slotKey].toLowerCase()} · ${statLabel(p.mainStatKey)} · +${p.level}${p.lock ? ' · locked' : ''}`,
     ...subs,
     p.owner ? `Equipped on ${characterName(p.owner)}` : '',
     e.reason,
     levelLine,
+    rerollLine,
   ]
     .filter(Boolean)
     .join('\n')
-  const cls = ['inv-cell', e.action ? `act-${e.action}` : 'idle', isDone ? 'done' : '', level && !leveled ? `t${level.tier}` : '']
+  const heat = level && !leveled ? level.tier : reroll && !rerolled ? reroll.tier : null
+  const cls = ['inv-cell', e.action ? `act-${e.action}` : 'idle', isDone ? 'done' : '', heat !== null ? `t${heat}` : '']
     .filter(Boolean)
     .join(' ')
   return (
@@ -310,6 +399,7 @@ function Cell({
             {leveled ? '✓' : '⬆'}+{level.next}
           </span>
         )}
+        {reroll && <span className={`inv-up t${reroll.tier}${rerolled ? ' leveled' : ''}`}>{rerolled ? '✓⟳' : '⟳'}</span>}
         <span className="inv-icon">{SLOT_ICON[p.slotKey]}</span>
         <span className="inv-main">{statShort(p.mainStatKey)}</span>
         <span className="inv-level">

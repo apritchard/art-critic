@@ -855,16 +855,16 @@ function spareCoverage(ref: ActiveBuild, spares: Piece[], pieces: Piece[]): { se
  * setsFit); each used once. Where a character's total ER and ER target are known, ER lines leave the substat values
  * and the change in their total counts instead (see erChangeValue), so a swap can win by bringing ER toward the
  * target or by shedding ER past it. A swap that would take the character's ER below their build's minimum (and
- * lower than it is now) is held back.
+ * lower than it is now) is held back. The Reroll tab leaves these spares and slots out of its spare rerolls.
  */
-function freeSwaps(
+export function freeSwaps(
   builds: ActiveBuild[],
   spares: Piece[],
   worn: Map<string, Record<string, number>>,
   equipped: Map<string, Piece>,
   barsOf: (ref: ActiveBuild) => Record<SlotKey, number | null>,
   er: ErModel | null,
-  config: ArtifactConfig,
+  config: ArtifactConfig | null,
 ): { swaps: Swap[]; erHeld: number } {
   const options: Swap[] = []
   for (const ref of builds) {

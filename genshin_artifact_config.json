@@ -422,10 +422,11 @@
             "eleMas": 0.5,
             "critRate_": 0.4,
             "atk_": 0.3,
-            "hp_": 0.3
+            "hp_": 0.3,
+            "hp": 0.1
           },
           "erTarget": "~130-180%",
-          "notes": "Goblet: any (EM preferred). Icy Veins prefers 4* Instructor over Silken Moon's. CRIT Rate circlet with Favonius, EM circlet with Makhaira"
+          "notes": "Goblet: any (EM preferred). Icy Veins prefers 4* Instructor over Silken Moon's. CRIT Rate circlet with Favonius, EM circlet with Makhaira. HP is for staying alive: nothing in her kit scales on it"
         }
       ]
     },
@@ -1627,7 +1628,8 @@
             "atk_": 0.7,
             "atk": 0.3,
             "eleMas": 0.25,
-            "hp_": 0.7
+            "hp_": 0.7,
+            "hp": 0.3
           },
           "erTarget": "130-160%",
           "notes": ""
@@ -1784,40 +1786,45 @@
       "enabled": true,
       "builds": [
         {
-          "name": "Battery/healer",
+          "name": "Hyperbloom battery/healer",
           "sets4": [
             {
               "set": "NoblesseOblige",
               "tier": 1
             },
             {
-              "set": "TenacityOfTheMillelith",
+              "set": "DeepwoodMemories",
               "tier": 2
+            },
+            {
+              "set": "FlowerOfParadiseLost",
+              "tier": 3
             }
           ],
           "sets2": [],
           "mainStats": {
             "sands": [
-              "enerRech_"
+              "enerRech_",
+              "eleMas"
             ],
             "goblet": [
-              "hp_"
+              "eleMas"
             ],
             "circlet": [
-              "hp_",
-              "heal_"
+              "eleMas",
+              "critRate_"
             ]
           },
           "substatPreset": "custom",
           "substats": {
-            "hp_": 1,
-            "enerRech_": 0.8,
+            "enerRech_": 1,
+            "eleMas": 0.8,
             "critRate_": 0.5,
-            "hp": 0.4,
-            "critDMG_": 0.15
+            "hp_": 0.3,
+            "hp": 0.1
           },
           "erTarget": "160%+",
-          "notes": "Favonius Greatsword is one of the most competitive weapons (KQM quick guide 4.0 builds Dori on EM for Hyperbloom: ER > EM > CRIT Rate (Favonius) > HP%). ER sands only: 140-260% ER by team and constellation (KQM quick guide 4.0; EM sands only once ER is covered)"
+          "notes": "KQM quick guide 4.0, Hyperbloom: ER (until requirements) > EM > CRIT Rate (Favonius) > HP%, with EM or ER sands and EM goblet and circlet. Her Burst heals on Max HP, but KQM marks the pure HP healer 'Not Recommended' because her healing is enough when built offensively. ER with Favonius at C6: 160-180% as a solo-Electro driver, 120-140% with a second Electro; as an off-field support 180-220% and 140-160%; 20-40 points more without Favonius. Raiden in the team lowers it by 40-60%, Fischl by 30-40%. ER sands until the need is met, then EM sands. Noblesse, or Deepwood when no Dendro teammate holds it; Flower of Paradise Lost falls behind those team buffs (KQM). CRIT Rate circlet with Favonius Greatsword"
         }
       ]
     },
@@ -2986,11 +2993,12 @@
             "atk_": 0.75,
             "atk": 0.3,
             "enerRech_": 0.3,
-            "hp_": 0.3,
+            "hp_": 0.4,
+            "hp": 0.15,
             "eleMas": 0.2
           },
           "erTarget": "120-140%",
-          "notes": ""
+          "notes": "HP% feeds Namisen (about 1% Max HP per stack, 4 at C0, added to Shunsuiken hits) and Jade Cutter's HP-to-ATK, so a roll is worth roughly half an ATK% roll. Flat HP is 0.4x HP%, as flat ATK is to ATK%."
         }
       ]
     },
@@ -3299,6 +3307,7 @@
             "enerRech_": 0.6,
             "critRate_": 0.3,
             "hp_": 0.2,
+            "hp": 0.1,
             "critDMG_": 0.15,
             "atk_": 0.1
           },
@@ -4706,6 +4715,46 @@
           },
           "erTarget": "130%+",
           "notes": "Heart of the Furnace in Stellar teams"
+        },
+        {
+          "name": "C6 Stellar-Conduct burst buffer",
+          "sets4": [
+            {
+              "set": "NoblesseOblige",
+              "tier": 1
+            },
+            {
+              "set": "TenacityOfTheMillelith",
+              "tier": 1
+            },
+            {
+              "set": "HeartOfTheFurnace",
+              "tier": 2
+            }
+          ],
+          "sets2": [],
+          "mainStats": {
+            "sands": [
+              "atk_",
+              "enerRech_"
+            ],
+            "goblet": [
+              "atk_"
+            ],
+            "circlet": [
+              "atk_",
+              "critRate_"
+            ]
+          },
+          "substatPreset": "custom",
+          "substats": {
+            "enerRech_": 1,
+            "atk_": 0.9,
+            "critRate_": 0.4,
+            "atk": 0.4
+          },
+          "erTarget": "150-170%",
+          "notes": "C6: each Burst (80 Energy, 20s CD) gives 4 Glimpse of Mystery stacks for 12s, each adding 600% of her ATK to the active teammate's Stellar-Conduct DMG, so Burst every rotation and build ATK. ER for C1+ bursting every rotation (KQM quick guide Luna VIII): 150-170% with Sandrone, 135-155% with a second Cryo, when Herald of Frost hits consistently (melee on-fielder); 190-220% and 170-190% when it doesn't. Favonius on Qiqi lowers it 20-30%, and R5 Favonius alone puts her at ~161%. Noblesse or Tenacity, whichever the team isn't holding; Heart of the Furnace only if no one else has it (Timesaver 7.1). CRIT Rate circlet only with Favonius (KQM: ER > ATK% > CRIT Rate (Favonius) > flat ATK)"
         }
       ]
     },
@@ -5055,24 +5104,26 @@
               "enerRech_"
             ],
             "goblet": [
-              "eleMas",
-              "anemo_dmg_"
+              "atk_",
+              "eleMas"
             ],
             "circlet": [
+              "heal_",
+              "atk_",
               "eleMas",
-              "heal_"
+              "critRate_"
             ]
           },
-          "substatPreset": "EM_PURE",
+          "substatPreset": "custom",
           "substats": {
-            "eleMas": 1,
-            "enerRech_": 0.6,
-            "critRate_": 0.3,
-            "critDMG_": 0.15,
-            "atk_": 0.1
+            "enerRech_": 1,
+            "atk_": 0.8,
+            "eleMas": 0.7,
+            "atk": 0.35,
+            "critRate_": 0.3
           },
           "erTarget": "160%+",
-          "notes": "ER sands only: off-field Burst Sayu needs 200%+ ER bursting every rotation and heavily favors an ER sands (KQM quick guide 4.0)"
+          "notes": "Off-field Burst support (KQM quick guide 4.0): her Burst and Daruma heals scale on ATK and her Swirls on EM, so ER (until requirements met) > ATK% ≥ EM, with ATK% or EM goblets and Healing Bonus, ATK%, EM or CRIT Rate (Favonius) circlets. ER sands only: 200%+ ER bursting every rotation, ~150-170% every other rotation, and she heavily favors an ER sands"
         }
       ]
     },
@@ -5803,6 +5854,7 @@
             "enerRech_": 0.8,
             "atk_": 0.7,
             "hp_": 0.4,
+            "hp": 0.15,
             "atk": 0.3,
             "eleMas": 0.25
           },
@@ -6874,7 +6926,7 @@
     },
     "Zhongli": {
       "element": "geo",
-      "confidence": "consensus",
+      "confidence": "verified",
       "enabled": true,
       "builds": [
         {
@@ -6883,6 +6935,10 @@
             {
               "set": "TenacityOfTheMillelith",
               "tier": 1
+            },
+            {
+              "set": "ArchaicPetra",
+              "tier": 2
             }
           ],
           "sets2": [
@@ -6906,50 +6962,12 @@
           "substatPreset": "custom",
           "substats": {
             "hp_": 1,
-            "enerRech_": 0.8,
             "critRate_": 0.5,
             "hp": 0.4,
-            "critDMG_": 0.15
+            "enerRech_": 0.3
           },
           "erTarget": "100%",
-          "notes": "Shield scales on HP alone: 2pc HP + 2pc HP when someone else holds Tenacity (GenshinBuilds). CRIT Rate circlet and substats only with Favonius Lance (KQM quick guide 7.1: HP% > CRIT Rate (Favonius) > flat HP)"
-        },
-        {
-          "name": "Damage support",
-          "sets4": [
-            {
-              "set": "NoblesseOblige",
-              "tier": 1
-            },
-            {
-              "set": "ArchaicPetra",
-              "tier": 2
-            }
-          ],
-          "sets2": [],
-          "mainStats": {
-            "sands": [
-              "atk_"
-            ],
-            "goblet": [
-              "geo_dmg_"
-            ],
-            "circlet": [
-              "critRate_",
-              "critDMG_"
-            ]
-          },
-          "substatPreset": "ATK_CRIT",
-          "substats": {
-            "critRate_": 1,
-            "critDMG_": 1,
-            "atk_": 0.75,
-            "atk": 0.3,
-            "enerRech_": 0.3,
-            "hp_": 0.3
-          },
-          "erTarget": "120%+",
-          "notes": ""
+          "notes": "Shieldbot is 'by far the most recommended playstyle' (KQM quick guide 7.1); GameWith and GenshinBuilds (7.2) build him the same way. Shield scales on HP alone. KQM: HP% > CRIT Rate (Favonius) > flat HP, CRIT Rate circlet only with Favonius Lance. ER: KQM sets no requirement for the shielder; GameWith and GenshinBuilds rank it after HP. 2pc HP + 2pc HP gives the strongest shield (KQM) and suits when someone else holds Tenacity. Tenacity 4pc is GameWith's and GenshinBuilds' pick, though the Stele's range limits it (KQM); Archaic Petra in Hydro teams (Neuvillette, Mualani) where he picks up the shard (KQM, GenshinBuilds); 4pc Instructor (4★) for Lunar-Crystallize. No damage build: KQM says his personal damage isn't worth investing in, and for a damage build it still ranks ATK over HP"
         }
       ]
     },

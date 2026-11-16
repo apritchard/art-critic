@@ -562,7 +562,8 @@ kbd {
   color: var(--muted);
 }
 
-/* Worth leveling (the Level up queue), brighter by expected gain: t0 below 0.5 rolls up to t4 at 3+ (PRIORITY_STEPS). */
+/* Worth leveling (the Level up queue) or rerolling (⟳, worn +20s), brighter by expected gain: t0 below 0.5 rolls (or
+   not for a ★ character) up to t4 at 3+ (PRIORITY_STEPS). */
 .inv-up {
   padding: 0 3px;
   border: 1px solid transparent;
@@ -627,6 +628,10 @@ kbd {
 
 .c-heat {
   color: var(--heat-2);
+}
+
+.c-heat-1 {
+  color: var(--heat-1);
 }
 
 .inv-key .inv-up + .inv-up {
@@ -1485,6 +1490,46 @@ a.fit-row {
   color: var(--muted);
 }
 
+/* Builds that run the piece's set, then builds that could only take it off-set (folded away). */
+.fit-section {
+  margin-top: 8px;
+}
+
+.fit-section .hint,
+.fit-section > p.muted {
+  margin: 4px 0;
+}
+
+.fit-section-head {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+button.fit-section-head {
+  padding: 0;
+  text-align: left;
+}
+
+/* Its average gain at +20 over what the build's character wears; the biggest is marked. */
+.fit-gain {
+  margin-left: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.fit-gain.best,
+.fit-best {
+  color: var(--keep);
+  font-weight: 600;
+}
+
+.fit-best {
+  font-size: 12px;
+}
+
 .fit-what {
   font-size: 12px;
   color: var(--faint);
@@ -1504,6 +1549,15 @@ a.fit-row {
 
 .fit-sum.o-substats {
   color: var(--toss);
+}
+
+/* A build that doesn't count the piece yet stays grey whatever its edits would do; what blocks it reads first. */
+.fit-block {
+  color: var(--muted);
+}
+
+.fit-sum.o-blocked {
+  color: var(--muted);
 }
 
 .fit-layers {

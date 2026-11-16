@@ -1,10 +1,10 @@
-// Dust of Enlightenment: which worn +20 pieces are most likely to come out better from a reroll.
+// Dust of Enlightenment: which +20 pieces are most likely to come out better from a reroll, worn or spare.
 import { erCap, erNeed, totalER, withoutER, type ErModel } from './er'
 import type { ActiveBuild, EvaluationResult } from './evaluate'
-import { swapSetFit, wearing } from './farm'
+import { freeSwaps, swapSetFit, wearing } from './farm'
 import type { Piece } from './load'
 import { mainStatOk } from './match'
-import { currentValue, gainDistribution, STEP } from './projection'
+import { currentValue, expectedFinal, gainDistribution, STEP } from './projection'
 import { AVG_TIER, MAX_ROLL, ROLL_TIERS } from './stats'
 import { SLOTS, type ArtifactConfig, type BuildConfig, type SlotKey } from './types'
 
@@ -22,9 +22,12 @@ export type Guarantee = 2 | 3 | 4
 export interface RerollOdds {
   /** The two lines to pick: the piece's highest-weighted ones, unless the character's ER needs protecting. */
   chosen: string[]
-  /** Chance the rerolled piece beats it as it is. You can keep the old one, so a reroll never loses value. */
+  /**
+   * Chance the rerolled piece beats it as it is, or for a spare, what the character wears (`bar` in rerollOdds).
+   * You can keep the old one, so a reroll never loses value.
+   */
   chance: number
-  /** Expected improvement, counting a worse result as 0 since you'd keep the old one. */
+  /** Expected improvement over the same, counting a worse result as 0 since you'd keep the old one. */
   gain: number
   /** Expected value of the rerolled piece. */
   expected: number
@@ -36,8 +39,15 @@ export interface RerollOdds {
 
 export interface RerollOption extends RerollOdds {
   piece: Piece
+  /** The wearer's build, or for a spare, the build of the character it would go to. */
   ref: ActiveBuild
+  /** The piece's value for `ref` as it is. */
   current: number
+  /**
+   * A spare +20 (unequipped): the piece it would replace and that piece's value, which a reroll has to beat for the
+   * gain to count. Null for a worn piece, which only has to beat itself.
+   */
+  spare: { replaces: Piece; bar: number } | null
   /** Upgrades that landed on lines this build gives no weight. */
   wasted: number
   upgrades: number
@@ -72,6 +82,7 @@ const MIN_MOVE_GAIN = 1
 const MIN_MOVE_EDGE = 2
 
 export interface RerollPlan {
+  /** Worn +20s, then spare +20s (each for the character it would gain most, ★ Priority first). */
   options: RerollOption[]
   /** Worn +20s skipped because their main stat doesn't fit the build: a reroll can't fix that. */
   wrongMain: number
@@ -149,12 +160,16 @@ function addInto(target: { d: Float64Array }, part: Float64Array, shift: number,
  * `erMin` is the least the ER line may end at without dropping the wearer below their ER target. When a
  * reroll could go under it, results that do count as no change (you'd keep the old stats), and every pair of
  * lines is tried, so picking ER itself can win.
+ *
+ * `bar` is what the rerolled piece has to beat when that's more than it's worth now: for a spare, what the character
+ * it would go to wears. Chance and gain are then measured against it.
  */
 export function rerollOdds(
   piece: Piece,
   weights: Record<string, number>,
   guaranteed: Guarantee,
   erMin: number | null = null,
+  bar: number | null = null,
 ): RerollOdds | null {
   const subs = piece.substats
   if (subs.length !== 4 || subs.some((s) => s.initialValue === undefined)) return null
@@ -163,7 +178,7 @@ export function rerollOdds(
   const order = [0, 1, 2, 3].sort((a, b) => w[b] - w[a])
   const n = upgradesOf(piece)
   const floor = Math.min(guaranteed, n)
-  const now = currentValue(piece, weights)
+  const now = Math.max(currentValue(piece, weights), bar ?? -Infinity)
   const e = subs.findIndex((s) => s.key === ER)
   const erBound = e >= 0 && erMin !== null && erMin > subs[e].initialValue! + 0.05
   const er = e >= 0 ? { idx: e, min: erBound ? erMin! : -Infinity } : null
@@ -276,14 +291,14 @@ export function planRerolls(
         noData++
         continue
       }
-      const counts = upgradeCounts(piece)
       // Against the build's own weights: a roll into spare ER isn't counted as wasted.
-      const wasted = piece.substats.reduce((n, s, i) => n + (ref.build.substats[s.key] > 0 ? 0 : counts[i]), 0)
+      const wasted = wastedUpgrades(piece, ref.build)
       options.push({
         ...odds,
         piece,
         ref,
         current: currentValue(piece, w),
+        spare: null,
         wasted,
         upgrades: upgradesOf(piece),
         cost: DUST_COST[slot],
@@ -292,5 +307,101 @@ export function planRerolls(
       })
     }
   }
+
+  // Spare +20s: rerolled, would one beat what someone wears? Each is judged for every character it could go to
+  // (main stat allowed, sets still fit) against the piece it would replace, and listed for the one it gains most,
+  // ★ Priority first while anyone is ★ (as levelPriority picks a piece's reason). The Farm tab's free upgrades are
+  // left out, both the spares and the slots they fill: it says to equip those first, and they're then judged as worn.
+  const anyStar = current.some((r) => r.priority === 'priority')
+  const counts = (o: RerollOption) => o.ref.priority === 'priority' || !anyStar
+  const spares = pieces.filter((p) => !p.owner && p.rarity === 5 && p.level === 20)
+  const { swaps } = freeSwaps(current, spares, worn, equipped, barsOf, erModel, config)
+  const swapped = new Set(swaps.map((s) => s.piece.id))
+  const filled = new Set(swaps.map((s) => `${s.char}|${s.slot}`))
+  const targets = current.map((ref) => {
+    const mine = SLOTS.flatMap((s) => equipped.get(`${ref.char}|${s}`) ?? [])
+    return { ref, mine, total: totalER(erModel, ref.char, mine), bars: barsOf(ref), sets: worn.get(ref.char) ?? {} }
+  })
+  for (const piece of spares) {
+    if (swapped.has(piece.id)) continue
+    let best: RerollOption | null = null
+    for (const { ref, mine, total, bars, sets } of targets) {
+      if (filled.has(`${ref.char}|${piece.slotKey}`)) continue
+      const replaces = equipped.get(`${ref.char}|${piece.slotKey}`)
+      // Nothing usable worn there: the spare is already an upgrade (the Farm tab's free upgrades).
+      if (!replaces || bars[piece.slotKey] === null || !mainStatOk(ref.build, piece)) continue
+      if (!swapSetFit(sets, replaces.setKey, piece.setKey, ref.build, config)) continue
+      const option = spareReroll(piece, ref, replaces, mine, total, erModel, guaranteed)
+      if (!option) continue
+      if (!best || Number(counts(option)) - Number(counts(best)) > 0 || (counts(option) === counts(best) && option.gain > best.gain)) {
+        best = option
+      }
+    }
+    if (best) options.push(best)
+  }
   return { options, wrongMain, noData }
+}
+
+/**
+ * Rerolling spare +20 `piece` for `ref`, who wears `replaces` in its slot (`mine` is all they wear, `total` their
+ * ER now, null if unknown): measured against `replaces`, with ER handled by spareTerms. Null when a reroll can't
+ * help: no starting values, ER they'd lose, already better as it is (a swap, not a reroll), or nothing to gain.
+ * The main stat and set fit are the caller's to check.
+ */
+export function spareReroll(
+  piece: Piece,
+  ref: ActiveBuild,
+  replaces: Piece,
+  mine: Piece[],
+  total: number | null,
+  erModel: ErModel | null,
+  guaranteed: Guarantee,
+): RerollOption | null {
+  const after = totalER(erModel, ref.char, [...mine.filter((p) => p.slotKey !== piece.slotKey), piece])
+  const terms = spareTerms(piece, ref.build, total, after)
+  if (!terms) return null
+  const bar = expectedFinal(replaces, terms.weights)
+  const now = currentValue(piece, terms.weights)
+  if (now >= bar) return null
+  const odds = rerollOdds(piece, terms.weights, guaranteed, terms.erMin, bar)
+  if (!odds || odds.gain <= 0) return null
+  return {
+    ...odds,
+    piece,
+    ref,
+    current: now,
+    spare: { replaces, bar },
+    wasted: wastedUpgrades(piece, ref.build),
+    upgrades: upgradesOf(piece),
+    cost: DUST_COST[piece.slotKey],
+    elsewhere: null,
+    er:
+      total !== null && after !== null
+        ? { now: total, after: odds.erAfter !== undefined ? after - terms.line + odds.erAfter : after, need: terms.need, cap: terms.cap }
+        : null,
+  }
+}
+
+/** Upgrades that landed on lines `build` gives no weight. */
+function wastedUpgrades(piece: Piece, build: BuildConfig): number {
+  const counts = upgradeCounts(piece)
+  return piece.substats.reduce((n, s, i) => n + (build.substats[s.key] > 0 ? 0 : counts[i]), 0)
+}
+
+/**
+ * How to judge rerolling a spare for a character whose total ER is `total` now and `after` with the spare on in
+ * place of their piece (null if unknown). Like rerollTerms for a worn piece: the swap may not leave them below their
+ * build's ER minimum (or below where they are, if already under it), so `erMin` is the least the spare's ER line
+ * may end at, and a spare with no ER line that would go under is ruled out (null). When they'd be at their ER cap
+ * without the spare's ER line, ER is all spare and `weights` leave it out, for the piece it replaces too.
+ */
+function spareTerms(piece: Piece, build: BuildConfig, total: number | null, after: number | null) {
+  const line = piece.substats.find((s) => s.key === ER)?.value ?? 0
+  const need = erNeed(build)
+  const cap = erCap(build)
+  if (total === null || after === null) return { line, erMin: null, need, cap, weights: build.substats }
+  const keep = need === null ? null : Math.min(need, total)
+  if (keep !== null && line === 0 && after < keep - 0.05) return null
+  const spare = cap !== null && after - line >= cap
+  return { line, erMin: keep === null ? null : line - (after - keep), need, cap, weights: spare ? withoutER(build.substats) : build.substats }
 }

@@ -161,4 +161,81 @@ describe('planRerolls', () => {
     expect(bennett.elsewhere!.to).toBeGreaterThan(bennett.elsewhere!.from!)
     expect(plan.options.find((o) => o.ref.char === 'Diluc')!.elsewhere).toBeNull()
   })
+
+  it('rerolls a spare against what the character wears', () => {
+    // Diluc wears a flower worth about 3. The bricked spare is worth 2, but rerolled it lands at least 3.4.
+    const worn = piece([
+      { key: 'critRate_', value: 7.8, initialValue: 3.9 },
+      { key: 'critDMG_', value: 7.8, initialValue: 7.8 },
+      { key: 'def', value: 23, initialValue: 23 },
+      { key: 'hp', value: 299, initialValue: 299 },
+    ])
+    const spare = (p: typeof bricked) => ({ ...p, location: '', idx: undefined, id: undefined, owner: undefined }) as unknown as GoodArtifact
+    const planWith = (...spares: GoodArtifact[]) => {
+      const pieces = loadPieces({
+        format: 'GOOD',
+        version: 3,
+        characters: owned,
+        artifacts: [{ ...worn, idx: undefined, id: undefined, owner: undefined } as unknown as GoodArtifact, ...spares],
+      })
+      return planRerolls(result(pieces), pieces, 2, null, config)
+    }
+    const result = (pieces: ReturnType<typeof loadPieces>) => evaluate(pieces, owned, config, defaultSettings(config), {})
+    // The sands has a main stat the build rejects.
+    const plan = planWith(spare(bricked), spare({ ...bricked, slotKey: 'sands', mainStatKey: 'hp_' }))
+    const spares = plan.options.filter((o) => o.spare)
+    expect(spares).toHaveLength(1)
+    const [o] = spares
+    expect(o).toMatchObject({ ref: { char: 'Diluc' }, elsewhere: null, cost: 1 })
+    expect(o.piece.substats[2].value).toBe(138)
+    expect(o.spare!.replaces.owner).toBe('Diluc')
+    expect(o.current).toBeCloseTo(2, 1)
+    expect(o.spare!.bar).toBeCloseTo(3, 1)
+    // Measured against the worn flower, not against itself.
+    expect(o.chance).toBeCloseTo(1, 6)
+    expect(o.gain).toBeCloseTo(o.expected - o.spare!.bar, 6)
+    expect(o.gain).toBeCloseTo(rerollOdds(bricked, W, 2)!.gain - (o.spare!.bar - o.current), 6)
+    // The worn flower is still listed as a reroll of its own.
+    expect(plan.options.filter((x) => !x.spare).map((x) => x.piece.owner)).toEqual(['Diluc'])
+    // With a spare that's already better, Free upgrades fills the slot: neither spare is rerolled for it.
+    expect(planWith(spare(bricked), spare(perfect)).options.filter((o) => o.spare)).toEqual([])
+  })
+
+  it("leaves out a spare that's already a free upgrade for someone", () => {
+    const support = { ...config.characters.Diluc.builds[0], name: 'Support', substats: { enerRech_: 1, hp_: 1, hp: 0.3 } }
+    const withBennett = {
+      ...config,
+      characters: { ...config.characters, Bennett: { ...config.characters.Diluc, builds: [support] } },
+    } as ArtifactConfig
+    const chars = [...owned, { ...owned[0], key: 'Bennett' }]
+    const raw = (p: typeof bricked, location: string) => ({ ...p, location, idx: undefined, id: undefined, owner: undefined }) as unknown as GoodArtifact
+    // Worth about 3 to Bennett.
+    const bennetts = piece([
+      { key: 'enerRech_', value: 13, initialValue: 6.5 },
+      { key: 'hp_', value: 5.8, initialValue: 5.8 },
+      { key: 'def', value: 23, initialValue: 23 },
+      { key: 'atk', value: 19, initialValue: 19 },
+    ])
+    // Worth about 2 to Bennett, so rerolled it could beat his flower, and about 5.3 to Diluc as it is.
+    const both = piece([
+      { key: 'critRate_', value: 15.6, initialValue: 3.9 },
+      { key: 'critDMG_', value: 7.8, initialValue: 7.8 },
+      { key: 'enerRech_', value: 6.5, initialValue: 6.5 },
+      { key: 'hp_', value: 5.8, initialValue: 5.8 },
+    ])
+    const spareFor = (dilucs: typeof bricked) => {
+      const pieces = loadPieces({
+        format: 'GOOD',
+        version: 3,
+        characters: chars,
+        artifacts: [raw(dilucs, 'Diluc'), raw(bennetts, 'Bennett'), raw(both, '')],
+      })
+      const result = evaluate(pieces, chars, withBennett, defaultSettings(withBennett), {})
+      return planRerolls(result, pieces, 2, null, withBennett).options.filter((o) => o.spare)
+    }
+    // Diluc wears the bricked flower (about 2): the spare is his free upgrade, so it isn't rerolled for Bennett.
+    expect(spareFor(bricked)).toEqual([])
+    // Diluc wears the perfect one (about 6): the spare is Bennett's to reroll.
+    expect(spareFor(perfect).map((o) => o.ref.char)).toEqual(['Bennett'])
+  })
 })

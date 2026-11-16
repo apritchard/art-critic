@@ -25,6 +25,16 @@ export interface BuildFit {
   worn: { set: string; tier: number } | null
   /** The build didn't accept the piece's main stat. */
   mainIssue: boolean
+  /**
+   * The build runs the piece's set: lists it among its 4pc sets (at any tier), or takes it for one of its 2pc pairs.
+   * Any other build could only use the piece as its one off-set piece.
+   */
+  onSet: boolean
+  /**
+   * A build that runs the piece's set but counts it only as its off-set piece, and why its set doesn't count: its tier
+   * (Settings → Set matching on tiers 1–2), or the 4pc set the character wears, which outranks it.
+   */
+  sidelined: { issue: 'tier'; tier: number } | { issue: 'worn'; tier: number; worn: { set: string; tier: number } } | null
   /** The piece judged against the build with the edits made. */
   cand: Candidate
   outcome: FitOutcome
@@ -88,6 +98,25 @@ export function piecesAhead(
   return { lane, ahead: ahead.sort((a, b) => place(a) - place(b)) }
 }
 
+/**
+ * The build's best finished spare for a piece's slot, other than the piece: unequipped, +20 and past the substat gate,
+ * as step 4 of `judge()` picks the spare that raises the bar for pieces still to level. A finished piece is only ever
+ * measured against what's worn, so several can be kept for one slot; this says whether another would be equipped
+ * first. `ref` is a fit's `cand.ref`, with its edits made. Null when there's no other.
+ */
+export function bestOtherSpare(piece: Piece, pieces: Piece[], ref: ActiveBuild, config: ArtifactConfig, settings: Settings): Ahead | null {
+  const relevant = relevantTo(piece, pieces)
+  const { perPiece } = judge(relevant, [ref], config, settings)
+  let best: Ahead | null = null
+  for (let i = 0; i < relevant.length; i++) {
+    const p = relevant[i]
+    const c = perPiece[i][0]
+    if (!c || p.id === piece.id || p.owner || p.level < 20 || p.slotKey !== piece.slotKey || c.gate === 'fail') continue
+    if (!best || c.expected > best.cand.expected) best = { piece: p, cand: c }
+  }
+  return best
+}
+
 /** The tier edits that make the piece's set count for the build, as the evaluation's set layer judges it. */
 function setEdits(
   ref: ActiveBuild,
@@ -121,11 +150,13 @@ function setEdits(
 }
 
 /**
- * How every build in `refs` stands with one piece, closest to keeping it first. Builds that accept its main stat come
- * before every build that would need it allowed, since that's a different build rather than a tweak (an Anemo DMG
- * goblet for Nilou). Within each group: builds that keep it (fewest edits first), then those it passes but the cap
- * cuts it from, then those it isn't likely to upgrade, then those whose substat gate it fails; within each of those,
- * nearest the next step up first.
+ * How every build in `refs` stands with one piece, closest to keeping it first. Builds that run its set (`onSet`) come
+ * before every build that could only use it as its off-set piece, so what its own set's builds make of it isn't lost
+ * among builds that would take a piece of any set. Within each, builds that accept its main stat come before every
+ * build that would need it allowed, since that's a different build rather than a tweak (an Anemo DMG goblet for Nilou).
+ * Within each group: builds that keep it (fewest edits first), then those it passes but the cap cuts it from, then
+ * those it isn't likely to upgrade, then those whose substat gate it fails; within each of those, nearest the next
+ * step up first.
  *
  * A build the piece doesn't count for is judged as if the edits that let it count were made: its main stat allowed
  * and, unless any set can fill the build's off-set slot with it (the Off-set setting), its set at the lowest tier that
@@ -159,7 +190,17 @@ export function fitPiece(
     const set = cur || offSet ? NO_SET_EDIT : setEdits(ref, piece, config, settings, worn.get(ref.char) ?? {})
     const mainIssue = !cur && !mainStatOk(ref.build, piece)
     const main: BuildEdit[] = mainIssue ? [{ kind: 'main', slot: piece.slotKey as MainSlot, main: piece.mainStatKey }] : []
-    return { ref, cur, set, mainIssue, edits: [...set.edits, ...main] }
+    const listed = ref.build.sets4.find((s) => s.set === piece.setKey)
+    const match = matchSet(ref.build, piece.setKey, config, settings.setMatch)
+    let sidelined: BuildFit['sidelined'] = null
+    if (listed && cur?.setMatch.kind === 'off') {
+      // The set layer turned it away (`setFor` in evaluate.ts): a tier that doesn't count, or the worn set outranks it.
+      const committed = commitmentOf(ref.build, worn.get(ref.char) ?? {})
+      if (!match) sidelined = { issue: 'tier', tier: listed.tier }
+      else if (committed) sidelined = { issue: 'worn', tier: listed.tier, worn: committed }
+    }
+    const onSet = !!listed || match?.kind === '2pc'
+    return { ref, cur, set, mainIssue, onSet, sidelined, edits: [...set.edits, ...main] }
   })
 
   const after = new Map<string, Candidate>()
@@ -173,13 +214,15 @@ export function fitPiece(
   for (const p of plans) {
     const cand = p.cur ?? after.get(key(p.ref))
     if (!cand) continue
-    fits.push({ ref: p.ref, edits: p.edits, setIssue: p.set.setIssue, worn: p.set.worn, mainIssue: p.mainIssue, cand, outcome: outcomeOf(cand) })
+    const { ref, edits, mainIssue, onSet, sidelined } = p
+    fits.push({ ref, edits, setIssue: p.set.setIssue, worn: p.set.worn, mainIssue, onSet, sidelined, cand, outcome: outcomeOf(cand) })
   }
 
   const near = (f: BuildFit) => nearness(f, settings)
   const gain = (f: BuildFit) => f.cand.expected - (f.cand.bar ?? 0)
   return fits.sort(
     (a, b) =>
+      Number(b.onSet) - Number(a.onSet) ||
       Number(a.mainIssue) - Number(b.mainIssue) ||
       LEVEL[b.outcome] - LEVEL[a.outcome] ||
       (a.outcome === 'keep'

@@ -1,5 +1,5 @@
 // Everything that could improve one character's pieces, slot by slot: spare +20s, pieces other characters
-// wear, pieces worth leveling, a reroll, an Elixir craft, the Strongbox and domains. Every option says how
+// wear, pieces worth leveling, a reroll of the worn piece or a spare, an Elixir craft, the Strongbox and domains. Every option says how
 // likely it is to beat what they wear now and by how much on average, so they compare side by side.
 import { erCap, erChangeValue, erNeed, totalER, withoutER, type ErChange, type ErModel } from './er'
 import type { ActiveBuild, EvaluationResult, Verdict } from './evaluate'
@@ -25,13 +25,13 @@ import {
 import type { Piece } from './load'
 import { fourPieceSets, mainStatOk } from './match'
 import { chanceToBeat, currentValue, expectedFinal, expectedGainOver } from './projection'
-import { DUST_COST, rerollOdds, rerollTerms, type Guarantee, type RerollOdds } from './reroll'
+import { DUST_COST, rerollOdds, rerollTerms, spareReroll, type Guarantee, type RerollOdds } from './reroll'
 import type { ArtifactConfig, SlotKey } from './types'
 import { SLOTS } from './types'
 
 /** How many of each kind of piece option to list per slot. */
-export const SHOWN = { spare: 4, taken: 4, level: 5 }
-/** Leveling options below this chance of beating the worn piece aren't listed. */
+export const SHOWN = { spare: 4, taken: 4, level: 5, spareReroll: 3 }
+/** Leveling and spare reroll options below this chance of beating the worn piece aren't listed. */
 const MIN_LEVEL_CHANCE = 0.05
 /** Spares and borrowed pieces have to beat the worn piece by at least this much. */
 const MIN_PIECE_GAIN = 0.1
@@ -84,6 +84,26 @@ export interface RerollChoice extends RerollOdds {
   er: ErChange | null
 }
 
+/**
+ * A spare +20 that a reroll could lift past the worn piece, judged as on the Reroll tab (spareReroll) but for this
+ * character, whoever else it would suit. `value` is its average after the reroll, and `er` the total with it on, on
+ * average; `erGain` is 0, since ER is handled by the reroll's own terms.
+ */
+export interface SpareRerollOption extends PieceOption {
+  /** Its value for this build as it is. */
+  current: number
+  /** The worn piece's value it's measured against: below the slot's `now` when ER past their target doesn't count. */
+  bar: number
+  /** The two lines to pick. */
+  chosen: string[]
+  /** Dust of Enlightenment per reroll. */
+  cost: number
+  /** Results that would cost ER this character needs count as no change. */
+  erBound?: boolean
+  /** The Farm tab's free upgrades hand this spare to someone else. */
+  claimedBy: string | null
+}
+
 /** Odds from a batch of Strongbox crafts or 200 resin of domain runs. */
 export interface SourceOdds {
   chance: number
@@ -105,7 +125,9 @@ export interface SlotPlan {
   spares: SpareOption[]
   taken: TakenOption[]
   level: LevelOption[]
+  /** Rerolling the worn piece. */
   reroll: RerollChoice | null
+  spareRerolls: SpareRerollOption[]
   elixir: ElixirPick | null
   strongbox: SourceOdds | null
   domain: SourceOdds | null
@@ -256,6 +278,40 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
       }
     }
 
+    // Spares a reroll could lift past the worn piece (ones already past it are under `spares`). Like leveling, not
+    // ones that would break a set bonus.
+    const spareRerolls =
+      wornPiece && now !== null
+        ? candidates
+            .filter((p) => !p.owner && p.level === 20)
+            .flatMap((p): SpareRerollOption[] => {
+              const fit = fitOf(p)
+              if (fit.kind === 'breaks') return []
+              const o = spareReroll(p, ref, wornPiece, mine, erNow, er, guarantee)
+              if (!o || o.chance < MIN_LEVEL_CHANCE) return []
+              const by = claimed.get(p.id)
+              return [
+                {
+                  piece: p,
+                  chance: o.chance,
+                  gain: o.gain,
+                  value: o.expected,
+                  fit,
+                  er: o.er && { from: o.er.now, to: o.er.after, need: o.er.need, cap: o.er.cap },
+                  erGain: 0,
+                  current: o.current,
+                  bar: o.spare!.bar,
+                  chosen: o.chosen,
+                  cost: o.cost,
+                  erBound: o.erBound,
+                  claimedBy: by && by !== char ? by : null,
+                },
+              ]
+            })
+            .sort(byFit)
+            .slice(0, SHOWN.spareReroll)
+        : []
+
     const boxSets = targets.filter((s) => !strongboxSets || strongboxSets.has(s))
     const farmSets = targets.filter((s) => domainOf.has(s))
     const c = boxOdds.slots[slot].chance
@@ -269,6 +325,7 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
       taken,
       level,
       reroll,
+      spareRerolls,
       elixir: elixirs[slot],
       strongbox: {
         chance: boxSets.length ? 1 - (1 - c) ** STRONGBOX_BATCH : 0,
