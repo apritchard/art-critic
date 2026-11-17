@@ -1,6 +1,7 @@
 // The order the game's artifact inventory lists pieces in, so the Inventory tab can mirror it cell for cell, and how
 // much each piece there is worth leveling or rerolling.
 import { standing, type Evaluation } from './evaluate'
+import type { LevelAdvice } from './fodder'
 import type { Piece } from './load'
 import { expectedGainOver, startLines } from './projection'
 import type { RerollOption } from './reroll'
@@ -32,6 +33,22 @@ export interface LevelPriority {
   tier: number
   /** Tier 2 or more: a gain of at least HIGH_PRIORITY_GAIN. */
   high: boolean
+  /**
+   * How leveling it pays for its EXP (levelingAdvice): gain per net EXP, what EXP is worth for it, and whether it's
+   * worth leveling now. Absent for an equipped piece, whose finishing comes out of the EXP first.
+   */
+  value?: LevelValue
+}
+
+export interface LevelValue {
+  /** Its value for its EXP: expected gain per net EXP, at the most EXP could be worth and it still pay (breakEven). */
+  rate: number
+  /** What EXP is worth for it, in gain per EXP: 0 while there's EXP to spare. */
+  price: number
+  /** Worth leveling to its next stop now. A piece that isn't is held: still kept, just not worth its EXP yet. */
+  worth: boolean
+  /** For a character Spend's "Rank for" counts, whose pieces get the EXP first. */
+  first: boolean
 }
 
 /**
@@ -39,9 +56,10 @@ export interface LevelPriority {
  * most PRIORITY_STEPS, counting only Building and ★ Priority characters (anyone, when `anyStar` says nobody is ★).
  * Within a tier, a Building character comes first (`standing`), then the biggest expected gain, so a small gain for
  * someone on the Building list never hides a bigger one for a ★ character. For an equipped piece, the gain is what
- * finishing it adds for its wearer. Null for pieces not in the queue.
+ * finishing it adds for its wearer. Null for pieces not in the queue. `advice` (levelingAdvice's entry for the piece)
+ * adds how it pays for its EXP.
  */
-export function levelPriority(e: Evaluation, anyStar: boolean): LevelPriority | null {
+export function levelPriority(e: Evaluation, anyStar: boolean, advice?: LevelAdvice): LevelPriority | null {
   if (e.piece.level >= 20 || e.nextStop === null) return null
   const kept = e.piece.owner ? (e.best ? [e.best] : []) : e.candidates.filter((c) => c.inCap)
   let top: { gain: number; char: string; chance: number; star: boolean; building: boolean; rank: number; tier: number } | null = null
@@ -54,9 +72,10 @@ export function levelPriority(e: Evaluation, anyStar: boolean): LevelPriority | 
       top = { gain, char: c.ref.char, chance: c.chance, star: c.ref.priority === 'priority', building: !!c.ref.building, rank, tier }
     }
   }
-  if (!top) return { next: e.nextStop, gain: 0, char: e.piece.owner ?? '', chance: 0, star: false, building: false, tier: 0, high: false }
+  const value = advice && { rate: advice.rate, price: advice.price, worth: advice.worth, first: advice.first }
+  if (!top) return { next: e.nextStop, gain: 0, char: e.piece.owner ?? '', chance: 0, star: false, building: false, tier: 0, high: false, value }
   const { gain, char, chance, star, building, tier } = top
-  return { next: e.nextStop, gain, char, chance, star, building, tier, high: tier >= 2 }
+  return { next: e.nextStop, gain, char, chance, star, building, tier, high: tier >= 2, value }
 }
 
 export interface RerollPriority {

@@ -18,7 +18,7 @@ import {
   upgradeOdds,
   type DomainsFile,
 } from './farm'
-import { planFeedOrBox } from './fodder'
+import { levelingAdvice, planFeedOrBox } from './fodder'
 import { loadPieces } from './load'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodExport, Roster, SlotKey } from './types'
 
@@ -618,12 +618,23 @@ describe('planFarming', () => {
     expect(rich.queue.pieces[0]).toMatchObject({ piece, funded: true })
     expect(rich.queue.pieces[0].ref.char).toBe('HuTao')
     expect(rich.queue.pieces[0].gain).toBeGreaterThan(0)
-    const rates = rich.queue.pieces.map((q) => q.gain / q.exp)
+    const rates = rich.queue.pieces.map((q) => q.gain / q.net)
     rates.forEach((r, i) => i > 0 && expect(r).toBeLessThanOrEqual(rates[i - 1]))
     expect(rich.queue.pieces.filter((q) => q.funded)).toHaveLength(rich.queue.funded)
-    // No EXP on hand: still listed, but nothing is funded.
-    const broke = planFeedOrBox(res, plan, {}, 0.2)
-    expect(broke.queue.pieces[0]).toMatchObject({ piece, funded: false })
+    // Plenty of EXP: it's worth nothing extra, so only the chance rule stops the piece (this one never stops).
+    const advice = levelingAdvice(res, { SanctifyingEssence: 1000 }, 'all', 0.2)
+    expect(advice.price).toBe(0)
+    expect(rich.queue.pieces[0].exp).toBe(270475)
+    // Only the 220,160 EXP a leveled piece marked to unlock gives: finishing it for sure doesn't fit, so EXP gets a
+    // price and the piece is leveled more cautiously, stopping where it's no longer worth its EXP. That fits.
+    const tight = levelingAdvice(res, {}, 'all', 0.2)
+    expect(tight.hand.budget).toBe(220160)
+    expect(tight.price).toBeGreaterThan(0)
+    const cautious = tight.pieces.get(piece.id)!
+    expect(cautious.worth).toBe(true)
+    expect(cautious.outlook.net).toBeLessThanOrEqual(220160)
+    expect(cautious.outlook.finish).toBeLessThan(1)
+    expect(planFeedOrBox(res, plan, {}, 0.2, tight).queue.pieces[0]).toMatchObject({ piece, funded: true })
   })
 
   it('ranks for the Building list, falling back to ★ Priority when it is empty', () => {

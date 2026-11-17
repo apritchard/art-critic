@@ -20,6 +20,7 @@ import {
 } from '../engine/farm'
 import { CRAFT_INPUTS, FEED_EXP, planFeedOrBox, type FeedOrBox } from '../engine/fodder'
 import { applyEquips, type Piece } from '../engine/load'
+import { nextStop } from '../engine/projection'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
 import { SLOTS, type SlotKey } from '../engine/types'
 import { useStore } from '../state/store'
@@ -205,7 +206,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
         <Section
           title="Best pieces to level"
           count={feedOrBox.queue.count}
-          note={`The To level queue's unequipped pieces for ${scopeLabel}, best expected gain per EXP first: the order the split above spends EXP on them. Each is leveled for the build it gains most and costs the EXP it's likely to take under the app's rule (level to the next stop, and carry on only while it can still beat the best that character has), so the gain counts only what a finished piece brings. Pieces above the line are what your EXP on hand pays for. Tick one once you've leveled it to its next stop; L does the same in the Artifacts grid.`}
+          note={`The To level queue's unequipped pieces for ${scopeLabel}, best expected gain per EXP first: the order the split above spends EXP on them. Each is leveled for the build it gains most and costs the EXP it's likely to take under the app's rule: level to the next stop, and carry on only while it can still beat the best that character has and, when your EXP can't cover the whole queue, while that's worth its EXP at what EXP brings elsewhere. A piece dropped part way gives back 80% of the EXP put into it when fed, so its EXP is counted net of that, and the gain counts only what a finished piece brings. Pieces above the line are what your EXP on hand pays for. Tick one once you've leveled it to its next stop; L does the same in the Artifacts grid.`}
         >
           <LevelQueue queue={feedOrBox.queue} />
         </Section>
@@ -249,9 +250,6 @@ export function QuickWins({ result }: { result: EvaluationResult }) {
   )
 }
 
-/** The next stop to level a piece to: +4, +8, … +20. */
-const nextStop = (level: number) => Math.min(20, Math.floor(level / 4) * 4 + 4)
-
 /**
  * Feed or box's queue as a list: the pieces to level next, best gain per EXP first, with a line where the EXP on hand
  * runs out and a tick to mark one leveled.
@@ -280,7 +278,7 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
             <th className="num" title="Average improvement once finished, counting a miss or a piece dropped part way as 0">
               Gain
             </th>
-            <th className="num" title="EXP it's likely to take before it's finished or dropped">
+            <th className="num" title="EXP it's likely to take before it's finished or dropped, less the 80% a piece dropped part way gives back when fed">
               EXP
             </th>
             <th className="num" title="Expected gain per 100k EXP: what the list is ranked by">
@@ -303,14 +301,14 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
                     <button
                       className={`tick${leveled ? ' on' : ''}`}
                       onClick={() => toggleDone(`lvl:${q.piece.id}`)}
-                      title={leveled ? 'Marked leveled: click to undo' : `Leveled it to +${nextStop(q.piece.level)} in-game`}
+                      title={leveled ? 'Marked leveled: click to undo' : `Leveled it to +${nextStop(q.piece)} in-game`}
                     >
                       ✓
                     </button>
                   </td>
                   <td>
                     <span title={SLOT_LABEL[q.piece.slotKey]}>{SLOT_ICON[q.piece.slotKey]}</span> {setName(q.piece.setKey)} ·{' '}
-                    <b>{statShort(q.piece.mainStatKey)}</b> · +{q.piece.level} → <b>+{nextStop(q.piece.level)}</b>
+                    <b>{statShort(q.piece.mainStatKey)}</b> · +{q.piece.level} → <b>+{nextStop(q.piece)}</b>
                     <div className="sub-note">{shortSubs(q.piece)}</div>
                     <a className="link find" href={inventoryHref(q.piece.id)} title="Show it in the Artifacts grid, outlined, to find it in-game">
                       find in grid
@@ -322,9 +320,9 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
                   </td>
                   <td className="num">{pct(q.chance)}</td>
                   <td className="num">+{q.gain.toFixed(2)}</td>
-                  <td className="num">{expText(q.exp)}</td>
+                  <td className="num">{expText(q.net)}</td>
                   <td className="num">
-                    <b>{per100k(q.gain / q.exp)}</b>
+                    <b>{per100k(q.gain / q.net)}</b>
                   </td>
                 </tr>
               </Fragment>
@@ -364,7 +362,7 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
   const align = pos < 12 ? 'start' : pos > 88 ? 'end' : ''
   const title = [
     f.bestCraft
-      ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)} rolls per 100k EXP (its ${CRAFT_INPUTS} pieces count as the ${expText(CRAFT_INPUTS * FEED_EXP)} EXP they'd give, and leveling what comes out takes ${expText(f.bestCraft.levelExp)} on average, since most are dropped at +0 or +4).`
+      ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)} rolls per 100k EXP (its ${CRAFT_INPUTS} pieces count as the ${expText(CRAFT_INPUTS * FEED_EXP)} EXP they'd give, and leveling what comes out takes ${expText(f.bestCraft.levelExp)} on average, since most are dropped at +0 or their first stop).`
       : f.tosses < CRAFT_INPUTS
         ? `Too few +0s for a Strongbox craft, which takes ${CRAFT_INPUTS}.`
         : `No Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces.`,
@@ -421,7 +419,7 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
         {expText(f.leveled.exp)} from {f.leveled.count} leveled piece{f.leveled.count === 1 ? '' : 's'} marked to unlock, and{' '}
         {expText(f.tosses * FEED_EXP)} if every +0 is fed.
         {f.committed > 0 && ` Finishing equipped pieces takes ${expText(f.committed)} of it first.`} The To level queue&apos;s{' '}
-        {f.queue.count} pieces would take about {expText(f.queue.exp)} to play out
+        {f.queue.count} pieces would take about {expText(f.queue.exp)} to play out (net of what dropped pieces give back)
         {f.queue.funded < f.queue.count
           ? `; this split pays for the ${f.queue.funded} that gain most per EXP (${expText(f.queue.fundedExp)}).`
           : `, and this split pays for all of them${f.left >= 1000 ? `, with ${expText(f.left)} to spare` : ''}.`}

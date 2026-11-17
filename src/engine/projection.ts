@@ -7,6 +7,22 @@ export const allSubs = (a: GoodArtifact): GoodSubstat[] => [...a.substats, ...(a
 /** True while a 3-liner hasn't reached +4 and revealed its 4th line yet. */
 export const pendingActivation = (a: GoodArtifact) => a.level < 4 && a.substats.length < 4
 
+/**
+ * A 3-liner still to reach +4 whose hidden 4th line the export gives. Its +4 adds no roll and only reveals that line,
+ * so leveling to +4 teaches nothing: it's judged now as it will be at +4, and its first stop is +8.
+ */
+export const knownReveal = (a: GoodArtifact) => pendingActivation(a) && (a.unactivatedSubstats?.length ?? 0) > 0
+
+/**
+ * The level to stop at next and re-check: the next multiple of 4, where an upgrade roll lands, or +8 for a 3-liner
+ * whose +4 only reveals a line already known (`knownReveal`). Null once it's +20.
+ */
+export function nextStop(a: GoodArtifact): number | null {
+  if (a.level >= 20) return null
+  if (knownReveal(a)) return 8
+  return Math.min(20, Math.floor(a.level / 4) * 4 + 4)
+}
+
 /** Number of substat lines the piece dropped with (3 or 4). */
 export function startLines(a: GoodArtifact): 3 | 4 {
   if (pendingActivation(a)) return 3

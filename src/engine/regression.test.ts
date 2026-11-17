@@ -55,9 +55,10 @@ describe.skipIf(!exportFile)('real export', () => {
     // and Electro Traveler, ER on Mavuika) takes off 4 (899). CRIT Rate for Favonius on supports (CRIT Rate circlets
     // and higher CRIT weights per KQM, Chevreuse's quickswap build on CRIT weights) adds 5 more (904). ER-only sands
     // for supports whose ER needs make one effectively mandatory (Xiangling, Bennett, Mona and nine others) takes off 6
-    // (898).
+    // (898). The build updates of 2026-11-15 add 2 (900). Judging a 3-liner at +0 as it will be at +4 (its known 4th
+    // line and starting rolls against the rescore bar, since +4 reveals nothing new) takes off 22 (878).
     if (exportFile === PROTOTYPE_EXPORT) {
-      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(898)
+      expect(plusZero.filter((e) => e.candidates.some((c) => c.passChance)).length).toBe(878)
     }
     const unequippedPassing = plusZero.filter((e) => !e.piece.owner && e.candidates.some((c) => c.passChance))
     expect(plusZero.filter((e) => e.grade === 'keep').length).toBe(unequippedPassing.length)

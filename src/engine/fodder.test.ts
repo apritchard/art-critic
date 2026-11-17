@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allocate, boxRatio, expBetween, feedExp, levelingOutlook, materialsExp, startOf, type CraftCurve } from './fodder'
+import { allocate, boxRatio, breakEven, expBetween, FEED_RETURN, feedExp, levelingOutlook, levelingPath, materialsExp, startOf, worthIt, type CraftCurve } from './fodder'
 import { expectedGainOver } from './projection'
 import type { GoodArtifact } from './types'
 
@@ -58,6 +58,45 @@ describe('levelingOutlook', () => {
     expect(o.gain).toBeLessThanOrEqual(expectedGainOver(a, W, bar) + 1e-9)
   })
 
+  it('counts what a dropped piece gives back when fed', () => {
+    const o = levelingOutlook(startOf(fresh(), W), 100, 0.2)
+    expect(o.net).toBeCloseTo(16300 * (1 - FEED_RETURN), 6)
+    const sure = levelingOutlook(startOf(fresh(), W), -1, 0.2)
+    expect(sure.net).toBe(sure.exp)
+  })
+
+  it('stops sooner when EXP has a price, and does better at that price than the chance rule alone', () => {
+    const start = startOf(fresh(), W)
+    const bar = 5
+    const free = levelingOutlook(start, bar, 0.2)
+    const price = 1e-5 // a roll per 100k EXP
+    const priced = levelingOutlook(start, bar, 0.2, price)
+    expect(priced.exp).toBeGreaterThanOrEqual(16300) // the first stop is paid in any case
+    expect(priced.net).toBeLessThan(free.net)
+    expect(priced.finish).toBeLessThan(free.finish)
+    expect(priced.gain - price * priced.net).toBeGreaterThan(free.gain - price * free.net)
+    // Dearer EXP stops it sooner still.
+    expect(levelingOutlook(start, bar, 0.2, 3 * price).net).toBeLessThanOrEqual(priced.net)
+  })
+
+  it("holds a +16 whose last roll can't pay for its EXP", () => {
+    // One roll left at the bar: it adds 0.58 on average (CRIT Rate, CRIT DMG, ATK% or DEF at 0.85 of a max roll)
+    // against 117,175 EXP. At a roll per 100k that's 1.17, so it isn't worth it; at a third of that it is.
+    const late = { level: 16, base: 5, lineW: [1, 1, 0.75, 0], rolls: 1, pending: false }
+    expect(worthIt(levelingOutlook(late, 5, 0.2, 1e-5), 1e-5)).toBe(false)
+    expect(worthIt(levelingOutlook(late, 5, 0.2, 0.3e-5), 0.3e-5)).toBe(true)
+    // Its break-even is that average over the EXP: 0.584 / 117,175, about half a roll per 100k EXP.
+    const even = breakEven(levelingPath(late, 5, 0.2))
+    expect(even / (((2.75 / 4) * 0.85) / 117175)).toBeCloseTo(1, 1)
+  })
+
+  it("pays a 3-liner's way to +8 before it can stop: its +4 only reveals the 4th line", () => {
+    const a = fresh({ substats: fresh().substats.slice(0, 3), unactivatedSubstats: [{ key: 'def', value: 19 }] })
+    const o = levelingOutlook(startOf(a, W), 100, 0.2)
+    expect(o.exp).toBe(expBetween(0, 8))
+    expect(o.gain).toBe(0)
+  })
+
   it("gives a 3-liner's +4 no roll", () => {
     const a = fresh({ substats: fresh().substats.slice(0, 3), unactivatedSubstats: [{ key: 'def', value: 19 }] })
     const o = levelingOutlook(startOf(a, W), null, 0.2)
@@ -67,7 +106,7 @@ describe('levelingOutlook', () => {
 })
 
 describe('allocate', () => {
-  const q = (gain: number, exp: number) => ({ gain, exp, finish: 1 })
+  const q = (gain: number, exp: number) => ({ gain, exp, net: exp, finish: 1 })
   const linear = (each: number, cost: number): CraftCurve => ({ set: 'S', levelExp: 0, cost, gain: (k) => k * each })
 
   it('funds the best queue pieces until EXP runs out', () => {
@@ -92,7 +131,7 @@ describe('allocate', () => {
 })
 
 describe('boxRatio', () => {
-  const q = (gain: number, exp: number) => ({ gain, exp, finish: 1 })
+  const q = (gain: number, exp: number) => ({ gain, exp, net: exp, finish: 1 })
   const linear = (each: number, cost: number): CraftCurve => ({ set: 'S', levelExp: 0, cost, gain: (k) => k * each })
   const split = (queue: ReturnType<typeof q>[], curves: CraftCurve[], budget: number, tosses: number) => {
     const a = allocate(queue, curves, budget, tosses)

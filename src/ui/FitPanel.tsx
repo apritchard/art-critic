@@ -43,10 +43,17 @@ const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%
 const n2 = (x: number) => x.toFixed(2)
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-/** The substat gate's numbers: starting lines at +0, the projected +20 value after (just its value once it's +20). */
+/**
+ * The substat gate's numbers: starting lines at +0, the projected +20 value after (just its value once it's +20). A
+ * 3-liner whose lines pass at +0 shows its projection, as it would at +4.
+ */
 const gateOf = (f: BuildFit, piece: Piece) =>
   f.cand.rescore
-    ? { what: piece.level >= 20 ? 'Value' : 'Projected +20 value', got: f.cand.expected, need: f.cand.rescore.bar }
+    ? {
+        what: piece.level >= 20 ? 'Value' : piece.level < 4 ? 'Projected +20 value, with the 4th line +4 reveals,' : 'Projected +20 value',
+        got: f.cand.expected,
+        need: f.cand.rescore.bar,
+      }
     : { what: 'Weight of its lines', got: f.cand.lineScore, need: f.cand.threshold }
 
 /** What a fit gains the build: the piece's average at +20 over its bar (what they wear, or their best spare). */

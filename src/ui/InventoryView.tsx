@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import type { Evaluation, EvaluationResult } from '../engine/evaluate'
+import type { LevelingAdvice } from '../engine/fodder'
 import {
   HIGH_PRIORITY_GAIN,
   inventoryOrder,
@@ -12,7 +13,7 @@ import type { Piece } from '../engine/load'
 import { characterName, formatStat, isPercent, SLOT_LABEL, setName, statLabel, statShort } from '../engine/stats'
 import type { GoodSubstat } from '../engine/types'
 import { useStore } from '../state/store'
-import { SLOT_ICON, weightClass } from './ArtifactCard'
+import { isHeld, SLOT_ICON, valueLine, weightClass } from './ArtifactCard'
 import { levelKey } from './ListView'
 import { useLocal } from './local'
 import { marks } from './marks'
@@ -32,9 +33,9 @@ export const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : (
 /** "CD 7.8" or "HP 299": short enough for a grid cell. */
 const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s.value.toFixed(1) : Math.round(s.value)}`
 
-/** "Level to +4: +0.85 rolls expected for Xingqiu ★, 34% to beat the best they have". */
+/** "Level to +4: +0.85 rolls expected for Xingqiu ★, 34% to beat the best they have. 0.84 rolls per 100k EXP". */
 export const levelLine = (level: LevelPriority) =>
-  `Level to +${level.next}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${marks({ priority: level.star ? 'priority' : 'normal', building: level.building })}, ${Math.round(level.chance * 100)}% to beat the best they have`
+  `${isHeld(level) ? `Hold, then level to +${level.next}` : `Level to +${level.next}`}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${marks({ priority: level.star ? 'priority' : 'normal', building: level.building })}, ${Math.round(level.chance * 100)}% to beat the best they have${level.value ? `. ${valueLine(level.value)}` : ''}`
 
 /** "Reroll: +1.03 rolls expected for Xingqiu ★, 100% to come out better. Pick CR + ATK%; 1 Dust". */
 export const rerollLine = (reroll: RerollPriority) =>
@@ -52,6 +53,8 @@ interface Props {
   jump?: { piece: string; key: string }
   /** +20s worth a reroll, as Spend → Dust judges them (rerollPriority). */
   rerolls: Map<string, RerollPriority>
+  /** Which pieces in the To level queue are worth their EXP now (levelingAdvice). */
+  advice: LevelingAdvice
   /** Controls the page puts first in the filter bar (the view switch). */
   toolbar: ReactNode
 }
@@ -61,7 +64,7 @@ interface Props {
  * pieces are included), each marked with its lock change and whether it's worth leveling or rerolling, so they can
  * be worked through in-game in one pass. Clicking a piece opens it in the inspector; its lock bar marks it done.
  */
-export function InventoryView({ result, set: setPick, onSet, selected, onSelect, jump, rerolls, toolbar }: Props) {
+export function InventoryView({ result, set: setPick, onSet, selected, onSelect, jump, rerolls, advice, toolbar }: Props) {
   const { done, toggleDone } = useStore()
   const [guarantee] = useGuarantee()
   const [colsPick, setCols] = useLocal<number>('inventory:cols', DEFAULT_COLS)
@@ -94,10 +97,14 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
   const pending = (e: Evaluation) => e.action !== null && !done.has(e.piece.id)
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
   const priorities = useMemo(
-    () => new Map(shown.map((e) => [e.piece.id, levelPriority(e, anyStar)] as const)),
-    [shown, anyStar],
+    () => new Map(shown.map((e) => [e.piece.id, levelPriority(e, anyStar, advice.pieces.get(e.piece.id))] as const)),
+    [shown, anyStar, advice],
   )
-  const highToLevel = (e: Evaluation) => !!priorities.get(e.piece.id)?.high && !done.has(levelKey(e.piece.id))
+  // A held piece isn't worth its EXP right now, so it's no high priority however big its gain.
+  const highToLevel = (e: Evaluation) => {
+    const p = priorities.get(e.piece.id)
+    return !!p?.high && !isHeld(p) && !done.has(levelKey(e.piece.id))
+  }
   const toRerollNow = (e: Evaluation) => rerolls.has(e.piece.id) && !done.has(rerollKey(e.piece.id))
   const highToReroll = (e: Evaluation) => toRerollNow(e) && !!rerolls.get(e.piece.id)?.high
 
@@ -139,6 +146,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
   const toUnlock = ordered.filter((e) => e.action === 'unlock')
   const left = ordered.filter(pending)
   const toLevel = ordered.filter((e) => priorities.get(e.piece.id) && !done.has(levelKey(e.piece.id)))
+  const held = toLevel.filter((e) => isHeld(priorities.get(e.piece.id)))
   const high = toLevel.filter(highToLevel)
   const toReroll = ordered.filter(toRerollNow)
   const highReroll = toReroll.filter(highToReroll)
@@ -275,8 +283,9 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               <span className="c-lock">▲ lock {toLock.length}</span> · <span className="c-unlock">▼ unlock {toUnlock.length}</span>
               {left.length < toLock.length + toUnlock.length && ` · ${toLock.length + toUnlock.length - left.length} done`} ·{' '}
               <span className="c-heat">
-                ⬆ level {toLevel.length}
+                ⬆ level {toLevel.length - held.length}
                 {high.length > 0 && `, ${high.length} high priority`}
+                {held.length > 0 && ` · ⏸ hold ${held.length}`}
               </span>
               {toReroll.length > 0 && (
                 <>
@@ -353,7 +362,9 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
                 </span>
               ))}
               . From {HIGH_PRIORITY_GAIN} it counts as high priority. Re-export after leveling; mark it leveled with{' '}
-              <kbd>L</kbd> or in the inspector.
+              <kbd>L</kbd> or in the inspector. <span className="inv-up t2 held">⏸+8</span> is kept but on hold: not
+              worth its EXP right now, since your EXP on hand does more on other pieces (hover for both rates). Its color
+              is still its expected gain.
             </p>
             <p className="sub-note inv-key">
               <span className="inv-up t2">⟳</span> a +20 worth a Dust of Enlightenment reroll, with the {GUARANTEE[guarantee]}{' '}
@@ -463,7 +474,8 @@ function Cell({
   ]
     .filter(Boolean)
     .join('\n')
-  const heat = level && !leveled ? level.tier : reroll && !rerolled ? reroll.tier : null
+  const hold = isHeld(level)
+  const heat = level && !leveled ? (hold ? 0 : level.tier) : reroll && !rerolled ? reroll.tier : null
   const act = e.action ? `act-${e.action}` : 'idle'
   const cls = ['inv-cell', act, isDone ? 'done' : '', heat !== null ? `t${heat}` : '', e.action ? 'has-act' : ''].filter(Boolean).join(' ')
   const slotCls = ['inv-slot', act, isDone ? 'done' : '', selected ? 'inv-selected' : '', spot ? 'inv-followed' : ''].filter(Boolean).join(' ')
@@ -472,8 +484,8 @@ function Cell({
       <button className={cls} title={title} onClick={() => onSelect(p.id)} aria-pressed={selected}>
         {p.lock && <span className="inv-lock">🔒</span>}
         {level && (
-          <span className={`inv-up t${level.tier}${leveled ? ' leveled' : ''}`}>
-            {leveled ? '✓' : '⬆'}+{level.next}
+          <span className={`inv-up t${level.tier}${leveled ? ' leveled' : hold ? ' held' : ''}`}>
+            {leveled ? '✓' : hold ? '⏸' : '⬆'}+{level.next}
           </span>
         )}
         {reroll && <span className={`inv-up t${reroll.tier}${rerolled ? ' leveled' : ''}`}>{rerolled ? '✓⟳' : '⟳'}</span>}

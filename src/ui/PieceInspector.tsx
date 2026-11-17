@@ -1,8 +1,9 @@
 import { useDeferredValue, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { EvaluationResult } from '../engine/evaluate'
+import type { LevelingAdvice } from '../engine/fodder'
 import { levelPriority, type RerollPriority } from '../engine/inventory'
 import { useStore } from '../state/store'
-import { BuildTable } from './ArtifactCard'
+import { BuildTable, isHeld } from './ArtifactCard'
 import { FitPanel, useFitting } from './FitPanel'
 import { levelLine, rerollKey, rerollLine } from './InventoryView'
 import { levelKey } from './ListView'
@@ -22,6 +23,8 @@ interface Props {
   id: string
   /** +20s worth a reroll, as Spend → Dust judges them. */
   rerolls: Map<string, RerollPriority> | null
+  /** Which pieces in the To level queue are worth their EXP now (levelingAdvice). */
+  advice: LevelingAdvice
   /** The dock picked, and where that puts it now. */
   dock: Dock
   placed: 'side' | 'bottom'
@@ -92,7 +95,7 @@ function DockSwitch({ dock, onDock }: Pick<Props, 'dock' | 'onDock'>) {
  * and Closest build (the builds nearest to keeping it, with the set and main-stat edits that would), so a verdict can
  * be checked without leaving the grid.
  */
-export function PieceInspector({ result, id, rerolls, dock, placed, onDock, size, onSize, onClose, onFind }: Props) {
+export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDock, size, onSize, onClose, onFind }: Props) {
   const { config, setCharacterBuilds } = useStore()
   // Ranking every build for a piece costs about an evaluation, so moving through the grid doesn't wait on it.
   const shownId = useDeferredValue(id)
@@ -150,20 +153,20 @@ export function PieceInspector({ result, id, rerolls, dock, placed, onDock, size
         title="Piece"
         editLink={editLink}
         tools={tools}
-        actions={<Actions result={result} id={shownId} rerolls={rerolls} onFind={onFind} />}
+        actions={<Actions result={result} id={shownId} rerolls={rerolls} advice={advice} onFind={onFind} />}
       />
     </Frame>
   )
 }
 
 /** Buttons to mark the piece's lock change done, and to mark it leveled or rerolled, with why it's worth either. */
-function Actions({ result, id, rerolls, onFind }: Pick<Props, 'result' | 'id' | 'rerolls' | 'onFind'>) {
+function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' | 'id' | 'rerolls' | 'advice' | 'onFind'>) {
   const { done, toggleDone } = useStore()
   const [showBuilds, setShowBuilds] = useState(false)
   const ev = result.evaluations.find((e) => e.piece.id === id)
   if (!ev) return null
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
-  const level = levelPriority(ev, anyStar)
+  const level = levelPriority(ev, anyStar, advice.pieces.get(id))
   const reroll = rerolls?.get(id) ?? null
   const isDone = done.has(id)
   const leveled = done.has(levelKey(id))
@@ -186,7 +189,7 @@ function Actions({ result, id, rerolls, onFind }: Pick<Props, 'result' | 'id' | 
             onClick={() => toggleDone(levelKey(id))}
             title={leveled ? 'Marked leveled: click to undo' : "Click once you've leveled it in-game (L)"}
           >
-            {leveled ? '✓ leveled' : `⬆ leveled to +${level.next}`}
+            {leveled ? '✓ leveled' : `${isHeld(level) ? '⏸' : '⬆'} leveled to +${level.next}`}
           </button>
         )}
         {reroll && (

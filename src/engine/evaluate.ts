@@ -6,8 +6,10 @@ import {
   currentValue,
   expectedFinal,
   isCritCirclet,
+  knownReveal,
   lineCeiling,
   lineScore,
+  nextStop,
   rescoreBar,
   startLines,
   thresholdScale,
@@ -101,7 +103,10 @@ export interface Candidate {
   threshold: number
   /** Why the threshold was lowered, e.g. "HP% main" or "few useful stats". */
   scaledFor: string[]
-  /** For pieces past +0: projected final vs the rescore bar. */
+  /**
+   * Projected final vs the rescore bar: for pieces at +4 or more, and for a 3-liner whose known 4th line (`knownReveal`)
+   * passed the +0 rule, since it's judged now as it will be at +4. Null when the +0 rule on its lines decides.
+   */
   rescore: { bar: number } | null
   current: number
   expected: number
@@ -137,7 +142,7 @@ export interface Evaluation {
   best: Candidate | null
   /** Every set+main-stat fit, best first. */
   candidates: Candidate[]
-  /** For pieces worth leveling: the next level to stop at and re-check. */
+  /** For pieces worth leveling: the next level to stop at and re-check (`nextStop`: +8 for a 3-liner still at +0). */
   nextStop: number | null
 }
 
@@ -460,6 +465,7 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
     const lines = startLines(piece)
     const baseThreshold = lines === 4 ? settings.threshold4Line : settings.threshold3Line
     const crit = settings.critCircletRule && isCritCirclet(piece)
+    const reveal = knownReveal(piece)
     const offSet = offSetAllowed(settings.offSet, piece)
     for (const ref of activeBuilds) {
       const setMatch: SetMatch = setFor(ref, piece) ?? (offSet ? { kind: 'off' } : null)
@@ -469,11 +475,12 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
       const threshold = baseThreshold * scale
       const score = lineScore(piece, w)
       const expected = expectedFinal(piece, w)
-      const rescore = piece.level >= 4 ? { bar: rescoreBar(threshold, lines) } : null
       const useful = usefulLineCount(piece, w)
-      const passesGate = rescore
-        ? expected >= rescore.bar - 1e-9
-        : score >= threshold - 1e-9 && (!settings.requireTwoLines || useful >= MIN_USEFUL_LINES)
+      const linesPass = score >= threshold - 1e-9 && (!settings.requireTwoLines || useful >= MIN_USEFUL_LINES)
+      // A 3-liner's +4 only reveals its 4th line, which the export already gives, so it isn't a stop: it has to pass
+      // the +0 rule and then, right away, the rescore it would face at +4 (its projection is the same there).
+      const rescore = piece.level >= 4 || (reveal && linesPass) ? { bar: rescoreBar(threshold, lines) } : null
+      const passesGate = rescore ? expected >= rescore.bar - 1e-9 : linesPass
       const gate = passesGate ? 'pass' : crit ? 'crit' : 'fail'
       out.push({
         ref,
@@ -609,7 +616,7 @@ function verdictFor(
   }
 
   const best = candidates[0] ?? null
-  const nextStop = piece.level < 20 ? Math.min(20, Math.floor(piece.level / 4) * 4 + 4) : null
+  const stop = nextStop(piece)
 
   if (piece.owner) {
     const own = candidates.find((c) => c.ref.char === piece.owner && c.gate !== 'fail')
@@ -622,7 +629,7 @@ function verdictFor(
       action: piece.lock ? null : 'lock',
       reason: `Equipped on ${characterName(piece.owner)}${hint}`,
       best: own ?? null,
-      nextStop: own && piece.level < 20 ? nextStop : null,
+      nextStop: own ? stop : null,
     }
   }
 
@@ -659,7 +666,9 @@ function verdictFor(
       .filter((s) => (best.ref.build.substats[s.key] ?? 0) > 0)
       .map((s) => statShort(s.key))
     reason = best.rescore
-      ? `Rolls fell short: projected ${num(best.expected)} for ${who} (need ${num(best.rescore.bar)})`
+      ? piece.level < 4
+        ? `Starting rolls too low: projected ${num(best.expected)} for ${who} with the 4th line +4 reveals (need ${num(best.rescore.bar)})`
+        : `Rolls fell short: projected ${num(best.expected)} for ${who} (need ${num(best.rescore.bar)})`
       : tooFewLines(best)
         ? `Too few useful lines: only ${used.join(' + ')} is a stat ${who} uses (needs ${MIN_USEFUL_LINES})`
         : `Subs too weak: best ${num(best.lineScore)} for ${who} (need ${num(best.threshold)})`
@@ -691,7 +700,7 @@ function verdictFor(
     action,
     reason: piece.elixirCrafted && !recommendLock ? `${reason} · elixir-crafted, double-check` : reason,
     best,
-    nextStop: grade === 'keep' ? nextStop : null,
+    nextStop: grade === 'keep' ? stop : null,
   }
 }
 

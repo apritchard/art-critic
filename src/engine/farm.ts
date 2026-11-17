@@ -398,6 +398,13 @@ export type FarmScope = 'building' | 'priority' | 'all'
 export const inFarmScope = (scope: FarmScope, ref: Pick<ActiveBuild, 'priority' | 'building'>) =>
   scope === 'all' || (scope === 'building' ? !!ref.building : ref.priority === 'priority')
 
+/** The scope a ranking uses: Building falls back to ★ Priority while nobody is pinned, and that to everyone while nobody is ★. */
+export function usedScope(scope: FarmScope, refs: Pick<ActiveBuild, 'priority' | 'building'>[]): FarmScope {
+  const anyBuilding = refs.some((r) => r.building)
+  const anyPriority = refs.some((r) => r.priority === 'priority')
+  return scope === 'building' && anyBuilding ? 'building' : scope !== 'all' && anyPriority ? 'priority' : 'all'
+}
+
 export interface ElixirPick {
   char: string
   set: string
@@ -594,10 +601,10 @@ export function planFarming(
   characters.sort((a, b) => b.odds.gain - a.odds.gain)
 
   // 3. Rank sources for the characters in scope.
-  const anyBuilding = characters.some((c) => c.ref.building)
-  const anyPriority = characters.some((c) => c.ref.priority === 'priority')
-  const used: FarmScope =
-    scope === 'building' && anyBuilding ? 'building' : scope !== 'all' && anyPriority ? 'priority' : 'all'
+  const used = usedScope(
+    scope,
+    characters.map((c) => c.ref),
+  )
   const inScope = characters.filter((c) => inFarmScope(used, c.ref))
 
   // The Level up queue by set, with who each piece is kept for (its wearer, if equipped).

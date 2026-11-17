@@ -1,7 +1,8 @@
 import { tooFewLines, type Candidate, type Evaluation } from '../engine/evaluate'
 import { describeSetMatch } from '../engine/match'
 import { AVG_TIER, characterName, formatStat, MAX_ROLL, SLOT_LABEL, setName, statLabel } from '../engine/stats'
-import type { LevelPriority } from '../engine/inventory'
+import { MAX_PRICE } from '../engine/fodder'
+import type { LevelPriority, LevelValue } from '../engine/inventory'
 import type { Piece } from '../engine/load'
 import type { GoodSubstat, SlotKey } from '../engine/types'
 import { useStore } from '../state/store'
@@ -36,6 +37,23 @@ export function verdictLabel(ev: Evaluation): string {
     case 'skip':
       return 'Not evaluated'
   }
+}
+
+/** Rolls per 100k EXP, as Spend → Fodder writes gain per EXP. */
+export const per100k = (rate: number) => (rate * 1e5).toFixed(2)
+
+/** A piece leveling advice holds: kept, but not worth its EXP right now. */
+export const isHeld = (level: LevelPriority | null | undefined) => level?.value?.worth === false
+
+/**
+ * "0.84 rolls per 100k EXP", or for a held piece why it's held: "Not worth its EXP right now: 0.16 rolls per 100k
+ * EXP, and your EXP brings 0.47 on the pieces it pays for".
+ */
+export function valueLine(v: LevelValue): string {
+  const rate = `${per100k(v.rate)} rolls per 100k EXP`
+  if (v.worth) return v.price > 0 ? `${rate}, past the ${per100k(v.price)} your EXP brings at the margin` : rate
+  if (v.price >= MAX_PRICE) return 'Not worth its EXP right now: your EXP on hand all goes to pieces for the characters Spend → Rank for counts'
+  return `Not worth its EXP right now: ${rate}, and your EXP brings ${per100k(v.price)} on the pieces it pays for${v.first ? '' : ' (after those for the characters Spend → Rank for counts)'}`
 }
 
 /** Colors a substat by how much the build weighs it. */
@@ -86,7 +104,7 @@ export function ArtifactCard(props: Props) {
         {piece.elixirCrafted && <span className="flag" title="Crafted with Sanctifying Elixir">⚗</span>}
         <span className={`verdict v-${ev.grade}`}>{verdictLabel(ev)}</span>
         {leveling ? (
-          <LevelButton ev={ev} done={done} onDone={onDone} />
+          <LevelButton ev={ev} held={isHeld(priority)} done={done} onDone={onDone} />
         ) : (
           <ActionButton ev={ev} done={done} onDone={onDone} />
         )}
@@ -201,14 +219,14 @@ function ActionButton({ ev, done, onDone }: { ev: Evaluation; done: boolean; onD
   )
 }
 
-function LevelButton({ ev, done, onDone }: { ev: Evaluation; done: boolean; onDone: () => void }) {
+function LevelButton({ ev, held, done, onDone }: { ev: Evaluation; held: boolean; done: boolean; onDone: () => void }) {
   const click = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDone()
   }
   return (
     <button className={`action level${done ? ' is-done' : ''}`} onClick={click} title="Click once you've leveled it in-game">
-      {done ? '✓ leveled' : `⬆ +${ev.nextStop}`}
+      {done ? '✓ leveled' : `${held ? '⏸' : '⬆'} +${ev.nextStop}`}
     </button>
   )
 }
@@ -243,6 +261,15 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
         >
           ⬆ +{gain.gain.toFixed(2)} {characterName(gain.char)}
           {marks({ priority: gain.star ? 'priority' : 'normal', building: gain.building })}
+        </span>
+      )}
+      {priority?.value && (
+        <span
+          className={`chance value${isHeld(priority) ? ' held' : ''}`}
+          title={`${valueLine(priority.value)}. "Best value" sorts by it.`}
+        >
+          {isHeld(priority) ? '⏸ hold · ' : ''}
+          <b>{per100k(priority.value.rate)}</b> per 100k EXP
         </span>
       )}
       {shown.slice(0, MAX_CHIPS).map((c) => {

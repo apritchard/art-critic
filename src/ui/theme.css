@@ -597,6 +597,12 @@ kbd {
     0 0 10px -2px var(--heat-4);
 }
 
+/* Kept, but not worth its EXP right now: its gain color stays, dimmed, and the cell gets no stripe. */
+.inv-up.held {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
 .inv-up.leveled {
   border-color: transparent;
   background: none;
@@ -882,6 +888,16 @@ kbd {
 }
 
 .chance.cut {
+  color: var(--marginal);
+  background: var(--marginal-bg);
+}
+
+/* A To level card's gain per EXP; on hold when it isn't worth its EXP right now. */
+.chance.value {
+  color: var(--muted);
+}
+
+.chance.value.held {
   color: var(--marginal);
   background: var(--marginal-bg);
 }

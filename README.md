@@ -26,7 +26,7 @@ Go through your inventory one set at a time, with the game open alongside.
 1. In **Artifacts**, pick a set from the left rail. It shows how many pieces to lock (▲), unlock (▼) and level (⬆).
 2. In-game, filter the inventory to that set. The grid is in the game's own order, cell for cell.
 3. Follow the green **LOCK** and red **UNLOCK** bars. <kbd>Space</kbd> marks a piece done and jumps to the next.
-4. Level the **⬆+4** pieces to the stop shown. The hotter the badge, the bigger the expected gain; blue and up is high priority.
+4. Level the **⬆+4** pieces to the stop shown. The hotter the badge, the bigger the expected gain; blue and up is high priority. A dimmed **⏸** piece is kept but on hold: your EXP on hand does more elsewhere.
 5. Re-export and load it. Each piece you leveled is judged again on what it actually rolled.
 
 Click any piece to open it in the inspector. It shows why the piece got its verdict, who it's for, and **Closest build**: what would have to change for a build to keep it. Edit a build right there and the verdict updates.

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { EvaluationResult } from '../engine/evaluate'
+import type { FarmScope } from '../engine/farm'
+import { levelingAdvice } from '../engine/fodder'
 import { rerollPriority, type RerollPriority } from '../engine/inventory'
 import { planRerolls } from '../engine/reroll'
 import { useStore } from '../state/store'
@@ -29,7 +31,7 @@ function usePortrait(): boolean {
  * leave the page. The view, set and inspected piece are kept in the URL, so Back comes here as it was.
  */
 export function ArtifactsPage({ result, route }: { result: EvaluationResult; route: ArtifactsRoute }) {
-  const { pieces, er, config } = useStore()
+  const { pieces, er, config, data, settings } = useStore()
   const [guarantee] = useGuarantee()
   const [view, setView] = useLocal<ArtifactsView>('artifacts:view', 'grid')
   const [set, setSet] = useLocal<string>('artifacts:set', 'all')
@@ -78,6 +80,14 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
     return m
   }, [needRerolls, result, pieces, guarantee, er, config, anyStar])
 
+  // What EXP is worth when leveling, and which pieces in the To level queue are worth theirs: for the characters
+  // Spend's "Rank for" counts first, as Spend → Fodder spends it. The grid's ⬆ badges, the list and the inspector.
+  const [farmFor] = useLocal<FarmScope>('farm:for', 'building')
+  const advice = useMemo(
+    () => levelingAdvice(result, data.materials, farmFor, settings.minUpgradeChance),
+    [result, data.materials, farmFor, settings.minUpgradeChance],
+  )
+
   const toolbar = (
     <>
       <button
@@ -119,6 +129,7 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           onSelect={setInspected}
           jump={jump}
           rerolls={rerolls ?? new Map()}
+          advice={advice}
           toolbar={toolbar}
         />
       ) : (
@@ -132,6 +143,7 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           onLevel={setLevel}
           inspected={inspected}
           onInspect={setInspected}
+          advice={advice}
           toolbar={toolbar}
         />
       )}
@@ -140,6 +152,7 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           result={result}
           id={inspected}
           rerolls={rerolls}
+          advice={advice}
           dock={dock}
           placed={placed}
           onDock={setDock}

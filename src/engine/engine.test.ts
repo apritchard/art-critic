@@ -10,6 +10,7 @@ import {
   isCritCirclet,
   lineCeiling,
   lineScore,
+  nextStop,
   remainingRolls,
   rescoreBar,
   startLines,
@@ -150,6 +151,16 @@ describe('roll accounting', () => {
   it('scores the hidden 4th line of a 3-liner', () => {
     expect(lineScore(threeLiner(), W)).toBe(2)
     expect(currentValue(threeLiner(), W)).toBeCloseTo(3.9 / 3.89 + 7.8 / 7.77, 5)
+  })
+  it('stops where a roll lands, so a 3-liner whose 4th line is known goes straight to +8', () => {
+    expect(nextStop(art())).toBe(4)
+    expect(nextStop(threeLiner())).toBe(8)
+    expect(nextStop(threeLiner({ level: 2 }))).toBe(8)
+    // Without the hidden line in the export, +4 still reveals something.
+    expect(nextStop(threeLiner({ unactivatedSubstats: [] }))).toBe(4)
+    expect(nextStop(art({ level: 4, totalRolls: 4 }))).toBe(8)
+    expect(nextStop(art({ level: 9, totalRolls: 6 }))).toBe(12)
+    expect(nextStop(art({ level: 20, totalRolls: 9 }))).toBeNull()
   })
 })
 
@@ -302,6 +313,33 @@ describe('evaluate', () => {
     expect(bad.verdict).toBe('trash')
     expect(bad.action).toBe('unlock')
     expect(bad.reason).toMatch(/Subs too weak/)
+  })
+
+  it('judges a 3-liner at +0 as it will be at +4, and levels it straight to +8', () => {
+    // CRIT Rate, flat ATK and the hidden ER weigh 1.6, past the 3-line bar of 1.5, but every starting roll is low:
+    // projected 2.48 against the 2.55 the piece faces once +4 reveals its 4th line.
+    const lines = [
+      { key: 'critRate_', value: 2.7 },
+      { key: 'atk', value: 14 },
+      { key: 'def', value: 16 },
+    ]
+    const low = threeLiner({ substats: lines, unactivatedSubstats: [{ key: 'enerRech_', value: 4.5 }] })
+    // Each piece once leveled to +4: its 4th line revealed, and no roll added.
+    const at4 = (p: GoodArtifact) => ({ ...p, level: 4, substats: [...p.substats, ...p.unactivatedSubstats!], unactivatedSubstats: [], totalRolls: 4 })
+    const [good, weak, good4, weak4] = run([threeLiner(), low, at4(threeLiner()), at4(low)], { capNormal: 9 }).evaluations
+    expect(good.verdict).toBe('level')
+    expect(good.nextStop).toBe(8)
+    expect(good.best!.rescore).not.toBeNull()
+    expect(good.best!.expected).toBeCloseTo(good4.best!.expected, 9)
+    expect(good4.verdict).toBe('continue')
+    expect(good4.nextStop).toBe(8)
+
+    expect(weak.best!.lineScore).toBeGreaterThanOrEqual(weak.best!.threshold)
+    expect(weak.verdict).toBe('trash')
+    expect(weak.nextStop).toBeNull()
+    expect(weak.reason).toBe('Starting rolls too low: projected 2.48 for Diluc with the 4th line +4 reveals (need 2.55)')
+    expect(weak4.grade).toBe(weak.grade)
+    expect(weak4.reason).toMatch(/^Rolls fell short: projected 2.48/)
   })
 
   it('applies the cap to pieces still to level', () => {
@@ -488,10 +526,11 @@ describe('evaluate', () => {
       const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts: [piece] }
       return evaluate(loadPieces(data), owned, cfgEM, { ...defaultSettings(cfgEM), requireTwoLines }, {}).evaluations[0]
     }
-    // Only ER counts: 0.60 clears the scaled bar, but one line isn't enough.
+    // Only ER counts: 0.60 clears the scaled bar, but one line isn't enough. It's a top ER roll, so without this rule
+    // the piece would also clear the projection a 3-liner faces at +0 (as at +4).
     const erOnly = goblet([
       { key: 'def_', value: 6.6 },
-      { key: 'enerRech_', value: 4.5 },
+      { key: 'enerRech_', value: 6.5 },
       { key: 'hp', value: 299 },
     ])
     const thin = judge(erOnly)
@@ -500,7 +539,7 @@ describe('evaluate', () => {
     expect(thin.reason).toBe('Too few useful lines: only ER is a stat Diluc uses (needs 2)')
     expect(judge(erOnly, false).verdict).toBe('level')
     // ER and CRIT Rate: two lines, so it passes.
-    expect(judge(goblet([{ key: 'def_', value: 6.6 }, { key: 'enerRech_', value: 4.5 }, { key: 'critRate_', value: 3.1 }])).verdict).toBe('level')
+    expect(judge(goblet([{ key: 'def_', value: 6.6 }, { key: 'enerRech_', value: 6.5 }, { key: 'critRate_', value: 3.1 }])).verdict).toBe('level')
   })
 
   it('lets crit circlets bypass the substat gate', () => {

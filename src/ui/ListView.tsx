@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { standing, type Evaluation, type EvaluationResult } from '../engine/evaluate'
+import { MAX_PRICE, type LevelingAdvice } from '../engine/fodder'
 import { levelPriority, type LevelPriority } from '../engine/inventory'
 import { characterName, SLOT_LABEL, setName, statLabel } from '../engine/stats'
 import { SLOTS, type SlotKey } from '../engine/types'
 import { useStore, type SortMode } from '../state/store'
-import { ArtifactCard, SLOT_ICON } from './ArtifactCard'
+import { ArtifactCard, isHeld, SLOT_ICON } from './ArtifactCard'
 import { useLocal } from './local'
 import type { LevelFilter, ShowFilter } from './routes'
 
@@ -16,10 +17,11 @@ const SORT_LABEL: Record<SortMode, string> = {
   verdict: 'Verdict',
   chance: 'Upgrade chance',
   gain: 'Expected gain',
+  value: 'Best value (gain per EXP)',
 }
 
 /** Sorts only the Level up queue offers. */
-const LEVEL_ONLY: SortMode[] = ['gain']
+const LEVEL_ONLY: SortMode[] = ['gain', 'value']
 
 export const SHOW_LABEL: Record<ShowFilter, { label: string; title: string }> = {
   changes: { label: 'Lock changes', title: 'Pieces whose lock should change: LOCK to keep, UNLOCK to feed' },
@@ -47,6 +49,19 @@ export const toLevel = (e: Evaluation) => e.piece.level < 20 && e.nextStop !== n
 /** A piece's expected gain once finished from its leveling priority, 0 when it isn't worth leveling. */
 const gainOf = (priorities: Map<string, LevelPriority | null>) => (e: Evaluation) => priorities.get(e.piece.id)?.gain ?? 0
 
+/**
+ * Best value first: equipped pieces to finish (their EXP is set aside first), then pieces worth their EXP now, then
+ * held ones, each by gain per EXP.
+ */
+const valueOf =
+  (priorities: Map<string, LevelPriority | null>) =>
+  (e: Evaluation): [number, number] => {
+    const p = priorities.get(e.piece.id)
+    if (!p) return [-1, 0]
+    if (!p.value) return [2, 0]
+    return [p.value.worth ? 1 : 0, p.value.rate]
+  }
+
 const GRADE_ORDER = { keep: 0, equipped: 1, marginal: 2, toss: 3, skip: 4 }
 
 /** Best chance this piece ends up beating what someone wears, over every build it passes for. */
@@ -71,8 +86,18 @@ const headedTo = (e: Evaluation, anyStar: boolean) => {
  * `gainOf` is a piece's expected gain once finished, as the Inventory's ⬆ badge rates it (levelPriority), or 0 when
  * it isn't worth leveling.
  */
-function sorter(mode: SortMode, gainOf: (e: Evaluation) => number): (a: Evaluation, b: Evaluation) => number {
+function sorter(
+  mode: SortMode,
+  gainOf: (e: Evaluation) => number,
+  valueOf: (e: Evaluation) => [number, number],
+): (a: Evaluation, b: Evaluation) => number {
   switch (mode) {
+    case 'value':
+      return (a, b) => {
+        const va = valueOf(a)
+        const vb = valueOf(b)
+        return vb[0] - va[0] || vb[1] - va[1] || gainOf(b) - gainOf(a) || b.piece.idx - a.piece.idx
+      }
     case 'gain':
       return (a, b) => gainOf(b) - gainOf(a) || topChance(b) - topChance(a) || b.piece.idx - a.piece.idx
     case 'chance':
@@ -117,11 +142,12 @@ export const doneKey = (leveling: boolean, e: Evaluation) => (leveling ? levelKe
 function priorityThen(
   mode: SortMode,
   gainOf: (e: Evaluation) => number,
+  valueOf: (e: Evaluation) => [number, number],
   rankOf: (e: Evaluation) => number,
   anyStar: boolean,
 ): (a: Evaluation, b: Evaluation) => number {
-  const base = sorter(mode, gainOf)
-  if (mode === 'gain') return (a, b) => rankOf(b) - rankOf(a) || base(a, b)
+  const base = sorter(mode, gainOf, valueOf)
+  if (mode === 'gain' || mode === 'value') return (a, b) => rankOf(b) - rankOf(a) || base(a, b)
   return (a, b) => {
     const pa = headedTo(a, anyStar)
     const pb = headedTo(b, anyStar)
@@ -141,6 +167,8 @@ interface Props {
   /** The piece open in the inspector, outlined. */
   inspected: string | null
   onInspect: (id: string) => void
+  /** Which pieces in the To level queue are worth their EXP now (levelingAdvice). */
+  advice: LevelingAdvice
   /** Controls the page puts first in the filter bar (the view switch). */
   toolbar: ReactNode
 }
@@ -149,7 +177,7 @@ interface Props {
  * The Artifacts tab's list: one card per piece, filtered to lock changes, the Level up queue or everything, at any
  * level. The old Triage +0, In progress, +20 review and Level up tabs are its filter combinations.
  */
-export function ListView({ result, set, onSet, show, onShow, level, onLevel, inspected, onInspect, toolbar }: Props) {
+export function ListView({ result, set, onSet, show, onShow, level, onLevel, inspected, onInspect, advice, toolbar }: Props) {
   const store = useStore()
   const { done, toggleDone } = store
   const leveling = show === 'level'
@@ -159,7 +187,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
   // The level queue keeps its own sort (expected gain by default); the lock lists share one.
   const [levelSort, setLevelSort] = useLocal<SortMode>('level:sortBy', 'gain')
   const [priorityFirst, setPriorityFirst] = useLocal('level:priorityFirst', true)
-  const sort = leveling ? levelSort : store.sort === 'gain' ? 'newest' : store.sort
+  const sort = leveling ? levelSort : LEVEL_ONLY.includes(store.sort) ? 'newest' : store.sort
   const setSort = leveling ? setLevelSort : store.setSort
   const [focus, setFocus] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -178,8 +206,8 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
   // What each piece is worth leveling, as the Inventory's ⬆ badge rates it: sorts by expected gain, and breaks ties.
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
   const priorities = useMemo(
-    () => new Map(inScope.map((e) => [e.piece.id, levelPriority(e, anyStar)] as const)),
-    [inScope, anyStar],
+    () => new Map(inScope.map((e) => [e.piece.id, levelPriority(e, anyStar, advice.pieces.get(e.piece.id))] as const)),
+    [inScope, anyStar, advice],
   )
   const rankOf = (e: Evaluation) => {
     const p = priorities.get(e.piece.id)
@@ -192,7 +220,8 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
       const c = m.get(e.piece.setKey) ?? { lock: 0, unlock: 0, level: 0, total: 0 }
       c.total++
       if (!done.has(doneKey(leveling, e))) {
-        if (leveling) c.level++
+        // A held piece isn't worth its EXP right now, so it isn't work to do yet.
+        if (leveling) c.level += isHeld(priorities.get(e.piece.id)) ? 0 : 1
         else if (e.action === 'lock') c.lock++
         else if (e.action === 'unlock') c.unlock++
       }
@@ -200,7 +229,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
     }
     const pending = (c: { lock: number; unlock: number; level: number }) => c.lock + c.unlock + c.level
     return [...m.entries()].sort((a, b) => pending(b[1]) - pending(a[1]) || setName(a[0]).localeCompare(setName(b[0])))
-  }, [inScope, done, leveling])
+  }, [inScope, done, leveling, priorities])
 
   const offSetCount = useMemo(() => {
     const picks = inScope.filter(isOffSetPick)
@@ -229,8 +258,8 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
         )
         .sort(
           leveling && priorityFirst
-            ? priorityThen(sort, gainOf(priorities), rankOf, anyStar)
-            : sorter(sort, gainOf(priorities)),
+            ? priorityThen(sort, gainOf(priorities), valueOf(priorities), rankOf, anyStar)
+            : sorter(sort, gainOf(priorities), valueOf(priorities)),
         ),
     [inSet, slot, main, show, hideDone, done, sort, leveling, priorityFirst, priorities, anyStar],
   )
@@ -394,7 +423,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
           <div className="set-info">
             Level each piece only to its next stop: every 4 levels adds one roll. Then re-export and the piece is re-scored
             with the new roll, so it either continues or gets fed. Each chip is the chance it beats what that character
-            wears once it reaches +20.
+            wears once it reaches +20. <ExpNote advice={advice} />
           </div>
         )}
         {set === OFF_SET && (
@@ -444,6 +473,35 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
         </div>
       </section>
     </div>
+  )
+}
+
+const SCOPE_LABEL = { building: '📌 Building characters', priority: '★ Priority characters', all: 'every character' } as const
+
+/**
+ * What EXP is worth when leveling, as levelingAdvice prices it: "Your 12.3M EXP on hand covers every piece for 📌
+ * Building characters; everyone else's are worth leveling from 0.61 rolls per 100k EXP. ⏸ marks the 224 held …".
+ */
+function ExpNote({ advice }: { advice: LevelingAdvice }) {
+  const { hand, price, restPrice, scope } = advice
+  const all = [...advice.pieces.values()]
+  const held = all.filter((a) => !a.worth).length
+  const exp = `${(Math.max(0, hand.budget) / 1e6).toFixed(1)}M`
+  const rate = (p: number) => `${(p * 1e5).toFixed(2)} rolls per 100k EXP`
+  const first = price > 0 ? `goes furthest on pieces for ${SCOPE_LABEL[scope]} worth ${rate(price)} or more` : `covers every piece for ${SCOPE_LABEL[scope]}`
+  const others = all.some((a) => !a.first)
+    ? restPrice >= MAX_PRICE
+      ? "; none is left for everyone else's"
+      : restPrice > 0
+        ? `; everyone else's need ${rate(restPrice)} from what's left`
+        : ", with enough left for everyone else's"
+    : ''
+  return (
+    <>
+      Your {exp} EXP on hand (Spend → Fodder) {first}
+      {others}. {held > 0 ? `⏸ marks the ${held} on hold: still kept, but not worth their EXP right now. ` : ''}
+      &quot;Best value&quot; sorts by gain per EXP; Spend → Rank for picks whose pieces get the EXP first.
+    </>
   )
 }
 
