@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { characterBoard, swapGain } from './board'
 import { erModel, type GameData } from './er'
 import { evaluate, defaultSettings } from './evaluate'
 import {
@@ -17,6 +18,7 @@ import {
   upgradeOdds,
   type DomainsFile,
 } from './farm'
+import { planFeedOrBox } from './fodder'
 import { loadPieces } from './load'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodExport, Roster, SlotKey } from './types'
 
@@ -581,6 +583,47 @@ describe('planFarming', () => {
     expect(plan.strongbox.find((s) => s.key === 'CrimsonWitchOfFlames')?.toLevel).toEqual([{ piece, chars: ['HuTao'] }])
     // Bennett's domain doesn't help Hu Tao, so it doesn't flag her piece.
     expect(plan.domains.find((d) => d.key === 'Clear Pool')?.toLevel).toEqual([])
+  })
+
+  it('puts each free swap and piece to level on the Characters board', () => {
+    // A fresh Crimson Witch sands with strong lines, kept for Hu Tao, beside her free circlet swap.
+    const fresh = art({ slotKey: 'sands', level: 0, substats: strong })
+    const withFresh = { ...data, artifacts: [...data.artifacts, fresh] }
+    const ps = loadPieces(withFresh)
+    const res = evaluate(ps, withFresh.characters, config, defaultSettings(config), roster)
+    const plan = planFarming(res, ps, config, domains, 'all')
+    const rows = characterBoard(res, ps, plan, [], null)
+    const hutao = rows.find((r) => r.char === 'HuTao')!
+    expect(hutao.ref?.buildIdx).toBe(0)
+    expect(hutao.fixes.circlet.swap?.piece.setKey).toBe('ShimenawasReminiscence')
+    expect(hutao.freeGain).toBeCloseTo(swapGain(hutao.fixes.circlet.swap!))
+    expect(hutao.fixes.sands.level?.piece.level).toBe(0)
+    expect(hutao.fixes.sands.level!.gain).toBeGreaterThan(0.5)
+    expect(hutao.fixes.flower.swap).toBeNull()
+    expect(hutao.newPiece).toBeGreaterThan(0)
+    // Bennett wears nothing: every slot is unusable, so his weakest is 0.
+    const bennett = rows.find((r) => r.char === 'Bennett')!
+    expect(bennett.ratings.flower).toBeNull()
+    expect(bennett.min).toBe(0)
+  })
+
+  it('lists the pieces to level next, best gain per EXP first, funded while the EXP lasts', () => {
+    const fresh = art({ slotKey: 'sands', level: 0, substats: strong })
+    const withFresh = { ...data, artifacts: [...data.artifacts, fresh] }
+    const ps = loadPieces(withFresh)
+    const res = evaluate(ps, withFresh.characters, config, defaultSettings(config), roster)
+    const piece = ps.find((p) => p.setKey === 'CrimsonWitchOfFlames' && p.slotKey === 'sands' && !p.owner)!
+    const plan = planFarming(res, ps, config, domains, 'all')
+    const rich = planFeedOrBox(res, plan, { SanctifyingEssence: 1000 }, 0.2)
+    expect(rich.queue.pieces[0]).toMatchObject({ piece, funded: true })
+    expect(rich.queue.pieces[0].ref.char).toBe('HuTao')
+    expect(rich.queue.pieces[0].gain).toBeGreaterThan(0)
+    const rates = rich.queue.pieces.map((q) => q.gain / q.exp)
+    rates.forEach((r, i) => i > 0 && expect(r).toBeLessThanOrEqual(rates[i - 1]))
+    expect(rich.queue.pieces.filter((q) => q.funded)).toHaveLength(rich.queue.funded)
+    // No EXP on hand: still listed, but nothing is funded.
+    const broke = planFeedOrBox(res, plan, {}, 0.2)
+    expect(broke.queue.pieces[0]).toMatchObject({ piece, funded: false })
   })
 
   it('ranks for the Building list, falling back to ★ Priority when it is empty', () => {

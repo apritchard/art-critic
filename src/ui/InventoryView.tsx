@@ -23,7 +23,7 @@ const DEFAULT_COLS = 8
 const MIN_COLS = 3
 const MAX_COLS = 16
 
-/** The Reroll tab's "Rerolled it" marks. */
+/** Spend → Dust's "Rerolled it" marks. */
 export const rerollKey = (id: string) => `reroll:${id}`
 
 /** The suffix of an ordinal: 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st. */
@@ -50,7 +50,7 @@ interface Props {
   onSelect: (id: string | null) => void
   /** A link followed to a piece: open its set (with equipped pieces if it's worn) and scroll to it once. */
   jump?: { piece: string; key: string }
-  /** +20s worth a reroll, as the Reroll tab judges them (rerollPriority). */
+  /** +20s worth a reroll, as Spend → Dust judges them (rerollPriority). */
   rerolls: Map<string, RerollPriority>
   /** Controls the page puts first in the filter bar (the view switch). */
   toolbar: ReactNode
@@ -357,7 +357,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
             </p>
             <p className="sub-note inv-key">
               <span className="inv-up t2">⟳</span> a +20 worth a Dust of Enlightenment reroll, with the {GUARANTEE[guarantee]}{' '}
-              guarantee picked on the Reroll tab: a worn piece, or a spare that rerolled could beat what someone wears.
+              guarantee picked in Spend → Dust: a worn piece, or a spare that rerolled could beat what someone wears.
               It&apos;s shaded the same way by the expected gain from one reroll
               {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}, from {PRIORITY_STEPS[0]}. A worn piece worth more
               moved to someone else gets none. Mark it rerolled with <kbd>R</kbd> or in the inspector.

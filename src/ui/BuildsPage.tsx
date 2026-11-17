@@ -21,7 +21,7 @@ import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { FitPanel, useFitting, type Fitting } from './FitPanel'
 import { useLocal } from './local'
-import type { BuildsFocus } from './routes'
+import { charactersHref, type BuildsFocus } from './routes'
 
 const qualityClass = (q: number | null) => (q === null ? 'q-none' : q >= 0.85 ? 'q-good' : q >= 0.6 ? 'q-ok' : 'q-weak')
 
@@ -167,8 +167,8 @@ function Editor(props: {
           {cc.element} · {cc.confidence} · {owned ? `Lv ${owned.level}` : 'not owned'}
           {!summary?.active && ' · not counted (see Roster)'}
         </span>
-        <a className="link" href={`#improve/${encodeURIComponent(char)}`} title="Every way to improve what they wear">
-          Improve →
+        <a className="link" href={charactersHref({ char })} title="Every way to improve what they wear, in the Characters tab">
+          Character →
         </a>
         {overrides[char] && (
           <button className="ghost" onClick={reset}>

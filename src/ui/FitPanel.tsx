@@ -440,7 +440,7 @@ function Layers(props: {
   )
 
   if (inactive) {
-    rows.push({ label: 'Counts', ok: false, text: <>Not counted: {inactive}. Switch them on in <a href="#roster">Roster</a>.</> })
+    rows.push({ label: 'Counts', ok: false, text: <>Not counted: {inactive}. Switch them on in <a href="#characters/roster">Characters → Roster</a>.</> })
   }
 
   const setEdits = f.edits.filter((e) => e.kind === 'tier')

@@ -7,6 +7,7 @@ import { SLOTS, type Priority } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { BuildingToggle } from './marks'
+import { charactersHref } from './routes'
 
 const PRIORITY_LABEL: Record<Priority, string> = { priority: '★ Priority', normal: 'Normal', ignore: 'Ignore' }
 const PRIORITY_ORDER: Record<Priority, number> = { priority: 0, normal: 1, ignore: 2 }
@@ -120,7 +121,7 @@ function Row({
             <>
               <td rowSpan={span}>
                 <BuildingToggle char={c.char} />{' '}
-                <a className="char-name char-link" href={`#improve/${encodeURIComponent(c.char)}`} title="All the ways to improve their pieces">
+                <a className="char-name char-link" href={charactersHref({ char: c.char })} title="All the ways to improve their pieces">
                   {characterName(c.char)}
                 </a>
                 <div className="sub-note">

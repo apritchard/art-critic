@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import { defaultRosterEntry, type ActiveBuild, type EvaluationResult } from '../engine/evaluate'
 import { currentBuilds, planFarming, RESIN_SHOWN, STRONGBOX_BATCH, wearing } from '../engine/farm'
 import { fourPieceSets } from '../engine/match'
@@ -6,12 +6,13 @@ import { improveCharacter, type ImprovePlan, type PieceOption, type SlotPlan } f
 import type { Piece } from '../engine/load'
 import type { Guarantee } from '../engine/reroll'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
+import type { Priority } from '../engine/types'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { EquipLog, ErChange, ErGainNote, erTargetText, runs, TradeNote } from './FarmPage'
 import { useLocal } from './local'
 import { BuildingToggle, marks } from './marks'
-import { buildsHref } from './routes'
+import { buildsHref, charactersHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 const qualityClass = (q: number | null) => (q === null ? 'q-none' : q >= 0.85 ? 'q-good' : q >= 0.6 ? 'q-ok' : 'q-weak')
@@ -21,10 +22,11 @@ const shortSubs = (p: Piece) =>
 const GUARANTEE: Record<Guarantee, string> = { 2: 'Normal (2)', 3: 'Advanced (3)', 4: 'Decreed (4)' }
 
 /** What the character rail ranks by: the weakest equipped piece's rating, or the average of all five. */
-type RailSort = 'min' | 'avg'
+type RailSort = 'min' | 'avg' | 'name'
 const RAIL_SORT: Record<RailSort, { label: string; title: string }> = {
   min: { label: 'Min', title: 'Weakest equipped piece' },
   avg: { label: 'Avg', title: 'Average of the five equipped pieces (an empty or unusable slot counts as 0%)' },
+  name: { label: 'A–Z', title: 'By name, 📌 Building first; the number is their weakest equipped piece' },
 }
 
 /** Every build of a character as something the planners can judge, active or not. */
@@ -50,16 +52,18 @@ function useRefs(result: EvaluationResult, char: string): ActiveBuild[] {
   }, [result.activeBuilds, config.characters, char, roster, settings.capNormal, settings.includeUnowned, data.characters])
 }
 
-export function ImprovePage({ result, initial }: { result: EvaluationResult; initial?: string }) {
+/**
+ * One character in the Characters tab: the rail of characters, weakest first, and every way to improve the one
+ * `selected`, slot by slot. Picking another adds a history entry, so Back returns to the last.
+ */
+export function ImprovePage({ result, selected }: { result: EvaluationResult; selected: string }) {
   const { pieces, config } = useStore()
   const [query, setQuery] = useState('')
   const [showInactive, setShowInactive] = useLocal('improve:inactive', false)
   const [sortPick, setSortBy] = useLocal<RailSort>('improve:sort', 'min')
-  const sortBy: RailSort = sortPick === 'avg' ? 'avg' : 'min'
-  const [selected, setSelected] = useLocal<string>('improve:char', '')
-  useEffect(() => {
-    if (initial && config.characters[initial]) setSelected(initial)
-  }, [initial, config.characters, setSelected])
+  const sortBy: RailSort = sortPick === 'avg' || sortPick === 'name' ? sortPick : 'min'
+  // The rating shown beside each name: by name, their weakest piece.
+  const shownBy = sortBy === 'avg' ? 'avg' : 'min'
 
   // Ratings of the build each character wears: the weakest slot (where help is most needed) and the average.
   const ratings = useMemo(() => {
@@ -84,7 +88,7 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
       }),
     )
   }, [result, pieces, config.characters])
-  const rating = (char: string) => ratings.get(char)?.[sortBy] ?? 0
+  const rating = (char: string) => ratings.get(char)?.[shownBy] ?? 0
 
   const chars = useMemo(
     () =>
@@ -94,16 +98,17 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
         .sort(
           (a, b) =>
             Number(b.building) - Number(a.building) ||
-            Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
-            (ratings.get(a.char)?.[sortBy] ?? 0) - (ratings.get(b.char)?.[sortBy] ?? 0),
+            (sortBy === 'name'
+              ? characterName(a.char).localeCompare(characterName(b.char))
+              : Number(b.priority === 'priority') - Number(a.priority === 'priority') ||
+                (ratings.get(a.char)?.[sortBy] ?? 0) - (ratings.get(b.char)?.[sortBy] ?? 0)),
         ),
     [result.characters, showInactive, query, ratings, sortBy],
   )
   const char = config.characters[selected] && result.characters.some((c) => c.char === selected) ? selected : chars[0]?.char
 
   const pick = (k: string) => {
-    setSelected(k)
-    location.hash = `#improve/${encodeURIComponent(k)}`
+    location.hash = charactersHref({ char: k })
   }
 
   return (
@@ -131,7 +136,7 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
                 {characterName(c.char)}
                 {marks(c)}
               </span>
-              <span className={`counts ${qualityClass(q)}`} title={RAIL_SORT[sortBy].title}>
+              <span className={`counts ${qualityClass(q)}`} title={RAIL_SORT[shownBy].title}>
                 {Math.round(q * 100)}%
               </span>
             </button>
@@ -146,12 +151,13 @@ export function ImprovePage({ result, initial }: { result: EvaluationResult; ini
 function Detail({ char, result }: { char: string; result: EvaluationResult }) {
   const { pieces, config, domains, er, strongboxSets, data } = useStore()
   const [guarantee, setGuarantee] = useLocal<Guarantee>('reroll:guarantee', 2)
+  const [otherSets, setOtherSets] = useLocal('improve:otherSets', true)
   const refs = useRefs(result, char)
   const worn = useMemo(() => wearing(result, pieces), [result, pieces])
   const wornIdx = useMemo(() => currentBuilds(refs, worn.worn, worn.barsOf, worn.ratingsOf)[0]?.buildIdx ?? 0, [refs, worn])
   const [idx, setIdx] = useState<number | null>(null)
   const ref = refs[idx ?? wornIdx] ?? refs[0]
-  // Spares the Farm tab's free upgrades already hand to someone.
+  // Spares the free upgrades (Quick wins) already hand to someone.
   const claimed = useMemo(
     () => new Map(planFarming(result, pieces, config, domains, 'all', er, strongboxSets).swaps.map((s) => [s.piece.id, s.char])),
     [result, pieces, config, domains, er, strongboxSets],
@@ -171,6 +177,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
           {marks({ priority: ref.priority })}
         </h2>
         <BuildingToggle char={char} label />
+        <PrioritySwitch char={char} />
         <span className="sub-note">
           {owned ? `Lv ${owned.level}` : 'not owned'}
           {plan.er !== null && (
@@ -179,7 +186,6 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
               · ER {plan.er.toFixed(0)}%{plan.need !== null && ` (needs ${erTargetText(plan.need, plan.cap)})`}
             </span>
           )}
-          {ref.priority === 'ignore' && ' · ignored in Roster'}
         </span>
         <a className="link" href={buildsHref({ char, idx: ref.buildIdx })} title="Change this build's sets, main stats, weights or ER target in the Builds tab">
           Edit build →
@@ -200,10 +206,11 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
       <p className="sub-note">
         <SetLine plan={plan} />
       </p>
+      <OffSetLine plan={plan} />
       <EquipLog char={char} />
       <div className="impact">
         {plan.slots.map((s) => (
-          <a key={s.slot} href={`#improve/${encodeURIComponent(char)}`} onClick={(e) => jump(e, s.slot)} className={`qcell ${qualityClass(s.quality)}`} title={SLOT_LABEL[s.slot]}>
+          <a key={s.slot} href={charactersHref({ char })} onClick={(e) => jump(e, s.slot)} className={`qcell ${qualityClass(s.quality)}`} title={SLOT_LABEL[s.slot]}>
             {SLOT_ICON[s.slot]} {s.quality === null ? '–' : `${Math.round(s.quality * 100)}%`}
           </a>
         ))}
@@ -211,8 +218,10 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
       </div>
       <p className="hint">
         <b>Chance</b> is how likely an option beats what {characterName(char)} wears in that slot; <b>Avg gain</b> is the
-        improvement in roll value, counting a miss as no change. Domain odds are per {RESIN_SHOWN} resin, Strongbox odds per
-        batch of {STRONGBOX_BATCH}.
+        improvement in roll value, counting a miss as no change. <b>Free</b> options cost nothing; <b>From others</b> takes a
+        piece someone who counts is wearing; <b>Spend</b> costs EXP, Dust, Elixirs or resin (domain odds per {RESIN_SHOWN}{' '}
+        resin, Strongbox odds per batch of {STRONGBOX_BATCH}). Small gains, other characters&apos; pieces and pieces that
+        would break a set bonus are folded under each slot.
       </p>
       <div className="roster-tools">
         <span className="muted">Reroll guarantee</span>
@@ -223,9 +232,15 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
             </button>
           ))}
         </div>
+        <label
+          className="check"
+          title={`Untick to list only ${ownSets(plan).map(setName).join(' or ')} pieces: ${plan.status.kind === 'none' ? 'the sets they should farm, since they wear no 4pc' : 'the 4pc set they wear'}. Rerolls of the worn piece, Elixirs, the Strongbox and domains always show.`}
+        >
+          <input type="checkbox" checked={otherSets} onChange={(e) => setOtherSets(e.target.checked)} /> Pieces from other sets
+        </label>
       </div>
       {plan.slots.map((s) => (
-        <SlotSection key={s.slot} s={s} plan={plan} />
+        <SlotSection key={s.slot} s={s} plan={plan} only={otherSets ? null : ownSets(plan)} />
       ))}
     </div>
   )
@@ -253,8 +268,73 @@ function SetLine({ plan }: { plan: ImprovePlan }) {
   )
 }
 
+/**
+ * Which slot can hold an off-set piece while they keep their 4pc: any one when all five are the set, else the one
+ * that isn't. Options in other slots that "use the off-set slot" can't all be taken.
+ */
+function OffSetLine({ plan }: { plan: ImprovePlan }) {
+  const st = plan.status
+  if (st.kind === 'none') return null
+  const onSet = plan.slots.filter((s) => s.worn?.setKey === st.set).length
+  if (onSet < 4) return null
+  if (onSet === 5) {
+    return (
+      <p className="sub-note">
+        All five are {setName(st.set)}: any one slot can take an off-set piece and keep the 4pc, but only one, so the
+        options marked &quot;off-set slot&quot; in different slots are alternatives.
+      </p>
+    )
+  }
+  const off = plan.slots.find((s) => s.worn?.setKey !== st.set)!
+  return (
+    <p className="sub-note">
+      Off-set slot: {SLOT_ICON[off.slot]} {SLOT_LABEL[off.slot].toLowerCase()}
+      {off.worn ? ` (${setName(off.worn.setKey)})` : ' (empty)'}. A piece of another set in any other slot would break
+      the 4pc unless {setName(st.set)} moves into the {SLOT_LABEL[off.slot].toLowerCase()} too.
+    </p>
+  )
+}
+
+const PRIORITY_LABEL: Record<Priority, string> = { priority: '★ Priority', normal: 'Normal', ignore: 'Ignore' }
+
+/** Who counts when judging pieces, as the Roster sets it. */
+function PrioritySwitch({ char }: { char: string }) {
+  const { roster, setRosterEntry, data, settings } = useStore()
+  const fallback = defaultRosterEntry(
+    data.characters.find((c) => c.key === char),
+    settings.includeUnowned,
+  )
+  const entry = roster[char] ?? fallback
+  return (
+    <span className="seg small" role="group" aria-label="Counts" title="Who counts when judging pieces, as in Roster">
+      {(Object.keys(PRIORITY_LABEL) as Priority[]).map((p) => (
+        <button key={p} className={entry.priority === p ? 'on' : ''} onClick={() => setRosterEntry(char, { priority: p }, fallback)}>
+          {PRIORITY_LABEL[p]}
+        </button>
+      ))}
+    </span>
+  )
+}
+
+/** Where an option comes from: free now, someone else's piece, or something to spend. */
+type Group = 'free' | 'cost' | 'spend'
+const GROUP_LABEL: Record<Group, string> = {
+  free: 'Free',
+  cost: 'From others',
+  spend: 'Spend',
+}
+
+/** Their own set: the 4pc they wear, or with none on, the sets the page says new pieces come from. */
+const ownSets = (plan: ImprovePlan) => (plan.status.kind === 'none' ? plan.targets : [plan.status.set])
+
+/** Options gaining less than this are folded away with the set-breaking ones. */
+const MINOR_GAIN = 0.1
+
 interface Row {
   key: string
+  group: Group
+  /** A domain or Strongbox: always shown, since their averages are small by nature. */
+  source?: boolean
   what: ReactNode
   detail?: ReactNode
   chance: number | null
@@ -264,16 +344,36 @@ interface Row {
   dim?: boolean
   /** A piece that would cost a set bonus: folded away below the rest. */
   breaks?: boolean
+  /** The set of the piece it puts on (spares, others' pieces, pieces to level, spares to reroll). */
+  set?: string
 }
 
-function SlotSection({ s, plan }: { s: SlotPlan; plan: ImprovePlan }) {
+/** One slot's options. With `only`, pieces of other sets are left out (and counted under the table). */
+function SlotSection({ s, plan, only }: { s: SlotPlan; plan: ImprovePlan; only: string[] | null }) {
   const { equip, equips } = useStore()
-  const [showBreaking, setShowBreaking] = useState(false)
-  const all = slotRows(s, plan, (p) => equip(p.id, plan.ref.char))
+  const [showMore, setShowMore] = useState(false)
+  const every = slotRows(s, plan, (p) => equip(p.id, plan.ref.char))
+  const all = only ? every.filter((r) => !r.set || only.includes(r.set)) : every
+  const otherSets = every.length - all.length
   const equippedHere = !!s.worn && equips.some((e) => e.piece === s.worn!.id && e.char === plan.ref.char)
-  const breaking = all.filter((r) => r.breaks)
-  const rows = [...all.filter((r) => !r.breaks), ...(showBreaking ? breaking : [])]
+  // Folded until asked for: pieces that would break a set bonus, pieces someone who counts is wearing, small gains.
+  const minor = (r: Row) => !r.source && r.gain < MINOR_GAIN
+  const folded = (r: Row) => !!r.breaks || r.group === 'cost' || minor(r)
+  const hidden = all.filter(folded)
+  const visible = showMore ? all : all.filter((r) => !folded(r))
+  const groups = (Object.keys(GROUP_LABEL) as Group[])
+    .map((g) => [g, visible.filter((r) => r.group === g)] as const)
+    .filter(([, rows]) => rows.length)
+  const rows = groups.flatMap(([, list]) => list)
   const top = Math.max(0.01, ...rows.filter((r) => !r.dim).map((r) => r.gain))
+  const foldedText = [
+    hidden.filter((r) => r.group === 'cost' && !r.breaks).length && `${hidden.filter((r) => r.group === 'cost' && !r.breaks).length} from others`,
+    hidden.filter((r) => r.breaks).length && `${hidden.filter((r) => r.breaks).length} breaking a set bonus`,
+    hidden.filter((r) => !r.breaks && r.group !== 'cost').length &&
+      `${hidden.filter((r) => !r.breaks && r.group !== 'cost').length} under ${MINOR_GAIN}`,
+  ]
+    .filter(Boolean)
+    .join(', ')
   return (
     <section className="improve-slot" id={`improve-${s.slot}`}>
       <h3>
@@ -302,30 +402,40 @@ function SlotSection({ s, plan }: { s: SlotPlan; plan: ImprovePlan }) {
               <th>Cost</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key} className={r.dim ? 'dim' : ''}>
-                <td>
-                  {r.what}
-                  {r.detail}
-                </td>
-                <td className="num">{r.chance === null ? '–' : pct(r.chance)}</td>
-                <td className="num gain-cell">
-                  <b>{r.gain.toFixed(2)}</b>
-                  <span className="gain-bar" style={{ width: `${Math.min(100, (r.gain / top) * 100)}%` }} />
-                </td>
-                <td className="cost">{r.cost}</td>
+          {groups.map(([g, list]) => (
+            <tbody key={g}>
+              <tr className="group-row">
+                <td colSpan={4}>{GROUP_LABEL[g]}</td>
               </tr>
-            ))}
-          </tbody>
+              {list.map((r) => (
+                <tr key={r.key} className={r.dim ? 'dim' : ''}>
+                  <td>
+                    {r.what}
+                    {r.detail}
+                  </td>
+                  <td className="num">{r.chance === null ? '–' : pct(r.chance)}</td>
+                  <td className="num gain-cell">
+                    <b>{r.gain.toFixed(2)}</b>
+                    <span className="gain-bar" style={{ width: `${Math.min(100, (r.gain / top) * 100)}%` }} />
+                  </td>
+                  <td className="cost">{r.cost}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       ) : (
         <p className="sub-note">Nothing found that beats it.</p>
       )}
-      {breaking.length > 0 && (
-        <button className="link more" onClick={() => setShowBreaking(!showBreaking)}>
-          {showBreaking ? 'Hide' : 'Show'} {breaking.length} piece{breaking.length === 1 ? '' : 's'} that would break a set bonus
+      {hidden.length > 0 && (
+        <button className="link more" onClick={() => setShowMore(!showMore)}>
+          {showMore ? `Fold the ${hidden.length} again` : `Show ${hidden.length} more (${foldedText})`}
         </button>
+      )}
+      {otherSets > 0 && (
+        <p className="sub-note">
+          {otherSets} piece{otherSets === 1 ? '' : 's'} from other sets hidden (tick &quot;Pieces from other sets&quot; above).
+        </p>
       )}
     </section>
   )
@@ -355,12 +465,14 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
   for (const o of s.spares) {
     rows.push({
       key: `spare-${o.piece.id}`,
+      group: 'free',
+      set: o.piece.setKey,
       what: <span className="opt">Spare +20</span>,
       detail: (
         <>
           {pieceLine(o)}
           {o.claimedBy && (
-            <div className="sub-note">Free upgrades gives it to {characterName(o.claimedBy)}</div>
+            <div className="sub-note">Quick wins gives it to {characterName(o.claimedBy)}</div>
           )}
         </>
       ),
@@ -380,6 +492,8 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
     const owner = characterName(o.owner)
     rows.push({
       key: `taken-${o.piece.id}`,
+      group: o.ownerActive ? 'cost' : 'free',
+      set: o.piece.setKey,
       what: <span className="opt">From {owner}</span>,
       detail: pieceLine(o),
       chance: o.chance,
@@ -404,6 +518,8 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
     const listed = o.verdict === 'level' || o.verdict === 'continue'
     rows.push({
       key: `level-${o.piece.id}`,
+      group: 'spend',
+      set: o.piece.setKey,
       what: <span className="opt">Level +{o.piece.level} → +20</span>,
       detail: (
         <>
@@ -422,6 +538,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
     const r = s.reroll
     rows.push({
       key: 'reroll',
+      group: 'spend',
       what: <span className="opt">Reroll</span>,
       detail: (
         <>
@@ -439,6 +556,8 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
   for (const o of s.spareRerolls) {
     rows.push({
       key: `spare-reroll-${o.piece.id}`,
+      group: 'spend',
+      set: o.piece.setKey,
       what: <span className="opt">Reroll a spare</span>,
       detail: (
         <>
@@ -454,7 +573,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
           <FitNote o={o} plan={plan} />
           {o.erBound && <div className="sub-note">keeps needed ER</div>}
           <ErChange er={o.er} approx />
-          {o.claimedBy && <div className="sub-note warn">Free upgrades gives it to {characterName(o.claimedBy)}</div>}
+          {o.claimedBy && <div className="sub-note warn">Quick wins gives it to {characterName(o.claimedBy)}</div>}
         </>
       ),
       chance: o.chance,
@@ -466,6 +585,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
     const e = s.elixir
     rows.push({
       key: 'elixir',
+      group: 'spend',
       what: <span className="opt">Sanctifying Elixir</span>,
       detail: (
         <>
@@ -487,6 +607,8 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
     const usable = src.sets.length > 0
     rows.push({
       key,
+      group: 'spend',
+      source: true,
       what: <span className="opt">{label}</span>,
       detail: (
         <>
@@ -514,7 +636,9 @@ function FitNote({ o, plan }: { o: PieceOption; plan: ImprovePlan }) {
   const st = plan.status
   if (o.fit.kind === 'keeps') {
     if (o.fit.trade) return <TradeNote trade={o.fit.trade} />
-    return st.kind !== 'none' && o.piece.setKey !== st.set ? <div className="sub-note">uses the off-set slot</div> : null
+    if (st.kind === 'none' || o.piece.setKey === st.set) return null
+    const allFive = plan.slots.every((x) => x.worn?.setKey === st.set)
+    return <div className="sub-note">uses the off-set slot{allFive ? ' (only one slot can)' : ''}</div>
   }
   if (o.fit.kind === 'switch') {
     return <div className="sub-note warn">only with 4pc {setName(o.piece.setKey)} (tier {o.fit.tier})</div>

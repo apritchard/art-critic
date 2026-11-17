@@ -13,6 +13,7 @@ import {
   type FarmPlan,
   type SimPiece,
 } from './farm'
+import type { Piece } from './load'
 import { mainStatOk } from './match'
 import {
   currentValue,
@@ -279,6 +280,17 @@ export function craftCurve(set: string, chars: CharacterFarm[], minChance: numbe
   return { set, levelExp: exp, cost: CRAFT_INPUTS * FEED_EXP + exp, gain: (k) => shapeAt(k) * scale }
 }
 
+/** A piece in the Level up queue as Feed or box ranks it: who it's leveled for, and what leveling it should bring. */
+export interface QueuePiece extends Outlook {
+  piece: Piece
+  /** The build in scope, among those triage keeps it for, that it gains most. */
+  ref: ActiveBuild
+  /** Chance it ends up beating the best that build's character has (what they wear, or a better finished spare). */
+  chance: number
+  /** Within what the EXP on hand pays for, best gain per EXP first. */
+  funded: boolean
+}
+
 export interface FeedOrBox {
   /** +0 pieces Triage marks to unlock. */
   tosses: number
@@ -293,8 +305,11 @@ export interface FeedOrBox {
   leveled: { count: number; exp: number }
   /** EXP to finish equipped pieces still leveling, set aside first. */
   committed: number
-  /** Unequipped pieces in the Level up queue, how many the EXP reaches (best gain per EXP first), and their EXP. */
-  queue: { count: number; funded: number; exp: number; fundedExp: number }
+  /**
+   * Unequipped pieces in the Level up queue, how many the EXP reaches (best gain per EXP first), and their EXP.
+   * `pieces` lists them in that order: the best pieces to level next.
+   */
+  queue: { count: number; funded: number; exp: number; fundedExp: number; pieces: QueuePiece[] }
   /** EXP left once everything worth doing is paid for. */
   left: number
   /** The craft with the best gain per EXP, judged on its first craft. */
@@ -320,7 +335,7 @@ export function planFeedOrBox(
   let tosses = 0
   const leveled = { count: 0, exp: 0 }
   let committed = 0
-  const queue: Outlook[] = []
+  const queue: Omit<QueuePiece, 'funded'>[] = []
   for (const e of result.evaluations) {
     const p = e.piece
     if (p.rarity !== 5) continue
@@ -345,7 +360,7 @@ export function planFeedOrBox(
     }
     if (!top) continue
     const o = levelingOutlook(startOf(p, top.c.ref.build.substats), top.c.bar, minChance)
-    if (o.gain > 0) queue.push(o)
+    if (o.gain > 0) queue.push({ ...o, piece: p, ref: top.c.ref, chance: top.c.chance })
   }
   queue.sort((a, b) => b.gain / b.exp - a.gain / a.exp)
 
@@ -379,6 +394,7 @@ export function planFeedOrBox(
       funded: a.funded,
       exp: queue.reduce((s, o) => s + o.exp, 0),
       fundedExp: queue.slice(0, a.funded).reduce((s, o) => s + o.exp, 0),
+      pieces: queue.map((o, i) => ({ ...o, funded: i < a.funded })),
     },
     left: a.left,
     bestCraft: best && bestRate > 0 ? { set: best.set, rate: bestRate, levelExp: best.levelExp } : null,

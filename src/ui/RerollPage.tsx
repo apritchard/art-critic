@@ -6,9 +6,10 @@ import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../eng
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { ErChange } from './FarmPage'
+import { Info } from './Info'
 import { useLocal } from './local'
 import { marks } from './marks'
-import { inventoryHref } from './routes'
+import { charactersHref, inventoryHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 
@@ -52,25 +53,38 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
 
   return (
     <div className="page reroll">
-      <p className="hint">
-        Dust of Enlightenment re-rolls a +20 piece&apos;s upgrades from its starting values. You pick two lines and at
-        least that many upgrades land on them; the suggestion is the two this build weights most. You can keep the old
-        stats, so a reroll never loses anything: what matters is how likely it comes out better, and by how much. When
-        the piece&apos;s ER line is needed to keep its wearer at their build&apos;s ER minimum, results that lose it count as
-        no change, and the pick may include ER.
-      </p>
-      <p className="hint">
-        <b>Spare</b> +20s are listed too, each for the character it would gain most
-        {firstPick ? ` (${firstPick} first)` : ''}:
-        one whose main stat their build takes and whose set keeps their set bonuses. Its reroll has to beat the piece it
-        would replace, without taking them below their ER minimum. The Farm tab&apos;s free upgrades are left out, both
-        their spares and the slots they fill: equip those first, and they&apos;re judged here as worn pieces.
-      </p>
-      <p className="hint">
-        A gain of {PRIORITY_STEPS[0]} rolls or more gets the Artifacts grid&apos;s ⟳ badge, shaded the same way
-        {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}; from {HIGH_PRIORITY_GAIN} it&apos;s high priority
-        {highLeft > 0 ? ` (${highLeft} not yet rerolled)` : ''}.
-      </p>
+      <Info
+        id="reroll"
+        heading={
+          <h2>
+            Dust of Enlightenment
+            {highLeft > 0 && (
+              <span className="badge" title="High-priority rerolls not yet marked rerolled">
+                {highLeft} high priority
+              </span>
+            )}
+          </h2>
+        }
+      >
+        <p>
+          Dust of Enlightenment re-rolls a +20 piece&apos;s upgrades from its starting values. You pick two lines and at
+          least that many upgrades land on them; the suggestion is the two this build weights most. You can keep the old
+          stats, so a reroll never loses anything: what matters is how likely it comes out better, and by how much. When
+          the piece&apos;s ER line is needed to keep its wearer at their build&apos;s ER minimum, results that lose it count
+          as no change, and the pick may include ER.
+        </p>
+        <p>
+          <b>Spare</b> +20s are listed too, each for the character it would gain most
+          {firstPick ? ` (${firstPick} first)` : ''}: one whose main stat their build takes and whose set keeps their set
+          bonuses. Its reroll has to beat the piece it would replace, without taking them below their ER minimum. The free
+          upgrades in Characters → Quick wins are left out, both their spares and the slots they fill: equip those first,
+          and they&apos;re judged here as worn pieces.
+        </p>
+        <p>
+          A gain of {PRIORITY_STEPS[0]} rolls or more gets the Artifacts grid&apos;s ⟳ badge, shaded the same way
+          {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}; from {HIGH_PRIORITY_GAIN} it&apos;s high priority.
+        </p>
+      </Info>
       <div className="roster-tools">
         <span className="muted">Guaranteed upgrades</span>
         <div className="seg small">
@@ -134,7 +148,9 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                 </td>
                 <td>
                   <span className="char-name">
-                    {characterName(o.ref.char)}
+                    <a className="char-link" href={charactersHref({ char: o.ref.char })} title="Every way to improve their pieces">
+                      {characterName(o.ref.char)}
+                    </a>
                     {marks(o.ref)}
                   </span>
                   <div className="sub-note">{o.ref.build.name}</div>
@@ -205,7 +221,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
       {plan.wrongMain > 0 && (
         <p className="sub-note">
           {plan.wrongMain} worn +20s aren&apos;t listed because their main stat doesn&apos;t fit the build; a reroll can&apos;t
-          fix that. See Free upgrades on the Farm tab, or allow the main stat in Builds.
+          fix that. See Characters → Quick wins, or allow the main stat in Builds.
         </p>
       )}
     </div>

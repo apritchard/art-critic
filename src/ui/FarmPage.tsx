@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { EvaluationResult } from '../engine/evaluate'
 import {
   DROPS_PER_RUN,
@@ -26,7 +26,8 @@ import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
 import { useLocal } from './local'
 import { marks } from './marks'
-import { artifactsHref } from './routes'
+import { Info } from './Info'
+import { artifactsHref, charactersHref, inventoryHref, type Resource } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
 const num = (x: number) => x.toFixed(2)
@@ -52,35 +53,38 @@ function Now({ char, slot, value, worn }: { char: string; slot: SlotKey; value: 
 const shortSubs = (p: Piece) =>
   p.substats.map((s) => `${statShort(s.key)} ${isPercent(s.key) ? s.value.toFixed(1) : Math.round(s.value)}`).join(' · ')
 
-export function FarmPage({ result }: { result: EvaluationResult }) {
-  const { pieces, config, domains, er, strongboxSets, done, toggleDone, equip, data, settings } = useStore()
-  // Building by default: farming is usually for whoever you're working on. With nobody on the list it's ★ Priority,
-  // as the old default was, so the choice moved to a new key for the new default to apply.
-  const [scope, setScope] = useLocal<FarmScope>('farm:for', 'building')
+/** The farming plan for the characters in scope, and what everyone wears. */
+function useFarmPlan(result: EvaluationResult, scope: FarmScope) {
+  const { pieces, config, domains, er, strongboxSets } = useStore()
   const plan = useMemo(
     () => planFarming(result, pieces, config, domains, scope, er, strongboxSets),
     [result, pieces, config, domains, scope, er, strongboxSets],
-  )
-  const feedOrBox = useMemo(
-    () => planFeedOrBox(result, plan, data.materials, settings.minUpgradeChance),
-    [result, plan, data.materials, settings.minUpgradeChance],
   )
   const worn: WornAt = useMemo(
     () => new Map(pieces.filter((p) => p.owner).map((p) => [`${p.owner}|${p.slotKey}`, p])),
     [pieces],
   )
+  return { plan, worn }
+}
+
+/**
+ * The Spend tab's farming views (Dust is the Reroll page): where resin, Strongbox crafts, Elixirs and fodder do most,
+ * one at a time, ranked for the characters picked at the top.
+ */
+export function FarmPage({ result, resource }: { result: EvaluationResult; resource: Exclude<Resource, 'dust'> }) {
+  const { domains, data, settings } = useStore()
+  // Building by default: farming is usually for whoever you're working on. With nobody on the list it's ★ Priority,
+  // as the old default was, so the choice moved to a new key for the new default to apply.
+  const [scope, setScope] = useLocal<FarmScope>('farm:for', 'building')
+  const { plan, worn } = useFarmPlan(result, scope)
+  const feedOrBox = useMemo(
+    () => (resource === 'fodder' ? planFeedOrBox(result, plan, data.materials, settings.minUpgradeChance) : null),
+    [resource, result, plan, data.materials, settings.minUpgradeChance],
+  )
   const domainOf = useMemo(
     () => new Map((domains?.domains ?? []).flatMap((d) => d.sets.map((s) => [s, d.domain] as const))),
     [domains],
   )
-  // Swaps ticked before ticks were recorded as equips: record them now, so everything treats them as worn.
-  useEffect(() => {
-    for (const s of plan.swaps) {
-      if (!done.has(`swap:${s.piece.id}`)) continue
-      equip(s.piece.id, s.char)
-      toggleDone(`swap:${s.piece.id}`, false)
-    }
-  }, [plan.swaps, done, equip, toggleDone])
   const priorityCount = plan.characters.filter((c) => c.ref.priority === 'priority').length
   const buildingCount = plan.characters.filter((c) => c.ref.building).length
   const scopeLabel =
@@ -89,11 +93,144 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
 
   return (
     <div className="page farm">
-      <p className="hint">
+      <div className="scope-bar">
+        <span className="muted">Rank for</span>
+        <div className="seg small">
+          <button
+            className={scope === 'building' ? 'on' : ''}
+            onClick={() => setScope('building')}
+            title="Who you're building now: pin characters with 📌 in the Characters tab"
+          >
+            📌 Building ({buildingCount})
+          </button>
+          <button className={scope === 'priority' ? 'on' : ''} onClick={() => setScope('priority')}>
+            ★ Priority ({priorityCount})
+          </button>
+          <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>
+            All active ({plan.characters.length})
+          </button>
+        </div>
+        {scope === 'building' && plan.scope !== 'building' && (
+          <span className="muted">
+            Nobody is on the Building list (📌 in the Characters tab), so{' '}
+            {plan.scope === 'priority' ? '★ Priority characters count' : 'everyone counts'}.
+          </span>
+        )}
+        {scope === 'priority' && plan.scope === 'all' && (
+          <span className="warn">No ★ Priority characters yet (set them in Characters → Roster), so everyone counts.</span>
+        )}
+      </div>
+      <p className="sub-note">
         Gains are in roll value: 1.0 ≈ one max roll of a stat the build fully wants. New pieces are measured against what
-        each character wears, after the free swaps below.
+        each character wears after the{' '}
+        <a href={charactersHref('quick')}>
+          {plan.swaps.length} free upgrade{plan.swaps.length === 1 ? '' : 's'}
+        </a>{' '}
+        in Characters → Quick wins.
       </p>
 
+      {resource === 'resin' && (
+        <>
+          <Section
+            title="Where to spend resin"
+            note={`Expected gain from ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, about ${resinDrops.toFixed(1)} five-star drops), summed over ${scopeLabel}. A domain splits its drops between its two sets. It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first. Gains assume what each character wears now, so "Level first" flags pieces of those sets you already have to level for them.`}
+          >
+            {domains ? (
+              <>
+                <SourceTable
+                  rows={plan.domains}
+                  label="Domain"
+                  per={resinDrops}
+                  unit={`per ${RESIN_SHOWN} resin`}
+                  describe={(d) => `${d.region} · ${d.sets.map(setName).join(' / ')}`}
+                />
+                {plan.noDomain.length > 0 && (
+                  <p className="sub-note">
+                    Not from any domain (Strongbox or bosses only): {plan.noDomain.map(setName).join(', ')}.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="warn">Add genshin_artifact_domains.json next to the config to rank domains.</p>
+            )}
+          </Section>
+          <Section
+            title="Who gains most from new pieces"
+            note="Every active character, by expected gain from one piece of the set they should farm. Chance = how often that piece beats what they wear."
+          >
+            <Beneficiaries rows={plan.characters} domainOf={domainOf} />
+          </Section>
+        </>
+      )}
+
+      {resource === 'strongbox' && (
+        <Section
+          title="Strongbox"
+          note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%). "Level first" flags pieces of the set you already have to level for those characters.`}
+        >
+          <SourceTable
+            rows={plan.strongbox}
+            label="Set"
+            name={setName}
+            per={STRONGBOX_BATCH}
+            unit={`per batch of ${STRONGBOX_BATCH}`}
+            describe={(s) => domainOf.get(s.key) ?? 'no domain'}
+          />
+          {plan.noStrongbox.length > 0 && (
+            <p className="sub-note">Not in the Strongbox yet: {plan.noStrongbox.map(setName).join(', ')}.</p>
+          )}
+          <StrongboxSets />
+        </Section>
+      )}
+
+      {resource === 'elixir' && (
+        <Section
+          title="Sanctifying Elixir"
+          note={`One craft per character, ranked per Elixir by what it adds beyond the drops ~${FARM_BUDGET_RUNS} domain runs would likely bring. Easy slots (flower, plume, ATK% sands) rarely win. Assumes 4 starting lines and at least 2 upgrades on the chosen lines; check the set is craftable.`}
+        >
+          <Elixirs picks={plan.elixirs} worn={worn} />
+        </Section>
+      )}
+
+      {resource === 'fodder' && feedOrBox && (
+        <Section
+          title="Feed or box"
+          note={`Whether the +0 pieces marked to unlock do more as EXP for the To level queue or as Strongbox input, for ${scopeLabel}. A crafted piece has to be leveled too, so both are compared by expected gain per EXP, counting a craft's ${CRAFT_INPUTS} pieces as the EXP they'd give. Pieces past +0 marked to unlock are always fed: they carry the EXP spent on them.`}
+        >
+          <FeedOrBoxPanel f={feedOrBox} />
+        </Section>
+      )}
+
+      {resource === 'fodder' && feedOrBox && (
+        <Section
+          title="Best pieces to level"
+          count={feedOrBox.queue.count}
+          note={`The To level queue's unequipped pieces for ${scopeLabel}, best expected gain per EXP first: the order the split above spends EXP on them. Each is leveled for the build it gains most and costs the EXP it's likely to take under the app's rule (level to the next stop, and carry on only while it can still beat the best that character has), so the gain counts only what a finished piece brings. Pieces above the line are what your EXP on hand pays for. Tick one once you've leveled it to its next stop; L does the same in the Artifacts grid.`}
+        >
+          <LevelQueue queue={feedOrBox.queue} />
+        </Section>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Characters → Quick wins: the free upgrades (spare +20s that beat what someone wears, keeping their set bonuses and
+ * ER minimum), with the equips made since the export and a way to take one back.
+ */
+export function QuickWins({ result }: { result: EvaluationResult }) {
+  const { done, toggleDone, equip, er } = useStore()
+  const { plan, worn } = useFarmPlan(result, 'all')
+  // Swaps ticked before ticks were recorded as equips: record them now, so everything treats them as worn.
+  useEffect(() => {
+    for (const s of plan.swaps) {
+      if (!done.has(`swap:${s.piece.id}`)) continue
+      equip(s.piece.id, s.char)
+      toggleDone(`swap:${s.piece.id}`, false)
+    }
+  }, [plan.swaps, done, equip, toggleDone])
+  return (
+    <div className="page farm">
       <Section
         title="Free upgrades"
         note="Spare +20s that beat what someone wears without breaking a set bonus or dropping their Energy Recharge below their build's minimum. 📌 Building characters come first and get first pick of a spare two people want, then ★ Priority characters, then everyone else, biggest gain first. Tick one once you've equipped it in-game: every tab then treats it as worn until your next export."
@@ -108,98 +245,95 @@ export function FarmPage({ result }: { result: EvaluationResult }) {
         )}
         {!er && <p className="sub-note warn">No weapon data (data/game-data.json), so ER isn&apos;t checked.</p>}
       </Section>
-
-      <div className="scope-bar">
-        <span className="muted">Rank resin, Strongbox and Elixirs for</span>
-        <div className="seg small">
-          <button
-            className={scope === 'building' ? 'on' : ''}
-            onClick={() => setScope('building')}
-            title="Who you're building now: pin characters with 📌 in Roster or Improve"
-          >
-            📌 Building ({buildingCount})
-          </button>
-          <button className={scope === 'priority' ? 'on' : ''} onClick={() => setScope('priority')}>
-            ★ Priority ({priorityCount})
-          </button>
-          <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>
-            All active ({plan.characters.length})
-          </button>
-        </div>
-        {scope === 'building' && plan.scope !== 'building' && (
-          <span className="muted">
-            Nobody is on the Building list (📌 in Roster or Improve), so{' '}
-            {plan.scope === 'priority' ? '★ Priority characters count' : 'everyone counts'}.
-          </span>
-        )}
-        {scope === 'priority' && plan.scope === 'all' && (
-          <span className="warn">No ★ Priority characters yet (set them in Roster), so everyone counts.</span>
-        )}
-      </div>
-
-      <Section
-        title="Where to spend resin"
-        note={`Expected gain from ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, about ${resinDrops.toFixed(1)} five-star drops), summed over ${scopeLabel}. A domain splits its drops between its two sets. It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first. Gains assume what each character wears now, so "Level first" flags pieces of those sets you already have to level for them.`}
-      >
-        {domains ? (
-          <>
-            <SourceTable
-              rows={plan.domains}
-              label="Domain"
-              per={resinDrops}
-              unit={`per ${RESIN_SHOWN} resin`}
-              describe={(d) => `${d.region} · ${d.sets.map(setName).join(' / ')}`}
-            />
-            {plan.noDomain.length > 0 && (
-              <p className="sub-note">
-                Not from any domain (Strongbox or bosses only): {plan.noDomain.map(setName).join(', ')}.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="warn">Add genshin_artifact_domains.json next to the config to rank domains.</p>
-        )}
-      </Section>
-
-      <Section
-        title="Feed or box"
-        note={`Whether the +0 pieces marked to unlock do more as EXP for the Level up queue or as Strongbox input, for ${scopeLabel}. A crafted piece has to be leveled too, so both are compared by expected gain per EXP, counting a craft's ${CRAFT_INPUTS} pieces as the EXP they'd give. Pieces past +0 marked to unlock are always fed: they carry the EXP spent on them.`}
-      >
-        <FeedOrBoxPanel f={feedOrBox} />
-      </Section>
-
-      <Section
-        title="Strongbox"
-        note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%). "Level first" flags pieces of the set you already have to level for those characters.`}
-      >
-        <SourceTable
-          rows={plan.strongbox}
-          label="Set"
-          name={setName}
-          per={STRONGBOX_BATCH}
-          unit={`per batch of ${STRONGBOX_BATCH}`}
-          describe={(s) => domainOf.get(s.key) ?? 'no domain'}
-        />
-        {plan.noStrongbox.length > 0 && (
-          <p className="sub-note">Not in the Strongbox yet: {plan.noStrongbox.map(setName).join(', ')}.</p>
-        )}
-        <StrongboxSets />
-      </Section>
-
-      <Section
-        title="Sanctifying Elixir"
-        note={`One craft per character, ranked per Elixir by what it adds beyond the drops ~${FARM_BUDGET_RUNS} domain runs would likely bring. Easy slots (flower, plume, ATK% sands) rarely win. Assumes 4 starting lines and at least 2 upgrades on the chosen lines; check the set is craftable.`}
-      >
-        <Elixirs picks={plan.elixirs} worn={worn} />
-      </Section>
-
-      <Section
-        title="Who gains most from new pieces"
-        note="Every active character, by expected gain from one piece of the set they should farm. Chance = how often that piece beats what they wear."
-      >
-        <Beneficiaries rows={plan.characters} domainOf={domainOf} />
-      </Section>
     </div>
+  )
+}
+
+/** The next stop to level a piece to: +4, +8, … +20. */
+const nextStop = (level: number) => Math.min(20, Math.floor(level / 4) * 4 + 4)
+
+/**
+ * Feed or box's queue as a list: the pieces to level next, best gain per EXP first, with a line where the EXP on hand
+ * runs out and a tick to mark one leveled.
+ */
+function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
+  const { done, toggleDone } = useStore()
+  const { pieces, funded } = queue
+  const [shown, more] = useMore(pieces, 15)
+  if (!pieces.length) return <p className="sub-note">Nothing in the queue gains these characters anything.</p>
+  return (
+    <>
+      <p className="sub-note">
+        {funded === pieces.length
+          ? `Your EXP on hand pays for all ${pieces.length}.`
+          : funded > 0
+            ? `Your EXP on hand pays for the first ${funded} (about ${expText(queue.fundedExp)}); the other ${pieces.length - funded} wait for more.`
+            : "Your EXP on hand doesn't reach any of them: the split above spends it on Strongbox crafts first, or there's none."}
+      </p>
+      <table className="farm-table level-queue">
+        <thead>
+          <tr>
+            <th />
+            <th>Piece</th>
+            <th>For</th>
+            <th title="Chance it ends up beating the best they have, once it reaches +20">Chance</th>
+            <th className="num" title="Average improvement once finished, counting a miss or a piece dropped part way as 0">
+              Gain
+            </th>
+            <th className="num" title="EXP it's likely to take before it's finished or dropped">
+              EXP
+            </th>
+            <th className="num" title="Expected gain per 100k EXP: what the list is ranked by">
+              Per 100k
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((q, i) => {
+            const leveled = done.has(`lvl:${q.piece.id}`)
+            return (
+              <Fragment key={q.piece.id}>
+                {i === funded && funded > 0 && (
+                  <tr className="budget-line">
+                    <td colSpan={7}>Your EXP on hand runs out here: the pieces below wait for more.</td>
+                  </tr>
+                )}
+                <tr className={[leveled ? 'done' : '', q.funded ? '' : 'unfunded'].filter(Boolean).join(' ')}>
+                  <td>
+                    <button
+                      className={`tick${leveled ? ' on' : ''}`}
+                      onClick={() => toggleDone(`lvl:${q.piece.id}`)}
+                      title={leveled ? 'Marked leveled: click to undo' : `Leveled it to +${nextStop(q.piece.level)} in-game`}
+                    >
+                      ✓
+                    </button>
+                  </td>
+                  <td>
+                    <span title={SLOT_LABEL[q.piece.slotKey]}>{SLOT_ICON[q.piece.slotKey]}</span> {setName(q.piece.setKey)} ·{' '}
+                    <b>{statShort(q.piece.mainStatKey)}</b> · +{q.piece.level} → <b>+{nextStop(q.piece.level)}</b>
+                    <div className="sub-note">{shortSubs(q.piece)}</div>
+                    <a className="link find" href={inventoryHref(q.piece.id)} title="Show it in the Artifacts grid, outlined, to find it in-game">
+                      find in grid
+                    </a>
+                  </td>
+                  <td>
+                    <CharName c={{ char: q.ref.char, ref: q.ref }} />
+                    <div className="sub-note">{q.ref.build.name}</div>
+                  </td>
+                  <td className="num">{pct(q.chance)}</td>
+                  <td className="num">+{q.gain.toFixed(2)}</td>
+                  <td className="num">{expText(q.exp)}</td>
+                  <td className="num">
+                    <b>{per100k(q.gain / q.exp)}</b>
+                  </td>
+                </tr>
+              </Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+      {more}
+    </>
   )
 }
 
@@ -290,14 +424,19 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
   )
 }
 
+/** A titled section whose explanation folds away behind ⓘ (remembered per section). */
 function Section({ title, note, count, children }: { title: string; note: string; count?: number; children: ReactNode }) {
+  const heading = (
+    <h2>
+      {title}
+      {count !== undefined && <span className="badge">{count}</span>}
+    </h2>
+  )
   return (
     <section className="section">
-      <h2>
-        {title}
-        {count !== undefined && <span className="badge">{count}</span>}
-      </h2>
-      <p className="hint">{note}</p>
+      <Info id={title} heading={heading}>
+        {note}
+      </Info>
       {children}
     </section>
   )
@@ -750,10 +889,13 @@ export function ErChange({ er, approx }: { er: ErTotals | null; approx?: boolean
   )
 }
 
+/** A character's name, linking to them in the Characters tab, with their 📌 and ★ marks. */
 function CharName({ c }: { c: { char: string; ref: { priority: string; building?: boolean } } }) {
   return (
     <span className="char-name">
-      {characterName(c.char)}
+      <a className="char-link" href={charactersHref({ char: c.char })} title="Every way to improve their pieces">
+        {characterName(c.char)}
+      </a>
       {marks(c.ref)}
     </span>
   )

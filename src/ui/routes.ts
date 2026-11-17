@@ -19,6 +19,46 @@ export interface ArtifactsRoute {
   key: string
 }
 
+/** The Characters tab's views besides one character's: the board, the free upgrades, and who counts. */
+export type CharactersView = 'board' | 'quick' | 'roster'
+const CHARACTER_VIEWS: CharactersView[] = ['board', 'quick', 'roster']
+
+/** What a #characters link asks for: a view, or one character (`char`); neither means where you last were. */
+export interface CharactersRoute {
+  view?: CharactersView
+  char?: string
+  key: string
+}
+
+/** The Characters tab: #characters/board, /quick, /roster, or #characters/<char> for one character. */
+export const charactersHref = (to: CharactersView | { char: string }) =>
+  `#characters/${typeof to === 'string' ? to : encodeURIComponent(to.char)}`
+
+/** The Characters tab's route, including the Roster and Improve tabs' old links. */
+export function charactersRoute(hash: string, n: number): CharactersRoute {
+  const { tab, args } = parseHash(hash)
+  const key = `${n}:${hash}`
+  if (tab === 'roster') return { view: 'roster', key }
+  const arg = args[0]
+  if (!arg) return { key }
+  if (tab !== 'improve' && CHARACTER_VIEWS.includes(arg as CharactersView)) return { view: arg as CharactersView, key }
+  return { char: arg, key }
+}
+
+/** What the Spend tab ranks: where resin, Strongbox crafts, Elixirs, Dust and fodder do most. */
+export type Resource = 'resin' | 'strongbox' | 'elixir' | 'dust' | 'fodder'
+export const RESOURCES: Resource[] = ['resin', 'strongbox', 'elixir', 'dust', 'fodder']
+
+export const spendHref = (resource: Resource) => `#spend/${resource}`
+
+/** The resource a #spend link (or the Farm and Reroll tabs' old links) asks for; none means the last one. */
+export function spendRoute(hash: string): Resource | undefined {
+  const { tab, args } = parseHash(hash)
+  if (tab === 'reroll') return 'dust'
+  if (tab === 'farm') return args[0] && RESOURCES.includes(args[0] as Resource) ? (args[0] as Resource) : undefined
+  return RESOURCES.includes(args[0] as Resource) ? (args[0] as Resource) : undefined
+}
+
 /** Fired when a page keeps its state in the URL with `replaceHash`, so the app knows where Back links should go. */
 export const HASH_REPLACED = 'art-critic:hash-replaced'
 

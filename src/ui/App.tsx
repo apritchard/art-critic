@@ -4,39 +4,54 @@ import { characterName } from '../engine/stats'
 import { useStore } from '../state/store'
 import { ArtifactsPage } from './ArtifactsPage'
 import { BuildsPage } from './BuildsPage'
-import { FarmPage } from './FarmPage'
-import { ImprovePage } from './ImprovePage'
+import { CharactersPage } from './CharactersPage'
 import { LoadExportButton } from './LoadExportButton'
 import { useLocal } from './local'
-import { RerollPage } from './RerollPage'
-import { artifactsRoute, buildsFocus, HASH_REPLACED, LEGACY_LISTS, parseHash } from './routes'
-import { RosterPage } from './RosterPage'
+import {
+  artifactsRoute,
+  buildsFocus,
+  charactersHref,
+  charactersRoute,
+  HASH_REPLACED,
+  LEGACY_LISTS,
+  parseHash,
+  spendRoute,
+} from './routes'
 import { SettingsPanel } from './SettingsPanel'
+import { SpendPage } from './SpendPage'
 
-type Tab = 'artifacts' | 'reroll' | 'farm' | 'roster' | 'improve' | 'builds' | 'settings'
+/** One tab per question: what to do with each piece, who needs help, where to spend what you have. */
+type Tab = 'artifacts' | 'characters' | 'spend' | 'builds' | 'settings'
 
 const TAB_LABEL: Record<Tab, string> = {
   artifacts: 'Artifacts',
-  reroll: 'Reroll',
-  farm: 'Farm',
-  roster: 'Roster',
-  improve: 'Improve',
+  characters: 'Characters',
+  spend: 'Spend',
   builds: 'Builds',
   settings: 'Settings',
 }
 
-/** The tab a hash names: the old list tabs and #inventory are the Artifacts tab now. */
+/** The tabs that were folded into others, by their old names. */
+const LEGACY_TABS: Record<string, Tab> = {
+  inventory: 'artifacts',
+  roster: 'characters',
+  improve: 'characters',
+  farm: 'spend',
+  reroll: 'spend',
+}
+
+/** The tab a hash names, including the old tabs' names (their links still work). */
 function tabOf(name: string): Tab | null {
   if (name in TAB_LABEL) return name as Tab
-  if (name in LEGACY_LISTS || name === 'inventory') return 'artifacts'
-  return null
+  if (name in LEGACY_LISTS) return 'artifacts'
+  return LEGACY_TABS[name] ?? null
 }
 
 export function App() {
   const store = useStore()
   const { pieces, data, config, settings, roster, done, building, toggleBuilding } = store
   const [savedTab, setSavedTab] = useLocal<string>('tab', 'artifacts')
-  // A #tab in the URL wins, so tabs can be bookmarked; #improve/Columbina also picks the character. `n` counts
+  // A #tab in the URL wins, so tabs can be bookmarked; #characters/Columbina also picks the character. `n` counts
   // navigations, so following the same link twice still counts as following it. `from` is the URL before, as the
   // page had it (pages keep their state in it with replaceHash), for the Builds tab's Back link.
   const [nav, setNav] = useState({ hash: location.hash, n: 0, from: null as string | null })
@@ -60,7 +75,7 @@ export function App() {
       window.removeEventListener(HASH_REPLACED, onReplace)
     }
   }, [])
-  const { tab: hashTab, args: hashArgs } = parseHash(nav.hash)
+  const { tab: hashTab } = parseHash(nav.hash)
   const tab = tabOf(hashTab) ?? tabOf(savedTab) ?? 'artifacts'
   // Switching tabs adds a history entry, so Back returns to the tab (and the view in it) you came from.
   const setTab = (t: Tab) => {
@@ -115,7 +130,7 @@ export function App() {
             <span className="muted">📌 Building</span>
             {building.map((c) => (
               <span key={c} className="chip building">
-                <a href={`#improve/${encodeURIComponent(c)}`} title={`Improve ${characterName(c)}`}>
+                <a href={charactersHref({ char: c })} title={`Every way to improve ${characterName(c)}'s pieces`}>
                   {characterName(c)}
                 </a>
                 <button className="chip-x" onClick={() => toggleBuilding(c, false)} title={`Take ${characterName(c)} off the Building list`}>
@@ -132,7 +147,11 @@ export function App() {
             Done {doneCount}/{allActions.length}
           </span>
           {store.equips.length > 0 && (
-            <a className="chip" href="#farm" title="Equips you've ticked since this export; every tab counts them as worn. Undo them on the Farm tab.">
+            <a
+              className="chip"
+              href={charactersHref('quick')}
+              title="Equips you've ticked since this export; every tab counts them as worn. Undo them in Characters → Quick wins."
+            >
               ✎ {store.equips.length} equipped since export
             </a>
           )}
@@ -168,16 +187,12 @@ export function App() {
       </nav>
 
       <main className="main">
-        {tab === 'roster' ? (
-          <RosterPage result={result} />
-        ) : tab === 'settings' ? (
+        {tab === 'settings' ? (
           <SettingsPanel result={result} />
-        ) : tab === 'reroll' ? (
-          <RerollPage result={result} />
-        ) : tab === 'farm' ? (
-          <FarmPage result={result} />
-        ) : tab === 'improve' ? (
-          <ImprovePage result={result} initial={hashTab === 'improve' ? hashArgs[0] : undefined} />
+        ) : tab === 'characters' ? (
+          <CharactersPage result={result} route={charactersRoute(tabOf(hashTab) === 'characters' ? nav.hash : '#characters', nav.n)} />
+        ) : tab === 'spend' ? (
+          <SpendPage result={result} route={tabOf(hashTab) === 'spend' ? spendRoute(nav.hash) : undefined} />
         ) : tab === 'builds' ? (
           <BuildsPage result={result} focus={hashTab === 'builds' ? buildsFocus(nav.hash) : undefined} back={back} />
         ) : (

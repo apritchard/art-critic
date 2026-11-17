@@ -2046,3 +2046,156 @@ a.chip {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Characters and Spend: a bar of views over the page */
+
+.characters,
+.spend {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.characters-body,
+.spend > .page {
+  flex: 1;
+  min-height: 0;
+}
+
+.view-bar,
+.spend-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.crumb {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.crumb b {
+  color: var(--text);
+}
+
+/* The board: one row per character, the whole row opens them. */
+.page.board {
+  max-width: 1100px;
+}
+
+.board-table tbody tr.board-row {
+  cursor: pointer;
+}
+
+.board-table tbody tr.board-row:hover td {
+  background: var(--panel);
+}
+
+.board-table td.qcell {
+  min-width: 52px;
+}
+
+.fixes {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fix.swap {
+  color: var(--keep);
+}
+
+.fix.reroll {
+  color: var(--heat-1);
+}
+
+.fix.level {
+  color: var(--heat-2);
+}
+
+/* Improve's options, grouped by what they cost. */
+.improve-table tr.group-row td {
+  padding: 8px 6px 2px;
+  border-bottom: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* A heading with its explanation folded behind ⓘ. */
+.info-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-head h2 {
+  margin: 16px 0 2px;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+}
+
+.info-head .info-toggle {
+  margin-top: 14px;
+}
+
+.info-toggle {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--faint);
+}
+
+.info-toggle:hover,
+.info-toggle.on {
+  color: var(--accent);
+  border-color: var(--border);
+}
+
+.info-text {
+  margin: 4px 0 8px;
+}
+
+.info-text p {
+  margin: 0 0 6px;
+}
+
+/* Under the Spend tab's bar, the scope comes first: no gap or rule above it. */
+.page.farm > .scope-bar:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Spend → Fodder's pieces to level: those past what the EXP on hand pays for are faded under a line. */
+.level-queue tr.unfunded td {
+  opacity: 0.6;
+}
+
+.level-queue tr.budget-line td {
+  padding: 6px;
+  border-top: 2px dashed var(--accent);
+  border-bottom: 0;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.level-queue .link.find {
+  padding: 0;
+  font-size: 12px;
+}

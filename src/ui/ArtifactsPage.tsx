@@ -65,7 +65,7 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
     replaceHash(artifactsHref({ view, set, piece: inspected ?? undefined }))
   }, [view, set, inspected])
 
-  // +20s worth a reroll, as the Reroll tab judges them: the grid's ⟳ badges and the inspector's reroll line.
+  // +20s worth a reroll, as Spend → Dust judges them: the grid's ⟳ badges and the inspector's reroll line.
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
   const needRerolls = view === 'grid' || inspected !== null
   const rerolls = useMemo(() => {

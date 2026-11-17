@@ -20,7 +20,7 @@ const DOCK_LABEL: Record<Dock, { label: string; title: string }> = {
 interface Props {
   result: EvaluationResult
   id: string
-  /** +20s worth a reroll, as the Reroll tab judges them. */
+  /** +20s worth a reroll, as Spend → Dust judges them. */
   rerolls: Map<string, RerollPriority> | null
   /** The dock picked, and where that puts it now. */
   dock: Dock
