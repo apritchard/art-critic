@@ -23,7 +23,7 @@ const LEVEL_ONLY: SortMode[] = ['gain']
 
 export const SHOW_LABEL: Record<ShowFilter, { label: string; title: string }> = {
   changes: { label: 'Lock changes', title: 'Pieces whose lock should change: LOCK to keep, UNLOCK to feed' },
-  level: { label: 'To level', title: 'The Level up queue: every piece worth leveling, locked or not, plus equipped pieces worth finishing' },
+  level: { label: 'To level', title: 'The To level queue: every piece worth leveling, locked or not, plus equipped pieces worth finishing' },
   all: { label: 'Everything', title: 'Every piece, whatever its verdict' },
 }
 

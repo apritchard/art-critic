@@ -1,6 +1,6 @@
 # Notes for coding agents
 
-Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impact player which artifacts to lock, level, feed, farm, reroll or swap. README.md is the user-facing manual and spells out every rule and number the app uses. Read the relevant section before changing behavior, and update it in the same change.
+Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impact player which artifacts to lock, level, feed, farm, reroll or swap. `docs/manual.md` is the user-facing manual and spells out every rule and number the app uses. Read the relevant section before changing behavior, and update it in the same change. README.md is the short tour (setup, the three workflows and screenshots): update it too when a workflow or a highlight it shows changes.
 
 ## Commands
 
@@ -29,7 +29,7 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
 
   `PersistedState` is saved by a debounced PUT, retried on failure, and flushed on `pagehide`. Done marks and equips are keyed by export file name, and cleared when that file's modified time changes (`exportMtimes`). The Building list (`building`, who the user is working on now) is not: it outlives exports.
 - **`src/engine/`** is pure TypeScript with no React, and is where the unit tests live.
-  - **`evaluate()`** is the core. For every active character build it runs the README's four layers:
+  - **`evaluate()`** is the core. For every active character build it runs the manual's four layers:
     1. set and main-stat match (`match.ts`);
     2. the substat gate;
     3. the projected upgrade chance;
@@ -42,7 +42,7 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
     - `reroll.ts` `planRerolls`: worn +20s against themselves, and spare +20s against the piece they'd replace (`rerollOdds`' `bar`), for the character each gains most, leaving out `freeSwaps`' spares and the slots they fill. `spareReroll` judges one spare for one character, for both this and Improve. `rerollPriority` in `inventory.ts` turns either into the Artifacts grid's ⟳ badge;
     - `improve.ts` `improveCharacter`: one character's options per slot (a character's page in the Characters tab);
     - `board.ts` `characterBoard`: the Characters board, from a `FarmPlan` and `planRerolls`' options: each character's worn build, slot ratings, ER, and per slot the best free swap, reroll and piece to level (`FIX_MIN_GAIN`);
-    - `fodder.ts` `planFeedOrBox` (Spend → Fodder, from the `FarmPlan` and the export's `materials`): splits the +0 pieces marked to unlock between feeding and Strongbox crafts by gain per EXP. `levelingOutlook` is the expected EXP and gain of leveling stop by stop under the upgrade-chance layer only; `allocate` spends one EXP budget on queue pieces and crafts, best rate first; `queue.pieces` lists the queue in that order, with what the budget funds (Spend → Fodder's "Best pieces to level"). Its game constants (`LEVEL_EXP`, fodder and material EXP) are quoted in the README.
+    - `fodder.ts` `planFeedOrBox` (Spend → Fodder, from the `FarmPlan` and the export's `materials`): splits the +0 pieces marked to unlock between feeding and Strongbox crafts by gain per EXP. `levelingOutlook` is the expected EXP and gain of leveling stop by stop under the upgrade-chance layer only; `allocate` spends one EXP budget on queue pieces and crafts, best rate first; `queue.pieces` lists the queue in that order, with what the budget funds (Spend → Fodder's "Best pieces to level"). Its game constants (`LEVEL_EXP`, fodder and material EXP) are quoted in the manual.
 
     Each judges a character by the build they're wearing (`currentBuilds` and `wearing` in `farm.ts`): a listed 4pc set worn, then usable slots, then the Roster ratings (`ratingsOf`), never raw totals, which favor builds that weigh more stats. All three decide whether a swap keeps a character's sets fit with `setsFit` / `swapSetFit` in `farm.ts`: every bonus stays, or only 2pc bonuses go and what's left still makes a listed 4pc or one of the build's `sets2` pairs, at least as well as before. The 2pc categories come from the config, so they take it as an argument.
   - **`projection.ts`** is the roll maths: remaining rolls, exact final-value distributions on a 0.05 grid, `chanceToBeat`, and threshold scaling (`lineCeiling`, `thresholdScale`).
@@ -61,12 +61,12 @@ Art Critic is a local Vite + React + TypeScript app that tells one Genshin Impac
 
   Edits made in the Builds tab are saved as overrides in `state/user-state.json`, never in the config file.
 - **The regression test** (`src/engine/regression.test.ts`) runs over the newest export in `imports/`. That folder is gitignored, so the test is skipped on a fresh clone. Its exact count is pinned to `PROTOTYPE_EXPORT` and the current config: when a config change moves it, update the number and the comment beside it.
-- **`STRONGBOX_SETS` in `farm.ts`** is the in-game list as of 7.2, and a test checks every entry exists in the config. The game constants at the top of `farm.ts` (drop rates, 4-line odds, Elixir costs) are quoted in the README.
+- **`STRONGBOX_SETS` in `farm.ts`** is the in-game list as of 7.2, and a test checks every entry exists in the config. The game constants at the top of `farm.ts` (drop rates, 4-line odds, Elixir costs) are quoted in the manual.
 - **A new setting** goes in `Settings` (`types.ts`), `defaultSettings` (`evaluate.ts`) and `SettingsPanel.tsx`. Saved settings merge over the defaults, so older state files keep working.
 
 ## Working alongside the running app
 
 - The user often has the dev server running with their real data. Don't stop it, and don't let tests or browser automation write `state/user-state.json`. When driving the page headless, intercept `PUT /api/state`.
 - On Windows, Vite's watcher sometimes misses an edit. Check what's being served with `curl localhost:5317/src/<path>`. Touching `vite.config.ts` restarts the server, and so does editing anything in `server/`.
-- `docs/screenshots/` holds the README images: headless Edge at 2× scale, each cropped to one feature.
+- `docs/screenshots/` holds the README images: headless Edge at 2× scale, each cropped to one feature. Use a separate headless instance with its own profile (the user's browser is usually open), and answer every non-GET `/api/*` request in the driver (CDP `Fetch`) so it can't save state.
 - Files mix LF and CRLF line endings, and `.gitattributes` normalizes them. `*.bat` must stay CRLF.

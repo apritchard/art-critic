@@ -343,7 +343,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               ))}
             </div>
             <p className="sub-note inv-key">
-              <span className="inv-up t0">⬆+4</span> worth leveling (the Level up queue), to the stop shown. Hotter means a
+              <span className="inv-up t0">⬆+4</span> worth leveling (the To level queue), to the stop shown. Hotter means a
               bigger expected gain once finished{anyStar ? ' for a 📌 Building or ★ Priority character' : ''}, in rolls, the
               same scale in every set:{' '}
               {PRIORITY_STEPS.map((s, i) => (

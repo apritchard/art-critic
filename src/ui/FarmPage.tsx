@@ -400,7 +400,7 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
             .{' '}
             {f.feed >= CRAFT_INPUTS &&
               (f.price > 0
-                ? 'Past that, a craft gains less than the EXP it would take from the Level up queue.'
+                ? 'Past that, a craft gains less than the EXP it would take from the To level queue.'
                 : 'Past that, more crafts would add almost nothing.')}
           </>
         ) : (
@@ -411,8 +411,8 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
               : !f.bestCraft
                 ? `no Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces${f.price > 0 ? '' : ', and your EXP already covers everything worth leveling'}.`
                 : ratio < 1
-                  ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the Level up queue.`
-                  : `the best craft, ${setName(f.bestCraft.set)}, would do about as well per EXP as the Level up queue, but your EXP runs out first.`}
+                  ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the To level queue.`
+                  : `the best craft, ${setName(f.bestCraft.set)}, would do about as well per EXP as the To level queue, but your EXP runs out first.`}
           </>
         )}
       </p>
@@ -420,7 +420,7 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
         EXP on hand: {f.materials === null ? 'materials aren’t in this export, so they’re not counted' : `${expText(f.materials)} in materials`},{' '}
         {expText(f.leveled.exp)} from {f.leveled.count} leveled piece{f.leveled.count === 1 ? '' : 's'} marked to unlock, and{' '}
         {expText(f.tosses * FEED_EXP)} if every +0 is fed.
-        {f.committed > 0 && ` Finishing equipped pieces takes ${expText(f.committed)} of it first.`} The Level up queue&apos;s{' '}
+        {f.committed > 0 && ` Finishing equipped pieces takes ${expText(f.committed)} of it first.`} The To level queue&apos;s{' '}
         {f.queue.count} pieces would take about {expText(f.queue.exp)} to play out
         {f.queue.funded < f.queue.count
           ? `; this split pays for the ${f.queue.funded} that gain most per EXP (${expText(f.queue.fundedExp)}).`
