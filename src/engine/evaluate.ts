@@ -1,3 +1,4 @@
+import { swapSetFit } from './farm'
 import type { Piece } from './load'
 import { describeSetMatch, fourPieceSets, mainStatOk, matchSet, offSetAllowed, type SetMatch } from './match'
 import {
@@ -386,6 +387,11 @@ export interface Judgement {
   barFor: (char: string, build: BuildConfig, slot: SlotKey) => number | null
   /** How a piece's set counts for a build, after sticking to the worn set. */
   setFor: (ref: ActiveBuild, piece: Piece) => SetMatch
+  /**
+   * Whether the character could put the piece on in its slot and keep their sets fit for the build (`swapSetFit`, as
+   * free upgrades judge it). Only a finished spare that passes this raises the bar for on-set pieces still to level.
+   */
+  wearable: (ref: ActiveBuild, piece: Piece) => boolean
 }
 
 /**
@@ -396,6 +402,9 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
   // What each character wears now.
   const equipped = new Map<string, Piece>()
   for (const p of pieces) if (p.owner) equipped.set(`${p.owner}|${p.slotKey}`, p)
+  const worn = wornSets(pieces)
+  const wearable = (ref: ActiveBuild, piece: Piece): boolean =>
+    !!swapSetFit(worn.get(ref.char) ?? {}, equipped.get(`${ref.char}|${piece.slotKey}`)?.setKey, piece.setKey, ref.build, config)
   const usable = (char: string, build: BuildConfig, slot: SlotKey): Piece | null => {
     const eq = equipped.get(`${char}|${slot}`)
     return eq && eq.rarity === 5 && mainStatOk(build, eq) ? eq : null
@@ -418,7 +427,6 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
   // a set the build keeps for 2pc pairs only commits it to nothing, so its partner sets keep counting.
   const commitment = new Map<ActiveBuild, { set: string; tier: number }>()
   if (settings.commitToWornSet) {
-    const worn = wornSets(pieces)
     for (const ref of activeBuilds) {
       const committed = commitmentOf(ref.build, worn.get(ref.char) ?? {})
       if (committed) commitment.set(ref, committed)
@@ -490,23 +498,32 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
 
   // 4. Upgrade chance. A finished piece is judged against what the character wears. A piece still to level is judged
   //    against the best they have: what they wear, or their best finished spare for the slot when that's better. A
+  //    piece on the build's set only meets spares the character could put on now without breaking their sets
+  //    (`wearable`), so an off-set spare doesn't count while their one off-set slot is elsewhere. An off-set piece is
+  //    judged as if the off-set slot moved to its slot (step 5), so it meets every spare, off-set ones included. A
   //    good spare thins out weak pieces through their odds, rather than by taking a cap place (step 6).
   const finished = (p: Piece) => p.level >= 20
-  const spares = new Map<string, { value: number; id: string }>()
+  type Spare = { value: number; id: string }
+  const spares = { any: new Map<string, Spare>(), wearable: new Map<string, Spare>() }
+  const offer = (pool: Map<string, Spare>, key: string, value: number, id: string) => {
+    const best = pool.get(key)
+    if (!best || value > best.value) pool.set(key, { value, id })
+  }
   pieces.forEach((piece, i) => {
     if (piece.owner || !finished(piece)) return
     for (const cand of perPiece[i]) {
       if (cand.gate === 'fail') continue
       const key = `${cand.ref.char}|${cand.ref.buildIdx}|${piece.slotKey}`
-      const best = spares.get(key)
-      if (!best || cand.expected > best.value) spares.set(key, { value: cand.expected, id: piece.id })
+      offer(spares.any, key, cand.expected, piece.id)
+      if (wearable(cand.ref, piece)) offer(spares.wearable, key, cand.expected, piece.id)
     }
   })
   pieces.forEach((piece, i) => {
     for (const cand of perPiece[i]) {
       const { ref } = cand
       let bar = piece.owner === ref.char ? null : barFor(ref.char, ref.build, piece.slotKey)
-      const spare = piece.owner !== ref.char && !finished(piece) ? spares.get(`${ref.char}|${ref.buildIdx}|${piece.slotKey}`) : undefined
+      const pool = cand.setMatch.kind === 'off' ? spares.any : spares.wearable
+      const spare = piece.owner !== ref.char && !finished(piece) ? pool.get(`${ref.char}|${ref.buildIdx}|${piece.slotKey}`) : undefined
       if (spare && (bar === null || spare.value > bar + 1e-9)) {
         bar = spare.value
         cand.spare = spare.id
@@ -562,7 +579,7 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
     })
   }
 
-  return { perPiece, usable, barFor, setFor }
+  return { perPiece, usable, barFor, setFor, wearable }
 }
 
 /** Best first: in-cap, then surviving, then passing the gate, then by projected value. */

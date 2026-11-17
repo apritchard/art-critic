@@ -281,6 +281,25 @@ describe('closest build', () => {
     expect(bestOtherSpare(pieces[4], pieces.slice(0, 1).concat(pieces[4]), ref, cfg, settings)).toBeNull()
   })
 
+  it("leaves out a spare the character couldn't put on without breaking their set, for a piece on it", () => {
+    // Four Gladiator's Finale pieces, with the off-set piece (Scarlet Proof) in the circlet.
+    const worn = [
+      art({ setKey: 'GladiatorsFinale', location: 'Diluc', level: 20 }),
+      art({ setKey: 'GladiatorsFinale', location: 'Diluc', level: 20, slotKey: 'plume', mainStatKey: 'atk' }),
+      art({ setKey: 'GladiatorsFinale', location: 'Diluc', level: 20, slotKey: 'sands', mainStatKey: 'atk_' }),
+      art({ setKey: 'GladiatorsFinale', location: 'Diluc', level: 20, slotKey: 'goblet', mainStatKey: 'pyro_dmg_' }),
+      art({ location: 'Diluc', level: 20, slotKey: 'circlet', mainStatKey: 'critDMG_' }),
+    ]
+    const offSet = art({ level: 20, substats: [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 21 }, { key: 'atk_', value: 5.8 }, { key: 'hp', value: 299 }] })
+    const onSet = art({ setKey: 'GladiatorsFinale', level: 20, substats: [{ key: 'critRate_', value: 7.8 }, { key: 'critDMG_', value: 15.5 }, ...CRIT_LINES.slice(2)] })
+    const { fits, pieces, cfg, settings } = setup({ Diluc: [build()] }, [...worn, offSet, onSet], { offSet: 'any' })
+    const ref = fits[0].cand.ref
+    // He'd give up the 4pc to wear the Scarlet Proof flower, so it isn't a spare he'd equip before the Gladiator's one.
+    expect(bestOtherSpare(pieces[6], pieces, ref, cfg, settings)).toBeNull()
+    // As an off-set flower, the Scarlet Proof one is judged as if the off-set slot moved there: the other is its rival.
+    expect(bestOtherSpare(pieces[5], pieces, ref, cfg, settings)?.piece.id).toBe(pieces[6].id)
+  })
+
   it('judges builds that are switched off when no evaluation is passed', () => {
     const cfg = config({ Diluc: [build()] })
     const settings = defaultSettings(cfg)

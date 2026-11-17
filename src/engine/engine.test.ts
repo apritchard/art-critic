@@ -345,6 +345,54 @@ describe('evaluate', () => {
     expect(weak.reason).toMatch(/chance to beat Diluc's best spare, a \+20 Gladiator's Finale flower, which already beats what they wear$/)
   })
 
+  it("measures pieces on the worn set only against spares the character could put on without breaking it", () => {
+    const lines = [
+      { key: 'critRate_', value: 3.9 },
+      { key: 'critDMG_', value: 7.8 },
+      { key: 'atk_', value: 5.8 },
+      { key: 'def', value: 23 },
+    ]
+    // Diluc wears four Gladiator's Finale pieces, and a circlet of `circletSet`.
+    const worn = (circletSet: string) => [
+      art({ location: 'Diluc', level: 20 }),
+      art({ location: 'Diluc', level: 20, slotKey: 'plume', mainStatKey: 'atk' }),
+      art({ location: 'Diluc', level: 20, slotKey: 'sands', mainStatKey: 'atk_' }),
+      art({ location: 'Diluc', level: 20, slotKey: 'goblet', mainStatKey: 'pyro_dmg_' }),
+      art({ location: 'Diluc', level: 20, slotKey: 'circlet', mainStatKey: 'critDMG_', setKey: circletSet }),
+    ]
+    // A finished Scarlet Proof flower that beats the one he wears.
+    const spare = art({
+      setKey: 'ScarletProof',
+      level: 20,
+      totalRolls: 9,
+      substats: [
+        { key: 'critRate_', value: 10.5 },
+        { key: 'critDMG_', value: 18.7 },
+        { key: 'atk_', value: 5.8 },
+        { key: 'hp', value: 299 },
+      ],
+    })
+    const judged = (circletSet: string) => {
+      const artifacts = [...worn(circletSet), spare, art({ substats: lines }), art({ setKey: 'ScarletProof', substats: lines })]
+      return run(artifacts, { offSet: 'any' }).evaluations.slice(-3)
+    }
+
+    // His off-set piece is the circlet, so wearing the spare would cost him the 4pc.
+    const [kept, onSet, offSet] = judged('ScarletProof')
+    expect(kept.verdict).toBe('spare')
+    // A Gladiator's Finale flower only has to beat the one he wears.
+    expect(onSet.best?.setMatch.kind).toBe('4pc')
+    expect(onSet.best?.spare).toBeUndefined()
+    expect(onSet.reason).toMatch(/to beat current/)
+    // An off-set flower is judged as if the off-set slot moved to the flower, where the spare competes with it.
+    expect(offSet.best?.setMatch.kind).toBe('off')
+    expect(offSet.best?.spare).toBe(kept.piece.id)
+
+    // Wearing all five, he could put the spare on and keep the 4pc, so it raises the bar.
+    const [, full] = judged('GladiatorsFinale')
+    expect(full.best?.spare).toBe(kept.piece.id)
+  })
+
   it('names the build in a reason when the character has more than one', () => {
     const two = config({ Diluc: [build(), build({ name: 'Vape (EM hybrid)' })] })
     const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts: [art(), art({ lock: false }), art()] }

@@ -100,18 +100,22 @@ export function piecesAhead(
 
 /**
  * The build's best finished spare for a piece's slot, other than the piece: unequipped, +20 and past the substat gate,
- * as step 4 of `judge()` picks the spare that raises the bar for pieces still to level. A finished piece is only ever
- * measured against what's worn, so several can be kept for one slot; this says whether another would be equipped
- * first. `ref` is a fit's `cand.ref`, with its edits made. Null when there's no other.
+ * and for a piece on the build's set, one the character could put on without breaking their sets. That's how step 4
+ * of `judge()` picks the spare that raises the bar for pieces still to level. A finished piece is only ever measured
+ * against what's worn, so several can be kept for one slot; this says whether another would be equipped first. `ref`
+ * is a fit's `cand.ref`, with its edits made. Null when there's no other.
  */
 export function bestOtherSpare(piece: Piece, pieces: Piece[], ref: ActiveBuild, config: ArtifactConfig, settings: Settings): Ahead | null {
   const relevant = relevantTo(piece, pieces)
-  const { perPiece } = judge(relevant, [ref], config, settings)
+  const { perPiece, wearable } = judge(relevant, [ref], config, settings)
+  const own = perPiece[relevant.findIndex((p) => p.id === piece.id)]?.[0]
+  const anySpare = !own || own.setMatch.kind === 'off'
   let best: Ahead | null = null
   for (let i = 0; i < relevant.length; i++) {
     const p = relevant[i]
     const c = perPiece[i][0]
     if (!c || p.id === piece.id || p.owner || p.level < 20 || p.slotKey !== piece.slotKey || c.gate === 'fail') continue
+    if (!anySpare && !wearable(ref, p)) continue
     if (!best || c.expected > best.cand.expected) best = { piece: p, cand: c }
   }
   return best
