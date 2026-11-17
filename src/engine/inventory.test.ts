@@ -115,9 +115,17 @@ describe('level priority', () => {
     expect(levelPriority(ev([cand('Yelan', 'priority', 2, false)]), true)?.high).toBe(false)
   })
 
-  it('prefers a Building reason over a ★ one, and counts it when the character is not ★', () => {
+  it('prefers a Building reason over a ★ one in the same tier, and counts it when the character is not ★', () => {
     const both = ev([cand('Yelan', 'priority', 0), cand('Thoma', 'normal', 2, true, true)])
     expect(levelPriority(both, true)).toMatchObject({ char: 'Thoma', building: true, star: false, high: true })
+  })
+
+  it("doesn't let a small Building gain hide a bigger ★ one", () => {
+    // Dehya, on the Building list, already wears nearly what it will become; Yelan would gain a lot.
+    const yelan = levelPriority(ev([cand('Yelan', 'priority', 2)]), true)!
+    const both = levelPriority(ev([cand('Dehya', 'normal', 7.5, true, true), cand('Yelan', 'priority', 2)]), true)!
+    expect(levelPriority(ev([cand('Dehya', 'normal', 7.5, true, true)]), true)?.tier).toBe(0)
+    expect(both).toMatchObject({ char: 'Yelan', building: false, gain: yelan.gain, tier: yelan.tier, high: true })
   })
 
   it('steps up at fixed gains, the same in every set', () => {

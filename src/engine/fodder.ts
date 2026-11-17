@@ -197,6 +197,12 @@ export interface Allocation {
   price: number
 }
 
+/** What a set's next craft adds per EXP once `made` are done; 0 when it adds too little to be worth its pieces. */
+function craftRate(c: CraftCurve, made: number): number {
+  const add = c.gain(made + 1) - c.gain(made)
+  return add >= MIN_CRAFT_GAIN ? add / c.cost : 0
+}
+
 /**
  * Spends one EXP budget, best gain per EXP first, on queue entries (sorted that way already) and crafts. Every +0
  * piece that could be boxed is in the budget as the EXP it would give, so a craft pays for its pieces from it, and
@@ -214,8 +220,7 @@ export function allocate(queue: Outlook[], curves: CraftCurve[], budget: number,
     let bestRate = 0
     if (boxed + CRAFT_INPUTS <= tosses) {
       curves.forEach((c, i) => {
-        const add = c.gain(crafts[i] + 1) - c.gain(crafts[i])
-        const rate = add >= MIN_CRAFT_GAIN ? add / c.cost : 0
+        const rate = craftRate(c, crafts[i])
         if (rate > bestRate) {
           best = i
           bestRate = rate
@@ -235,6 +240,30 @@ export function allocate(queue: Outlook[], curves: CraftCurve[], budget: number,
       boxed += CRAFT_INPUTS
     }
   }
+}
+
+/**
+ * How many times more a +0 does boxed than fed, for the bar: the best first craft's gain per EXP over the price the
+ * allocation ended on. Crafts are judged by allocate's own rule, so the bar leans to box exactly when the split boxes.
+ * 0 when no craft is worth its pieces or there are too few +0s for one; Infinity when one is and EXP isn't short.
+ */
+export function boxRatio(
+  curves: CraftCurve[],
+  a: Allocation,
+  tosses: number,
+): { best: CraftCurve | null; rate: number; ratio: number } {
+  let best: CraftCurve | null = null
+  let rate = 0
+  if (tosses >= CRAFT_INPUTS) {
+    for (const c of curves) {
+      const r = craftRate(c, 0)
+      if (r > rate) {
+        best = c
+        rate = r
+      }
+    }
+  }
+  return { best, rate, ratio: rate === 0 ? 0 : a.price > 0 ? rate / a.price : Infinity }
 }
 
 let fresh: SimPiece[] | null = null
@@ -312,12 +341,18 @@ export interface FeedOrBox {
   queue: { count: number; funded: number; exp: number; fundedExp: number; pieces: QueuePiece[] }
   /** EXP left once everything worth doing is paid for. */
   left: number
-  /** The craft with the best gain per EXP, judged on its first craft. */
+  /**
+   * The craft with the best gain per EXP, judged on its first craft; null when none adds enough to be worth its
+   * pieces, or there are fewer +0s than a craft takes.
+   */
   bestCraft: { set: string; rate: number; levelExp: number } | null
   /** Gain per EXP of the best use EXP can't reach; 0 when EXP isn't what runs out. */
   price: number
-  /** How many times more a +0 is worth boxed than fed (under 1: fed); null when neither would gain anything. */
-  ratio: number | null
+  /**
+   * How many times more a +0 is worth boxed than fed (under 1: fed; see boxRatio). 0 when nothing is worth boxing;
+   * Infinity when a craft is and there's EXP to spare.
+   */
+  ratio: number
 }
 
 /**
@@ -372,11 +407,7 @@ export function planFeedOrBox(
     .map((s) => craftCurve(s.key, inScopeChars, minChance))
     .filter((c): c is CraftCurve => !!c)
   const a = allocate(queue, curves, budget, tosses)
-
-  const firstRate = (c: CraftCurve) => c.gain(1) / c.cost
-  const best = curves.reduce<CraftCurve | null>((b, c) => (!b || firstRate(c) > firstRate(b) ? c : b), null)
-  const bestRate = best ? firstRate(best) : 0
-  const ratio = a.price > 0 ? bestRate / a.price : bestRate > 0 ? Infinity : null
+  const { best, rate: bestRate, ratio } = boxRatio(curves, a, tosses)
   const box = a.crafts.reduce((s, n) => s + n, 0) * CRAFT_INPUTS
   return {
     tosses,
@@ -397,7 +428,7 @@ export function planFeedOrBox(
       pieces: queue.map((o, i) => ({ ...o, funded: i < a.funded })),
     },
     left: a.left,
-    bestCraft: best && bestRate > 0 ? { set: best.set, rate: bestRate, levelExp: best.levelExp } : null,
+    bestCraft: best ? { set: best.set, rate: bestRate, levelExp: best.levelExp } : null,
     price: a.price,
     ratio,
   }

@@ -349,23 +349,25 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
   if (!f.tosses) return <p className="sub-note">No +0 pieces are marked to unlock, so there&apos;s nothing to feed or box.</p>
   const times = (r: number) => (r >= 10 ? `${Math.round(r)}` : r.toFixed(1))
   const { ratio } = f
-  const lean = ratio === null ? 0 : Math.min(BAR_SPAN, Math.max(-BAR_SPAN, Math.log2(Math.max(ratio, 2 ** -BAR_SPAN))))
+  const lean = Math.min(BAR_SPAN, Math.max(-BAR_SPAN, Math.log2(Math.max(ratio, 2 ** -BAR_SPAN))))
   const pos = 50 + (lean / BAR_SPAN) * 50
   const label =
-    ratio === null
-      ? 'even'
-      : ratio === Infinity
-        ? 'box: EXP to spare'
-        : ratio === 0
-          ? 'feed'
-          : ratio >= 1
+    ratio === Infinity
+      ? 'box: EXP to spare'
+      : ratio === 0
+        ? 'feed: nothing worth boxing'
+        : Math.abs(ratio - 1) < 1e-9
+          ? 'even'
+          : ratio > 1
             ? `${times(ratio)}× box`
             : `${times(1 / ratio)}× feed`
   const align = pos < 12 ? 'start' : pos > 88 ? 'end' : ''
   const title = [
     f.bestCraft
       ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)} rolls per 100k EXP (its ${CRAFT_INPUTS} pieces count as the ${expText(CRAFT_INPUTS * FEED_EXP)} EXP they'd give, and leveling what comes out takes ${expText(f.bestCraft.levelExp)} on average, since most are dropped at +0 or +4).`
-      : 'No Strongbox craft would gain anything.',
+      : f.tosses < CRAFT_INPUTS
+        ? `Too few +0s for a Strongbox craft, which takes ${CRAFT_INPUTS}.`
+        : `No Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces.`,
     f.price > 0
       ? `The best use your EXP can't pay for: ${per100k(f.price)} rolls per 100k EXP.`
       : 'Your EXP covers everything worth leveling.',
@@ -404,9 +406,13 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
         ) : (
           <>
             Feed all <b>{f.tosses.toLocaleString()}</b>:{' '}
-            {f.bestCraft
-              ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the Level up queue.`
-              : 'no Strongbox craft would gain anything.'}
+            {f.tosses < CRAFT_INPUTS
+              ? `a Strongbox craft takes ${CRAFT_INPUTS}.`
+              : !f.bestCraft
+                ? `no Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces${f.price > 0 ? '' : ', and your EXP already covers everything worth leveling'}.`
+                : ratio < 1
+                  ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the Level up queue.`
+                  : `the best craft, ${setName(f.bestCraft.set)}, would do about as well per EXP as the Level up queue, but your EXP runs out first.`}
           </>
         )}
       </p>

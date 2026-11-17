@@ -35,26 +35,27 @@ export interface LevelPriority {
 }
 
 /**
- * Why a piece in the Level up queue is worth leveling: the Building character it's kept for with the biggest expected
- * gain, or else the ★ Priority one, or else anyone it's kept for (`standing`). Its tier counts the PRIORITY_STEPS that
- * gain reaches, for a Building or ★ character (for anyone, when `anyStar` says nobody is ★). For an equipped piece,
- * the gain is what finishing it adds for its wearer. Null for pieces not in the queue.
+ * Why a piece in the Level up queue is worth leveling: of the characters it's kept for, the one whose gain reaches the
+ * most PRIORITY_STEPS, counting only Building and ★ Priority characters (anyone, when `anyStar` says nobody is ★).
+ * Within a tier, a Building character comes first (`standing`), then the biggest expected gain, so a small gain for
+ * someone on the Building list never hides a bigger one for a ★ character. For an equipped piece, the gain is what
+ * finishing it adds for its wearer. Null for pieces not in the queue.
  */
 export function levelPriority(e: Evaluation, anyStar: boolean): LevelPriority | null {
   if (e.piece.level >= 20 || e.nextStop === null) return null
   const kept = e.piece.owner ? (e.best ? [e.best] : []) : e.candidates.filter((c) => c.inCap)
-  let top: { gain: number; char: string; chance: number; star: boolean; building: boolean; rank: number } | null = null
+  let top: { gain: number; char: string; chance: number; star: boolean; building: boolean; rank: number; tier: number } | null = null
   for (const c of kept) {
     const gain = e.piece.owner ? Math.max(0, c.expected - c.current) : expectedGainOver(e.piece, c.ref.build.substats, c.bar)
     const rank = standing(c.ref, anyStar)
-    // A Building character's reason wins, then one that counts toward the tier, then the biggest gain.
-    if (!top || rank > top.rank || (rank === top.rank && gain > top.gain)) {
-      top = { gain, char: c.ref.char, chance: c.chance, star: c.ref.priority === 'priority', building: !!c.ref.building, rank }
+    const tier = rank > 0 ? gainTier(gain) : 0
+    // The hottest reason wins, then a Building character's, then one that counts toward the tier, then the biggest gain.
+    if (!top || tier > top.tier || (tier === top.tier && (rank > top.rank || (rank === top.rank && gain > top.gain)))) {
+      top = { gain, char: c.ref.char, chance: c.chance, star: c.ref.priority === 'priority', building: !!c.ref.building, rank, tier }
     }
   }
   if (!top) return { next: e.nextStop, gain: 0, char: e.piece.owner ?? '', chance: 0, star: false, building: false, tier: 0, high: false }
-  const { gain, char, chance, star, building, rank } = top
-  const tier = rank > 0 ? gainTier(gain) : 0
+  const { gain, char, chance, star, building, tier } = top
   return { next: e.nextStop, gain, char, chance, star, building, tier, high: tier >= 2 }
 }
 

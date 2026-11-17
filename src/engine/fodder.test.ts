@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allocate, expBetween, feedExp, levelingOutlook, materialsExp, startOf, type CraftCurve } from './fodder'
+import { allocate, boxRatio, expBetween, feedExp, levelingOutlook, materialsExp, startOf, type CraftCurve } from './fodder'
 import { expectedGainOver } from './projection'
 import type { GoodArtifact } from './types'
 
@@ -88,5 +88,33 @@ describe('allocate', () => {
     const a = allocate(Array.from({ length: 10 }, () => q(0.8, 100)), [curve], 600, 30)
     expect(a.crafts).toEqual([2])
     expect(a.funded).toBe(4)
+  })
+})
+
+describe('boxRatio', () => {
+  const q = (gain: number, exp: number) => ({ gain, exp, finish: 1 })
+  const linear = (each: number, cost: number): CraftCurve => ({ set: 'S', levelExp: 0, cost, gain: (k) => k * each })
+  const split = (queue: ReturnType<typeof q>[], curves: CraftCurve[], budget: number, tosses: number) => {
+    const a = allocate(queue, curves, budget, tosses)
+    return { boxed: a.crafts.some((n) => n > 0), ...boxRatio(curves, a, tosses) }
+  }
+
+  it("counts a craft that adds too little as nothing, as the split does, even with EXP to spare", () => {
+    const s = split([q(1, 100)], [linear(0.005, 10)], 1e6, 30)
+    expect(s).toMatchObject({ boxed: false, best: null, ratio: 0 })
+  })
+
+  it('leans to box exactly when the split boxes', () => {
+    const halving: CraftCurve = { set: 'S', levelExp: 0, cost: 100, gain: (k) => 4 * (1 - 0.5 ** k) }
+    const cases = [
+      split([q(1, 100)], [linear(0.5, 10)], 1e6, 30), // EXP to spare: box
+      split([q(1, 100)], [linear(0.5, 10)], 1e6, 2), // too few +0s for a craft: feed
+      split(Array.from({ length: 10 }, () => q(0.8, 100)), [halving], 600, 30), // crafts first, then the queue
+      split(Array.from({ length: 10 }, () => q(5, 100)), [halving], 600, 30), // the queue beats every craft
+    ]
+    expect(cases.map((s) => s.boxed)).toEqual([true, false, true, false])
+    expect(cases[0].ratio).toBe(Infinity)
+    expect(cases[1].ratio).toBe(0)
+    for (const s of cases) expect(s.ratio > 1).toBe(s.boxed)
   })
 })
