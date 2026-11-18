@@ -156,7 +156,7 @@ function Editor(props: {
   return (
     <div className="editor">
       {back && (
-        <a className="link back-link" href={back.href} title="Where you were, as you left it">
+        <a className="link back-link" href={back.href} title="Back to where you were">
           ← Back to {back.label}
         </a>
       )}
@@ -167,7 +167,7 @@ function Editor(props: {
           {cc.element} · {cc.confidence} · {owned ? `Lv ${owned.level}` : 'not owned'}
           {!summary?.active && ' · not counted (see Roster)'}
         </span>
-        <a className="link" href={charactersHref({ char })} title="Every way to improve what they wear, in the Characters tab">
+        <a className="link" href={charactersHref({ char })} title="Improve in Characters">
           Character →
         </a>
         {overrides[char] && (
@@ -207,7 +207,7 @@ function Editor(props: {
         </label>
         <span
           className="sub-note"
-          title="Free upgrades and rerolls won't take this character's ER below the minimum. Where their total ER is known, ER counts at this build's ER weight up to the top of the target and nothing past it."
+          title="Swaps and rerolls keep ER ≥ minimum; ER counts up to the cap"
         >
           {need === null ? 'No ER minimum (no percentage)' : `Minimum ${need}%`}
           {cap !== null && need !== null && cap > need && ` · counts up to ${cap}%`}
@@ -218,22 +218,21 @@ function Editor(props: {
       {slots && (
         <div className="impact">
           {SLOTS.map((s) => (
-            <span key={s} className={`qcell ${qualityClass(slots[s].quality)}`} title={`${SLOT_LABEL[s]}: what they wear now`}>
+            <span key={s} className={`qcell ${qualityClass(slots[s].quality)}`} title={`${SLOT_LABEL[s]}: current`}>
               {SLOT_ICON[s]} {slots[s].quality === null ? '–' : `${Math.round(slots[s].quality! * 100)}%`}
             </span>
           ))}
-          <span className="muted">· {summary?.kept ?? 0} pieces kept for them</span>
+          <span className="muted">
+            · {summary?.kept ?? 0} {summary?.kept === 1 ? 'piece' : 'pieces'} kept for them
+          </span>
         </div>
       )}
 
       <section className="field">
         <h3>4-piece sets</h3>
         <p className="hint">
-          Tier 1 is best. Tiers 1–2 count when keeping pieces; tier 3 is a fallback that only counts with the loosest
-          set matching. Once a character wears one of these sets, only it and better-ranked sets count for them.
-          "2pc only" keeps a set's pieces for the 2-piece pairs below without preferring its 4pc over them, as with
-          Nilou's two HP sets: free upgrades won't give up a 2pc to complete its 4pc, and wearing its 4pc doesn't stop
-          its partner sets counting.
+          Tier 1 best · 1–2 count (3 with loosest matching) · once worn, only it and better tiers count · 2pc only: kept
+          for the pairs below, its 4pc never preferred
         </p>
         {sets.map((s) => (
           <div key={s.set} className="set-row">
@@ -252,7 +251,7 @@ function Editor(props: {
             <button
               className={s.twoPieceOnly ? 'toggle on' : 'toggle'}
               onClick={() => save(withTwoPieceOnly(build, s.set, !s.twoPieceOnly))}
-              title="Keep this set's pieces for the 2-piece pairs below, without preferring its 4pc over them"
+              title="Kept for the pairs below; 4pc never preferred"
             >
               2pc only
             </button>
@@ -280,12 +279,7 @@ function Editor(props: {
 
       <section className="field">
         <h3>2-piece pairs</h3>
-        <p className="hint">
-          Two 2pc bonuses this build is happy with instead of a 4pc. Free upgrades and Improve let a swap give up a 2pc
-          bonus as long as what's left still makes one of these pairs (or a 4pc set above): add ATK + Energy Recharge,
-          say, and trading a 2pc ATK set for a 2pc ER set counts. The loosest set matching also keeps pieces of their
-          sets. "Any set" leaves that half free.
-        </p>
+        <p className="hint">2pc + 2pc combos that stand in for a 4pc. Any set = free half.</p>
         {build.sets2.map((pair, j) => (
           <div key={pair.join('+') + j} className="set-row">
             <span className="set-row-name">{pair.map((c) => categoryLabel(config, c)).join(' + ')}</span>
@@ -299,7 +293,7 @@ function Editor(props: {
 
       <section className="field">
         <h3>Main stats</h3>
-        <p className="hint">Pieces with any other main stat in these slots don't count for this build.</p>
+        <p className="hint">Other main stats don&apos;t count.</p>
         {MAIN_SLOTS.map((slot) => {
           const on = allowedMains(build, slot)
           return (
@@ -327,10 +321,7 @@ function Editor(props: {
 
       <section className="field">
         <h3>Substat weights</h3>
-        <p className="hint">
-          1 = a stat this build fully wants, 0 = useless. These drive every score: the +0 rule, projected value and upgrade
-          chances.
-        </p>
+        <p className="hint">1 = fully wanted · 0 = useless</p>
         <label className="preset">
           Preset{' '}
           <select

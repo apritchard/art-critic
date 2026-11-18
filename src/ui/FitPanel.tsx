@@ -1,11 +1,19 @@
 import { Fragment, useDeferredValue, useMemo, type ReactNode } from 'react'
 import { applyEdits, type BuildEdit } from '../engine/builds'
-import { defaultRosterEntry, MIN_USEFUL_LINES, tooFewLines, type ActiveBuild, type Evaluation, type EvaluationResult } from '../engine/evaluate'
-import { bestOtherSpare, fitPiece, locksWith, piecesAhead, type Ahead, type BuildFit } from '../engine/fit'
+import {
+  defaultRosterEntry,
+  MIN_USEFUL_LINES,
+  referenceValue,
+  tooFewLines,
+  type ActiveBuild,
+  type Evaluation,
+  type EvaluationResult,
+} from '../engine/evaluate'
+import { bestOtherSpare, fitPiece, locksWith, piecesAhead, spareContext, type Ahead, type BuildFit, type SpareContext } from '../engine/fit'
 import type { Piece } from '../engine/load'
 import { describeSetMatch, offSetAllowed } from '../engine/match'
 import { allSubs } from '../engine/projection'
-import { characterName, formatStat, onlyTopKept, SLOT_LABEL, setName, slotPlural, statLabel, statShort } from '../engine/stats'
+import { characterName, formatStat, SLOT_LABEL, setName, slotPlural, statLabel, statShort, topKept } from '../engine/stats'
 import type { BuildConfig, Settings } from '../engine/types'
 import { useStore } from '../state/store'
 import { ReasonText, SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
@@ -50,11 +58,11 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 const gateOf = (f: BuildFit, piece: Piece) =>
   f.cand.rescore
     ? {
-        what: piece.level >= 20 ? 'Value' : piece.level < 4 ? 'Projected +20 value, with the 4th line +4 reveals,' : 'Projected +20 value',
+        what: piece.level >= 20 ? 'Value' : piece.level < 4 ? 'Projected +20 (with +4 line)' : 'Projected +20',
         got: f.cand.expected,
         need: f.cand.rescore.bar,
       }
-    : { what: 'Weight of its lines', got: f.cand.lineScore, need: f.cand.threshold }
+    : { what: 'Line weight', got: f.cand.lineScore, need: f.cand.threshold }
 
 /** What a fit gains the build: the piece's average at +20 over its bar (what they wear, or their best spare). */
 const gainOf = (f: BuildFit) => f.cand.expected - (f.cand.bar ?? 0)
@@ -72,26 +80,68 @@ function bestOf(fits: BuildFit[]): BuildFit | null {
 }
 
 /**
- * "keeps it", "#4 for their sands, top 3 kept", "12% to beat their +20 Emblem of Severed Fate": where a fit ends up,
- * its edits made, in a few words. `byId` names the spare it's measured against.
+ * "keeps", "#4 sands, top 3 kept", "12% to beat spare +20 Emblem of Severed Fate": where a fit ends up, its edits made,
+ * in a few words. `byId` names the spare it's measured against; `offSet` labels it "off-set:" when they'd wear it in
+ * their off-set slot.
  */
-function outcomeText(f: BuildFit, piece: Piece, settings: Settings, byId: Map<string, Evaluation>): string {
+function outcomeText(f: BuildFit, piece: Piece, settings: Settings, byId: Map<string, Evaluation>, offSet = false): string {
   const c = f.cand
   const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
   const spare = c.spare ? byId.get(c.spare)?.piece : undefined
+  const label = offSet ? 'off-set:' : 'spare'
   const what =
     f.outcome === 'keep'
-      ? 'keeps it'
+      ? 'keeps'
       : f.outcome === 'cut'
         ? c.rank !== undefined
-          ? `#${c.rank} for their ${slot}, top ${c.ref.cap} kept`
-          : `#${c.offRank} off-set ${slot}, top ${settings.capOffSet} kept`
+          ? `#${c.rank} ${slot}, ${topKept(c.ref.cap)}`
+          : `#${c.offRank} off-set ${slot}, ${topKept(settings.capOffSet)}`
         : f.outcome === 'chance'
           ? piece.level >= 20
-            ? `doesn't beat what they wear`
-            : `${pct(c.chance)} to beat ${spare ? `their +20 ${setName(spare.setKey)} spare` : c.spare ? 'their best spare' : 'what they wear'}`
-          : `substats ${n2(gateOf(f, piece).got)} of ${n2(gateOf(f, piece).need)}`
+            ? `doesn't beat current`
+            : c.floor !== undefined && c.chance >= settings.minUpgradeChance - 1e-9
+              ? `${pct(c.floorChance!)} to reach ${pct(settings.levelFloor)} floor`
+              : `${pct(c.chance)} to beat ${spare ? `${label} +${spare.level} ${setName(spare.setKey)}` : c.spare ? label.replace(':', '') : 'current'}`
+          : `substats ${n2(gateOf(f, piece).got)} / ${n2(gateOf(f, piece).need)}`
   return what
+}
+
+/** The spare, not the piece's odds, is what stops it: a piece still to level that isn't likely enough to beat it. */
+const spareBlocks = (f: BuildFit, piece: Piece, settings: Settings) =>
+  f.outcome === 'chance' && !!f.cand.spare && piece.level < 20 && !(f.cand.floor !== undefined && f.cand.chance >= settings.minUpgradeChance - 1e-9)
+
+/**
+ * What a piece measured against a spare is better shown against first: what they wear now. That's when they wear all
+ * five pieces of their set, so the spare only fits because one can go off-set, and when the build runs the piece's set
+ * but its character wears another (`SpareContext.runsSet`), so the spare is just their best off-set piece.
+ */
+const leadsWithWorn = (f: BuildFit, ctx: SpareContext | null): ctx is SpareContext & { worn: NonNullable<SpareContext['worn']> } =>
+  !!ctx?.worn && (ctx.offSet?.why === 'five' || (f.onSet && !ctx.runsSet))
+
+/**
+ * A row's text: where the fit ends up (`outcomeText`), then, when a finished spare stops a piece still to level, a
+ * line with its chance against what they wear ("41% to beat current"). A spare they'd wear in their off-set slot
+ * (`SpareContext.offSet`) is labelled "off-set:". When it `leadsWithWorn`, what they wear comes first and the spare
+ * follows: "<1% to beat current +20 Heart of the Furnace", then "0% to beat off-set: +20 Scroll of the Hero of Cinder
+ * City". That's also how a piece their set doesn't count yet reads (`BuildFit.sidelined`): it's only up against the
+ * spare as an off-set piece.
+ */
+function rowText(
+  f: BuildFit,
+  piece: Piece,
+  settings: Settings,
+  byId: Map<string, Evaluation>,
+  ctx: SpareContext | null,
+): [string, string | null] {
+  if (!ctx || !spareBlocks(f, piece, settings)) return [outcomeText(f, piece, settings, byId), null]
+  const o = ctx.offSet
+  if (leadsWithWorn(f, ctx)) {
+    const first = `${pct(ctx.worn.chance)} to beat current +${ctx.worn.piece.level} ${setName(ctx.worn.piece.setKey)}`
+    return [first, outcomeText(f, piece, settings, byId, !!o || f.cand.setMatch.kind === 'off')]
+  }
+  const worn = ctx.worn ? `${pct(ctx.worn.chance)} to beat current` : null
+  const also = [o?.why === 'empty' ? 'empty slot' : null, worn ?? (o?.why === 'empty' ? null : 'nothing usable worn')]
+  return [outcomeText(f, piece, settings, byId, !!o), also.filter(Boolean).join(' · ')]
 }
 
 type TierEdit = Extract<BuildEdit, { kind: 'tier' }>
@@ -165,13 +215,13 @@ export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, act
   const owned = data.characters.find((c) => c.key === char)
   const entry = roster[char] ?? defaultRosterEntry(owned, settings.includeUnowned)
   const inactive = !cc.enabled
-    ? 'the config switches them off'
+    ? 'off in config'
     : !owned && !settings.includeUnowned
-      ? "you don't own them (Settings → Include unowned)"
+      ? 'not owned'
       : entry.priority === 'ignore'
-        ? 'they’re set to Ignore'
+        ? 'set to Ignore'
         : entry.disabledBuilds.includes(idx)
-          ? 'this build is switched off'
+          ? 'build switched off'
           : null
   const fit = useMemo(() => {
     if (!piece || piece.owner) return null
@@ -208,7 +258,7 @@ export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, act
     return (
       <div className="fit-panel">
         {head}
-        <p className="hint">That piece isn&apos;t in this export. If you&apos;ve leveled it since, open it again from its new card.</p>
+        <p className="hint">Not in this export (leveled since?)</p>
       </div>
     )
   }
@@ -224,12 +274,12 @@ export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, act
   const offOpen = offForced || showOffSet
   const offKeeps = offSet.filter((f) => f.outcome === 'keep' && !f.mainIssue).length
   const onBest = bestOf(onSet)
-  const what = piece.slotKey === 'flower' || piece.slotKey === 'plume' ? `A ${SLOT_LABEL[piece.slotKey].toLowerCase()}` : `A ${statShort(piece.mainStatKey)} ${SLOT_LABEL[piece.slotKey].toLowerCase()}`
+  const what = piece.slotKey === 'flower' || piece.slotKey === 'plume' ? `${SLOT_LABEL[piece.slotKey]}` : `${statShort(piece.mainStatKey)} ${SLOT_LABEL[piece.slotKey].toLowerCase()}`
   const offSetHint = offSetAllowed(settings.offSet, piece)
-    ? `They don't run ${set}, but any set can fill a 4pc build's one free slot.`
+    ? null
     : settings.offSet === 'off'
-      ? `They don't run ${set}, and off-set pieces are switched off (Settings → Off-set pieces), so each needs ${set} added to count it at all.`
-      : `They don't run ${set}. ${what} can't be an off-set piece with Settings → Off-set pieces on Rare main stats, so each needs ${set} added to count it at all.`
+      ? `Off-set pieces off: each needs ${set} added`
+      : `${what} can't be off-set on Rare main stats: each needs ${set} added`
   const rows = { piece, settings, isOn, onPick, byId: fitting.byId }
   // Two blocks, stacked unless there's room side by side (the inspector docked at the bottom): the piece and the
   // builds nearest to keeping it, then the build on screen layer by layer.
@@ -260,46 +310,40 @@ export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, act
           {actions}
 
           {piece.owner ? (
-            <p className="hint">Equipped on {characterName(piece.owner)}, so it&apos;s kept whatever the builds say.</p>
+            <p className="hint">Equipped on {characterName(piece.owner)}.</p>
           ) : (
             <>
               <h4>Nearest to keeping it</h4>
-              <p className="hint">
-                Active builds, as if they counted it: its main stat allowed, and its set listed if it can&apos;t be their
-                off-set piece. Builds that take its main stat come first, those that would keep it first; each says what
-                stands in the way. The number is its average gain at +20 over what they wear, and ▲ marks who it gains most,
-                kept or not. Pick one to edit it here.
-              </p>
               {!fits.length && <p className="muted">No active build has this slot.</p>}
               {fits.length > 0 && (
                 <div className="fit-section">
                   <span className="fit-section-head">
-                    Builds that run {set} <span className="muted">· {onSet.length}</span>
+                    Run {set} <span className="muted">· {onSet.length}</span>
                     {onBest && (
-                      <span className="fit-best">
+                      <span className="fit-best" title="Most gain">
                         {' '}
-                        · ▲ most gain: {characterName(onBest.ref.char)} {signed(gainOf(onBest))}
+                        · ▲ {characterName(onBest.ref.char)} {signed(gainOf(onBest))}
                       </span>
                     )}
                   </span>
-                  {onSet.length ? <FitRows fits={onSet} store="builds:fit:all" {...rows} /> : <p className="muted">No active build runs {set}.</p>}
+                  {onSet.length ? <FitRows fits={onSet} store="builds:fit:all" {...rows} /> : <p className="muted">None run {set}.</p>}
                 </div>
               )}
               {offSet.length > 0 && (
                 <div className="fit-section">
                   {offForced ? (
                     <span className="fit-section-head">
-                      As an off-set piece <span className="muted">· {offSet.length}</span>
+                      Off-set <span className="muted">· {offSet.length}</span>
                     </span>
                   ) : (
                     <button className="link fit-section-head" onClick={() => setShowOffSet(!showOffSet)} aria-expanded={offOpen}>
-                      {offOpen ? '▾' : '▸'} As an off-set piece for {plural(offSet.length, 'other build')}
-                      {offKeeps > 0 && `, ${offKeeps} would keep it`}
+                      {offOpen ? '▾' : '▸'} Off-set · {plural(offSet.length, 'build')}
+                      {offKeeps > 0 && `, ${offKeeps} keep`}
                     </button>
                   )}
                   {offOpen && (
                     <>
-                      <p className="hint">{offSetHint}</p>
+                      {offSetHint && <p className="hint">{offSetHint}</p>}
                       <FitRows fits={offSet} store="builds:fit:off-set:all" {...rows} />
                     </>
                   )}
@@ -344,6 +388,7 @@ function FitRows(props: {
   store: string
 }) {
   const { fits, piece, settings, isOn, onPick, store, byId } = props
+  const { pieces } = useStore()
   const [showAll, setShowAll] = useLocal(store, false)
   const shown = showAll ? fits : fits.slice(0, SHOWN)
   const firstNeedsMain = shown.findIndex((f) => f.mainIssue)
@@ -353,18 +398,21 @@ function FitRows(props: {
     <div className="fit-list">
       {shown.map((f, i) => {
         const c = f.cand
+        // Measured against a spare: what they wear there too, and how they'd wear a spare of another set.
+        const ctx = c.spare ? spareContext(piece, c, pieces) : null
+        const overWorn = ctx?.worn ? ` · vs current ${n2(ctx.worn.value)}: ${signed(c.expected - ctx.worn.value)}` : ''
         const gainTitle =
           c.bar === null
-            ? `Nothing usable worn in this slot: ${n2(c.expected)} at +20 is all gain`
-            : `${piece.level >= 20 ? 'Its value' : 'Its average at +20'} (${n2(c.expected)}) over ${c.spare ? 'their best spare' : 'what they wear'} (${n2(c.bar)})`
+            ? `${n2(c.expected)}, nothing usable worn`
+            : `${n2(c.expected)} − ${c.spare ? 'spare' : 'current'} ${n2(c.bar)}${overWorn}`
         // Coloured by where the build stands now: a build that only keeps it after an edit doesn't keep it yet.
         const blocker = blockerText(f, piece)
+        const [what, also] = rowText(f, piece, settings, byId, ctx)
         return (
           <Fragment key={`${f.ref.char}|${f.ref.buildIdx}`}>
             {i === firstNeedsMain && (
               <span className="fit-group">
-                These need {statLabel(piece.mainStatKey)} {slotPlural(piece.slotKey)} allowed, which makes a different build
-                rather than a tweak:
+                Need {statLabel(piece.mainStatKey)} {slotPlural(piece.slotKey)} allowed:
               </span>
             )}
             <button
@@ -375,7 +423,7 @@ function FitRows(props: {
               <span className="fit-who">
                 {characterName(f.ref.char)}
                 {marks(f.ref)} <small>{f.ref.build.name}</small>
-                <span className={`fit-gain${f === top ? ' best' : ''}`} title={`${gainTitle}${f === top ? '. The most it gains any build here.' : ''}`}>
+                <span className={`fit-gain${f === top ? ' best' : ''}`} title={`${gainTitle}${f === top ? ' · most gain' : ''}`}>
                   {f === top && '▲ '}
                   {signed(gainOf(f))}
                 </span>
@@ -383,12 +431,13 @@ function FitRows(props: {
               <span className="fit-what">
                 {blocker ? (
                   <>
-                    <span className="fit-block">{blocker[0]}</span> · {blocker[1]}: {outcomeText(f, piece, settings, byId)}
+                    <span className="fit-block">{blocker[0]}</span> · {blocker[1]}: {what}
                   </>
                 ) : (
-                  outcomeText(f, piece, settings, byId)
+                  what
                 )}
               </span>
+              {also && <span className="fit-also">{also}</span>}
             </button>
           </Fragment>
         )
@@ -445,9 +494,11 @@ function Layers(props: {
     () => (piece.level >= 20 && c.gate !== 'fail' ? bestOtherSpare(piece, pieces, c.ref, config, settings) : null),
     [piece, c.gate, pieces, c.ref, config, settings],
   )
+  // Measured against a spare: what they wear there too, and how they'd wear a spare of another set.
+  const ctx = useMemo(() => (c.spare ? spareContext(piece, c, pieces) : null), [piece, c, pieces])
 
   if (inactive) {
-    rows.push({ label: 'Counts', ok: false, text: <>Not counted: {inactive}. Switch them on in <a href="#characters/roster">Characters → Roster</a>.</> })
+    rows.push({ label: 'Counts', ok: false, text: <>Not counted: {inactive} (<a href="#characters/roster">Roster</a>)</> })
   }
 
   const setEdits = f.edits.filter((e) => e.kind === 'tier')
@@ -460,176 +511,217 @@ function Layers(props: {
       ok: true,
       text:
         side.issue === 'tier'
-          ? `${set} is tier ${side.tier}, and only tiers 1–2 count, so it counts only as their off-set piece`
-          : `${set} is tier ${side.tier}, but they wear the 4pc ${setName(side.worn.set)} (tier ${side.worn.tier}), which outranks it, so it counts only as their off-set piece`,
-      note: `As their off-set piece, it's ranked by gain against spares of every set for the slot (Settings → Off-set pieces → Per slot). ${
-        side.issue === 'tier' ? `At tier 2 it would count as one of their sets.` : `Ranked above ${setName(side.worn.set)}, it would count as one of their sets.`
-      }`,
+          ? `${set} tier ${side.tier}: off-set only (tier 2 counts it)`
+          : `${set} tier ${side.tier}, below worn ${setName(side.worn.set)} (t${side.worn.tier}): off-set only`,
     })
   } else if (!f.setIssue) {
     rows.push({
       label: 'Set',
       ok: true,
-      text: c.setMatch.kind === 'off' ? `${set} as its off-set piece: any set can fill its one free slot` : `${set}, ${describeSetMatch(c.setMatch)}`,
+      text: c.setMatch.kind === 'off' ? `${set}: off-set` : `${set}, ${describeSetMatch(c.setMatch)}`,
     })
   } else {
-    const worn = f.worn && `the 4pc ${setName(f.worn.set)} they wear (tier ${f.worn.tier})`
+    const worn = f.worn && `worn ${setName(f.worn.set)} (t${f.worn.tier})`
     const why =
       f.setIssue === 'unlisted'
-        ? `${set} isn't one of its sets${worn ? `, and has to outrank ${worn}` : ''}`
+        ? `${set} not listed${worn ? `; must outrank ${worn}` : ''}`
         : f.setIssue === 'tier'
-          ? `${set} is tier ${own?.from}, and only tiers 1–2 count${worn ? `; it has to outrank ${worn} too` : ''}`
+          ? `${set} tier ${own?.from} doesn't count${worn ? `; must outrank ${worn}` : ''}`
           : `${set} doesn't outrank ${worn}`
     const label = setEdits
       .map((e) => (e.set !== piece.setKey ? `${setName(e.set)} to tier ${e.to}` : e.from === null ? `add at tier ${e.to}` : `make it tier ${e.to}`))
       .join(', ')
     // The set only needs listing because the Off-set setting keeps this piece out of the build's free slot.
-    const what = piece.slotKey === 'flower' || piece.slotKey === 'plume' ? `A ${slot}` : `A ${statShort(piece.mainStatKey)} ${slot}`
+    const what = piece.slotKey === 'flower' || piece.slotKey === 'plume' ? SLOT_LABEL[piece.slotKey] : `${statShort(piece.mainStatKey)} ${slot}`
     const note = offSetAllowed(settings.offSet, piece)
       ? undefined
       : settings.offSet === 'off'
-        ? 'Off-set pieces are switched off (Settings → Off-set pieces → Off). With Any slot, it could fill the free slot without listing its set.'
-        : `${what} can't be its off-set piece with Settings → Off-set pieces on Rare main stats. With Any slot, it could fill the free slot without listing its set.`
+        ? 'Off-set pieces off; Any slot would take it unlisted'
+        : `${what} can't be off-set on Rare main stats; Any slot would take it unlisted`
     rows.push({ label: 'Set', ok: false, text: why, fix: { label: label[0].toUpperCase() + label.slice(1), edits: setEdits }, note })
   }
 
   const mainEdits = f.edits.filter((e) => e.kind === 'main')
   rows.push(
     f.mainIssue
-      ? { label: 'Main stat', ok: false, text: `${statLabel(piece.mainStatKey)} ${slotPlural(piece.slotKey)} aren't on its list`, fix: { label: `Allow ${statShort(piece.mainStatKey)}`, edits: mainEdits } }
+      ? { label: 'Main stat', ok: false, text: `${statLabel(piece.mainStatKey)} not allowed`, fix: { label: `Allow ${statShort(piece.mainStatKey)}`, edits: mainEdits } }
       : { label: 'Main stat', ok: true, text: statLabel(piece.mainStatKey) },
   )
 
   const gate = gateOf(f, piece)
-  const scaled = c.scaledFor.length ? ` (lowered for ${c.scaledFor.join(', ')})` : ''
+  const scaled = c.scaledFor.length ? ` (${c.scaledFor.join(', ')})` : ''
   const lines = allSubs(piece)
     .map((s) => `${statShort(s.key)} ${n2(build.substats[s.key] ?? 0)}`)
     .join(' · ')
   rows.push(
     c.gate === 'crit'
-      ? { label: 'Substats', ok: true, text: 'CRIT circlet with the other CRIT stat, which always passes' }
+      ? { label: 'Substats', ok: true, text: 'CRIT circlet + CRIT line: pass' }
       : c.gate === 'pass'
         ? { label: 'Substats', ok: true, text: `${gate.what} ${n2(gate.got)} ≥ ${n2(gate.need)}${scaled}` }
         : tooFewLines(c)
           ? {
               label: 'Substats',
               ok: false,
-              text: `${gate.what} ${n2(gate.got)} ≥ ${n2(gate.need)}${scaled}, but only ${c.usefulLines} of its lines ${c.usefulLines === 1 ? 'is a stat' : 'are stats'} this build uses, and a +0 needs ${MIN_USEFUL_LINES} (Settings → Substat thresholds). Its lines weigh ${lines}.`,
+              text: `${gate.what} ${n2(gate.got)} ≥ ${n2(gate.need)}${scaled}, but ${plural(c.usefulLines, 'useful line')} (needs ${MIN_USEFUL_LINES}) · ${lines}`,
             }
           : {
               label: 'Substats',
               ok: false,
-              text: `${gate.what} ${n2(gate.got)}, needs ${n2(gate.need)}${scaled}. Its lines weigh ${lines}: raise the weights below to keep pieces like it.`,
+              text: `${gate.what} ${n2(gate.got)} / ${n2(gate.need)}${scaled} · ${lines}`,
             },
   )
 
   // What it's measured against: their best finished spare when that beats what they wear, or what they wear.
   const rival = c.bar === null ? null : (spare?.piece ?? pieces.find((p) => p.owner === c.ref.char && p.slotKey === piece.slotKey) ?? null)
   const rivalLink = rival && (
-    <a href={inventoryHref(rival.id)} title="Show it in the Artifacts grid">
+    <a href={inventoryHref(rival.id)} title="Show in grid">
       {statShort(rival.mainStatKey)} {setName(rival.setKey)} {slot}
       {spare ? ` +${rival.level}` : ''}
     </a>
   )
-  const needs = c.passChance ? '' : `; it needs ${pct(settings.minUpgradeChance)}`
+  const min = settings.minUpgradeChance - 1e-9
+  const needs = c.chance >= min ? '' : ` · needs ${pct(settings.minUpgradeChance)}`
   // A finished piece against their best other +20 spare, when that one also beats what they wear.
   const beatsWorn = c.bar === null || c.expected > c.bar + 1e-9
   const rivalSpare = other && (c.bar === null || other.cand.expected > c.bar + 1e-9) ? other : null
   const rivalSpareLink = rivalSpare && (
-    <a href={inventoryHref(rivalSpare.piece.id)} title="Show it in the Artifacts grid">
+    <a href={inventoryHref(rivalSpare.piece.id)} title="Show in grid">
       {statShort(rivalSpare.piece.mainStatKey)} {setName(rivalSpare.piece.setKey)} {slot} +20
     </a>
   )
   const spareLine = rivalSpare ? (
     rivalSpare.cand.expected > c.expected + 1e-9 ? (
       <>
-        . Their best spare, the {rivalSpareLink} ({n2(rivalSpare.cand.expected)}), scores higher, so they&apos;d equip that
-        first and this one is a backup
+        {' '}
+        · backup to spare {rivalSpareLink} ({n2(rivalSpare.cand.expected)})
       </>
     ) : (
       <>
-        . It&apos;s their best +20 spare for the {slot}: the next is the {rivalSpareLink} ({n2(rivalSpare.cand.expected)})
+        {' '}
+        · best spare (next: {rivalSpareLink} {n2(rivalSpare.cand.expected)})
       </>
     )
   ) : piece.level >= 20 && beatsWorn ? (
-    c.bar === null ? `. They have no other usable +20 spare for the ${slot}` : '. No other +20 spare beats what they wear'
+    c.bar === null ? ' · no other spare' : ' · no other spare beats current'
   ) : null
+  // A spare of another set, for a build that runs this piece's set: they'd wear it in their off-set slot.
+  const o = ctx?.offSet
+  const worn = ctx?.worn
+  const wornLink = worn && (
+    <a href={inventoryHref(worn.piece.id)} title="Show in grid">
+      {statShort(worn.piece.mainStatKey)} {setName(worn.piece.setKey)} {slot}
+    </a>
+  )
+  const wornLine = worn ? (
+    <>
+      {' '}
+      · {pct(worn.chance)} vs current {wornLink} ({n2(worn.value)})
+    </>
+  ) : !ctx ? null : o?.why === 'empty' ? (
+    ' · empty slot'
+  ) : (
+    ' · nothing usable worn'
+  )
+  // As in the list's row (`leadsWithWorn`): what they wear comes first, and the spare that decides the ✓ follows.
+  const wornFirst =
+    spare && leadsWithWorn(f, ctx) ? (
+      <>
+        {pct(ctx.worn.chance)} to beat current {wornLink} ({n2(ctx.worn.value)}) · avg {n2(c.expected)} · {pct(c.chance)} to
+        beat {o || c.setMatch.kind === 'off' ? 'off-set:' : 'spare'} {rivalLink} ({n2(c.bar ?? 0)}){needs}
+      </>
+    ) : null
   rows.push(
     c.gate === 'fail'
-      ? { label: 'Upgrade', ok: null, text: 'Not judged until the substats pass' }
+      ? { label: 'Upgrade', ok: null, text: 'Not reached' }
       : {
           label: 'Upgrade',
-          ok: c.passChance,
+          ok: c.chance >= min,
           text:
             c.bar === null ? (
-              <>
-                Nothing usable worn in the {slot}, so anything is an upgrade{spareLine}
-              </>
+              <>Nothing usable worn: any piece upgrades{spareLine}</>
+            ) : wornFirst ? (
+              wornFirst
             ) : spare ? (
               // Only pieces still to level are measured against a spare.
               <>
-                {pct(c.chance)} to beat their best spare, the {rivalLink} ({n2(c.bar)}), which already beats what they wear,
-                so it&apos;s ready to equip. This one averages {n2(c.expected)} at +20{needs}.
+                {pct(c.chance)} to beat {o ? 'off-set:' : 'spare'} {rivalLink} ({n2(c.bar)}) · avg {n2(c.expected)}
+                {needs}
+                {wornLine}
               </>
             ) : piece.level >= 20 ? (
               <>
-                Scores {n2(c.expected)} against {n2(c.bar)} for the {rivalLink} they wear, so it{' '}
-                {beatsWorn ? 'beats it' : 'doesn’t beat it'}
+                {n2(c.expected)} vs current {rivalLink} {n2(c.bar)}
                 {spareLine}
               </>
             ) : (
               <>
-                {pct(c.chance)} to beat the {rivalLink} they wear ({n2(c.bar)}). This one averages {n2(c.expected)} at +20
+                {pct(c.chance)} to beat current {rivalLink} ({n2(c.bar)}) · avg {n2(c.expected)}
                 {needs}
               </>
             ),
           // Farm's free swaps flag the same thing.
           note:
             rival && rival.mainStatKey !== piece.mainStatKey
-              ? `Main stat changes: ${statShort(rival.mainStatKey)} → ${statShort(piece.mainStatKey)}. Scores compare substats only, so this trade isn't weighed: check it in-game.`
+              ? `Main stat ${statShort(rival.mainStatKey)} → ${statShort(piece.mainStatKey)}: not scored`
               : undefined,
           warn: true,
         },
   )
 
+  // Only where it decides anything: a piece still to level, when the floor is above what they have.
+  if (c.floor !== undefined) {
+    const typical = referenceValue(c.ref.build, piece.mainStatKey)
+    const theirs = c.bar === null ? 'nothing usable worn' : `${c.spare ? 'spare' : 'current'} ${pct(c.bar / typical)}`
+    rows.push({
+      label: 'Floor',
+      ok: c.floorChance! >= min,
+      text: `${pct(c.floorChance!)} to pass ${pct(settings.levelFloor)} floor (${n2(c.floor)})${
+        c.floorChance! >= min ? '' : ` · needs ${pct(settings.minUpgradeChance)}`
+      } · ${theirs}`,
+    })
+  }
+
   rows.push(
     !c.passChance
-      ? { label: 'Cap', ok: null, text: 'Not ranked until it passes the rest' }
+      ? { label: 'Cap', ok: null, text: 'Not reached' }
       : piece.level >= 20
         ? // judge() gives finished pieces no rank in either pool: inCap is just passChance.
-          { label: 'Cap', ok: true, text: "Finished +20s take no place, since they can't roll any further: one that beats what they wear is kept as a spare" }
+          { label: 'Cap', ok: true, text: '+20: no cap place' }
         : c.rank === undefined
         ? {
             label: 'Cap',
             ok: false,
-            text: `#${c.offRank} of its off-set ${slotPlural(piece.slotKey)}, which rank by gain over what they wear (+${n2(c.expected - (c.bar ?? 0))} for this one), and ${onlyTopKept(settings.capOffSet)} (Settings → Off-set pieces → Per slot)`,
+            text: `#${c.offRank} off-set ${slot} by gain (+${n2(c.expected - (c.bar ?? 0))}), ${topKept(settings.capOffSet)}`,
           }
         : {
             label: 'Cap',
             ok: c.inCap,
-            text: `#${c.rank} of ${c.rankOf} for their ${slot}, and ${onlyTopKept(c.ref.cap)}${!c.inCap && c.ref.priority !== 'priority' ? ` (${settings.capPriority} as ★ Priority)` : ''}`,
+            text: `#${c.rank} of ${c.rankOf}, ${topKept(c.ref.cap)}${!c.inCap && c.ref.priority !== 'priority' ? ` (${settings.capPriority} if ★)` : ''}`,
           },
   )
 
   const ahead = cut?.ahead.length ?? 0
+  const slots = ahead === 1 ? slot : slotPlural(piece.slotKey)
   const tail = {
-    keep: "it's kept for this build",
+    keep: 'kept',
     cut: !cut
-      ? 'it passes, but the cap cuts it'
+      ? 'passes; cap cuts it'
       : cut.lane === 'off-set'
-        ? `it passes, but ${ahead} other off-set ${ahead === 1 ? slot : slotPlural(piece.slotKey)} would gain them more`
-        : `it passes, but ${ahead} other ${ahead === 1 ? slot : slotPlural(piece.slotKey)} rank above it`,
+        ? `passes; ${ahead} off-set ${slots} gain more`
+        : `passes; ${ahead} ${slots} rank above`,
     chance:
       piece.level >= 20
-        ? "it doesn't beat what they wear"
-        : `it isn't likely enough to beat ${c.spare ? 'their best spare +20' : 'what they wear'}`,
-    substats: 'its substats fall short',
+        ? "doesn't beat current"
+        : c.floor !== undefined && c.chance >= min
+          ? 'unlikely to reach floor'
+          : c.spare
+            ? `unlikely to beat spare${ctx?.worn && ctx.worn.chance < min ? ' (or current)' : ''}`
+            : 'unlikely to beat current',
+    substats: 'substats short',
   }[f.outcome]
-  const backup = f.outcome !== 'keep' && locksWith(f.outcome, piece, settings) ? ', so it stays locked as a backup' : ''
+  const backup = f.outcome !== 'keep' && locksWith(f.outcome, piece, settings) ? ' · stays locked' : ''
   // Like the list, it says where the build stands now first: an edit's outcome is only what it would take.
-  const sentence = f.edits.length
-    ? `As it stands, this build doesn't count it. With ${f.edits.length === 1 ? 'that edit' : 'those edits'}, ${tail}`
-    : tail[0].toUpperCase() + tail.slice(1)
+  const sentence = f.edits.length ? `Not counted. With ${f.edits.length === 1 ? 'edit' : 'edits'}: ${tail}` : tail[0].toUpperCase() + tail.slice(1)
   const fixes = rows.filter((r) => r.fix)
 
   return (
@@ -660,7 +752,7 @@ function Layers(props: {
       <p className={`fit-sum o-${f.edits.length ? 'blocked' : f.outcome}`}>
         {sentence}
         {backup}
-        {inactive ? ', once they count' : ''}.
+        {inactive ? ' · once counted' : ''}
         {fixes.length > 1 && (
           <button className="ghost small" onClick={() => save(applyEdits(build, f.edits))}>
             Make both edits
@@ -683,13 +775,7 @@ function RankedAhead({ cut, byId }: { cut: NonNullable<ReturnType<typeof piecesA
   const offSet = cut.lane === 'off-set'
   return (
     <div className="fit-ahead">
-      <p className="hint">
-        Ranked above it, still to level:{' '}
-        {cut.ahead.length === 1
-          ? 'level it first. If it rolls badly, it drops back and this piece moves up.'
-          : 'level them first. Each one that rolls badly drops back, and this piece moves up.'}{' '}
-        Each opens in the Artifacts grid, outlined.
-      </p>
+      <p className="hint">Ranked above, still to level:</p>
       <div className="fit-list">
         {cut.ahead.slice(0, AHEAD_SHOWN).map((a) => (
           <AheadLink key={a.piece.id} a={a} offSet={offSet} ev={byId.get(a.piece.id)} />
@@ -706,7 +792,7 @@ function AheadLink({ a, offSet, ev }: { a: Ahead; offSet: boolean; ev?: Evaluati
   // A slot's off-set lane ranks by gain over its bar; its cap by projected value.
   const worth = offSet ? `+${n2(a.cand.expected - (a.cand.bar ?? 0))} gain` : `${n2(a.cand.expected)} at +20`
   return (
-    <a className="fit-row" href={inventoryHref(p.id)} title={`Show it in the Artifacts grid${ev ? `. ${verdictLabel(ev)}: ${ev.reason}` : ''}`}>
+    <a className="fit-row" href={inventoryHref(p.id)} title={`Show in grid${ev ? ` · ${verdictLabel(ev)}: ${ev.reason}` : ''}`}>
       <span className="fit-who">
         #{place} {SLOT_ICON[p.slotKey]} {statShort(p.mainStatKey)} +{p.level} <small>{setName(p.setKey)}</small>
       </span>

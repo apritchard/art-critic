@@ -6,11 +6,11 @@ import { RerollPage } from './RerollPage'
 import { replaceHash, RESOURCES, spendHref, type Resource } from './routes'
 
 const RESOURCE_LABEL: Record<Resource, { label: string; title: string }> = {
-  resin: { label: 'Resin', title: 'Which domain to run, and who gains most from new pieces' },
-  strongbox: { label: 'Strongbox', title: 'Which set to craft from the Artifact Strongbox' },
-  elixir: { label: 'Elixirs', title: 'Which piece to craft with a Sanctifying Elixir' },
-  dust: { label: 'Dust', title: 'Which +20 to reroll with Dust of Enlightenment' },
-  fodder: { label: 'Fodder', title: 'Whether the +0 pieces marked to unlock do more fed or boxed' },
+  resin: { label: 'Resin', title: 'Domains, and who gains most' },
+  strongbox: { label: 'Strongbox', title: 'Which set to craft' },
+  elixir: { label: 'Elixirs', title: 'Which piece to craft' },
+  dust: { label: 'Dust', title: 'Which +20 to reroll' },
+  fodder: { label: 'Fodder', title: 'Feed or box +0 unlocks' },
 }
 
 /**

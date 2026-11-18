@@ -135,6 +135,13 @@ export interface Settings {
   capOffSet: number
   /** 0-1; a candidate must have at least this chance of beating the equipped piece. */
   minUpgradeChance: number
+  /**
+   * 0-1, 0 for off: a piece still to level also needs `minUpgradeChance` of finishing past this share of a typical
+   * well-rolled +20 for the build and its main stat (the Characters board's 100%), however weak what's worn is.
+   */
+  levelFloor: number
+  /** Leave rare main stats (`isRareMain`) out of the leveling floor: a better one is far harder to farm. */
+  levelFloorExemptRare: boolean
   capNormal: number
   capPriority: number
   includeUnowned: boolean

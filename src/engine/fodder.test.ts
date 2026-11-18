@@ -47,6 +47,19 @@ describe('levelingOutlook', () => {
     expect(o.gain).toBe(0)
   })
 
+  it('stops by the leveling floor when it is above the bar, but measures gains over the bar', () => {
+    const start = startOf(fresh(), W)
+    const free = levelingOutlook(start, 2, 0.2)
+    const floored = levelingOutlook(start, 2, 0.2, 0, 5)
+    expect(free.finish).toBeCloseTo(1, 9)
+    expect(floored.finish).toBeLessThan(free.finish)
+    expect(floored.exp).toBeLessThan(free.exp)
+    // What finishes is counted over the bar, not the floor: more than its gain over the floor.
+    expect(floored.gain).toBeGreaterThan(levelingOutlook(start, 5, 0.2).gain)
+    // A floor under the bar changes nothing.
+    expect(levelingOutlook(start, 5, 0.2, 0, 2)).toEqual(levelingOutlook(start, 5, 0.2))
+  })
+
   it('drops some borderline pieces part way, and loses a little gain for it', () => {
     const a = fresh()
     const bar = 5

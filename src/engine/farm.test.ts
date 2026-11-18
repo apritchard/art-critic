@@ -614,7 +614,7 @@ describe('planFarming', () => {
     const res = evaluate(ps, withFresh.characters, config, defaultSettings(config), roster)
     const piece = ps.find((p) => p.setKey === 'CrimsonWitchOfFlames' && p.slotKey === 'sands' && !p.owner)!
     const plan = planFarming(res, ps, config, domains, 'all')
-    const rich = planFeedOrBox(res, plan, { SanctifyingEssence: 1000 }, 0.2)
+    const rich = planFeedOrBox(res, plan, { SanctifyingEssence: 1000 }, defaultSettings(config))
     expect(rich.queue.pieces[0]).toMatchObject({ piece, funded: true })
     expect(rich.queue.pieces[0].ref.char).toBe('HuTao')
     expect(rich.queue.pieces[0].gain).toBeGreaterThan(0)
@@ -634,7 +634,7 @@ describe('planFarming', () => {
     expect(cautious.worth).toBe(true)
     expect(cautious.outlook.net).toBeLessThanOrEqual(220160)
     expect(cautious.outlook.finish).toBeLessThan(1)
-    expect(planFeedOrBox(res, plan, {}, 0.2, tight).queue.pieces[0]).toMatchObject({ piece, funded: true })
+    expect(planFeedOrBox(res, plan, {}, defaultSettings(config), tight).queue.pieces[0]).toMatchObject({ piece, funded: true })
   })
 
   it('ranks for the Building list, falling back to ★ Priority when it is empty', () => {

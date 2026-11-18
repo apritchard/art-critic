@@ -1,6 +1,6 @@
 import { swapSetFit } from './farm'
 import type { Piece } from './load'
-import { describeSetMatch, fourPieceSets, mainStatOk, matchSet, offSetAllowed, type SetMatch } from './match'
+import { describeSetMatch, fourPieceSets, isRareMain, mainStatOk, matchSet, offSetAllowed, type SetMatch } from './match'
 import {
   chanceToBeat,
   currentValue,
@@ -16,7 +16,7 @@ import {
   TYPICAL_CEILING,
   usefulLineCount,
 } from './projection'
-import { characterName, onlyTopKept, SLOT_LABEL, setName, slotPlural, statShort } from './stats'
+import { characterName, SLOT_LABEL, setName, slotPlural, statShort, topKept } from './stats'
 import type {
   ArtifactConfig,
   BuildConfig,
@@ -43,6 +43,8 @@ export function defaultSettings(config: ArtifactConfig): Settings {
     offSet: 'rare',
     capOffSet: 1,
     minUpgradeChance: 0.2,
+    levelFloor: 0.8,
+    levelFloorExemptRare: true,
     capNormal: 3,
     capPriority: 5,
     includeUnowned: false,
@@ -118,7 +120,16 @@ export interface Candidate {
   bar: number | null
   /** Id of the finished spare that sets `bar`, when it beats what's worn. */
   spare?: string
+  /** Chance it finishes strictly above `bar`. */
   chance: number
+  /**
+   * Settings → Leveling floor, for a piece still to level: the value it must also be able to finish past (`levelFloor`),
+   * set only when that's above `bar`. Gains are still measured over `bar`.
+   */
+  floor?: number
+  /** With `floor`: the chance it finishes strictly above it. */
+  floorChance?: number
+  /** Gate passed, and both `chance` and any `floorChance` reach the minimum. */
   passChance: boolean
   /** 1-based rank among this build/slot's surviving candidates (unequipped pieces still to level only). */
   rank?: number
@@ -178,10 +189,30 @@ function rosterEntry(roster: Roster, char: string, owned: GoodCharacter | undefi
   return roster[char] ?? defaultRosterEntry(owned, includeUnowned)
 }
 
-/** Value of a typical well-rolled +20: the four best lines this main stat allows, average tiers, 9 rolls. */
-function referenceValue(build: BuildConfig, main: string): number {
+/**
+ * Value of a typical well-rolled +20: the four best lines this main stat allows, average tiers, 9 rolls. The Characters
+ * board's 100%.
+ */
+export function referenceValue(build: BuildConfig, main: string): number {
   return lineCeiling(build.substats, main) * 0.85 * 2.25
 }
+
+/**
+ * Settings → Leveling floor for a piece and build: the value it has to be able to finish past to be worth leveling,
+ * however weak what's worn is. Null when the floor is off, or the piece's main stat is rare and exempt.
+ */
+export function levelFloor(
+  build: BuildConfig,
+  piece: Pick<Piece, 'slotKey' | 'mainStatKey'>,
+  settings: Pick<Settings, 'levelFloor' | 'levelFloorExemptRare'>,
+): number | null {
+  if (!(settings.levelFloor > 0)) return null
+  if (settings.levelFloorExemptRare && isRareMain(piece)) return null
+  return settings.levelFloor * referenceValue(build, piece.mainStatKey)
+}
+
+/** The chance that decides layer 4: to beat the bar, or the leveling floor when that's higher. */
+export const keepChance = (c: Candidate) => c.floorChance ?? c.chance
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
 const num = (x: number) => x.toFixed(2)
@@ -211,8 +242,9 @@ function describeKeep(c: Candidate, piece: Piece): string {
       : piece.level >= 20
         ? // A finished piece has no rolls left: it beats what's worn or it doesn't.
           `beats current (${num(c.expected)} vs ${num(c.bar)})`
-        : `${pct(c.chance)} to beat ${c.spare ? 'their best spare +20' : 'current'}`,
+        : `${pct(c.chance)} to beat ${c.spare ? 'spare' : 'current'}`,
   )
+  if (c.floor !== undefined) parts.push(`${pct(c.floorChance!)} past the ${pct(c.floor / referenceValue(c.ref.build, piece.mainStatKey))} floor`)
   if (c.rank) parts.push(`#${c.rank} of ${c.rankOf}`)
   return parts.join(' · ')
 }
@@ -230,16 +262,15 @@ function buildLabel(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string | nul
   return theirs.some((r) => r.buildIdx !== ref.buildIdx && short(r.build.name) === name) ? ref.build.name : name
 }
 
-/** "Nilou's C6 hybrid build" for a character with several active builds, or just "Diluc". */
+/** "Nilou (C6 hybrid)" for a character with several active builds, or just "Diluc". */
 function whoFor(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string {
-  const build = buildLabel(ref, activeBuilds)
-  return build ? `${characterName(ref.char)}'s ${build} build` : characterName(ref.char)
+  return characterName(ref.char) + forBuild(ref, activeBuilds)
 }
 
-/** What follows a possessive ("Nilou's current circlet") to say which build: " for their C6 hybrid build", or nothing. */
+/** What follows a name or possessive ("Nilou's current") to say which build: " (C6 hybrid)", or nothing. */
 function forBuild(ref: ActiveBuild, activeBuilds: ActiveBuild[]): string {
   const build = buildLabel(ref, activeBuilds)
-  return build ? ` for their ${build} build` : ''
+  return build ? ` (${build})` : ''
 }
 
 /** Threshold multiplier for a build and main stat, with the reasons it's below 1. */
@@ -336,12 +367,16 @@ export function evaluate(
     }
   }
 
-  // Reasons name the spare a piece is measured against.
+  // Reasons name the spare a piece is measured against, and say when they'd wear it off-set.
   const byId = new Map(pieces.map((p) => [p.id, p]))
+  const worn = wornSets(pieces)
+  const outgoing = new Map(pieces.filter((p) => p.owner).map((p) => [`${p.owner}|${p.slotKey}`, p.setKey]))
+  const offSetOf = (piece: Piece, cand: Candidate, spare: Piece) =>
+    offSetSpare(piece, cand, spare, worn.get(cand.ref.char) ?? {}, outgoing.get(`${cand.ref.char}|${piece.slotKey}`))
   const keptBy = new Map<string, number>()
   const evaluations = pieces.map((piece, i): Evaluation => {
     const candidates = perPiece[i].sort(compareCandidates)
-    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding, (id) => byId.get(id))
+    const ev = verdictFor(piece, candidates, settings, activeBuilds, config, setFor, offStanding, (id) => byId.get(id), offSetOf)
     if (ev.grade === 'keep' && ev.best) keptBy.set(ev.best.ref.char, (keptBy.get(ev.best.ref.char) ?? 0) + 1)
     return ev
   })
@@ -374,6 +409,39 @@ export function wornSets(pieces: Piece[]): Map<string, Record<string, number>> {
     worn.set(p.owner, sets)
   }
   return worn
+}
+
+/**
+ * A finished spare the character would wear as their off-set piece: the 4pc set they keep, and why its slot is free
+ * for a piece of another set. They wear all five pieces of `set` ('five'), the slot holds their off-set piece already
+ * ('slot'), or they wear nothing there ('empty').
+ */
+export interface OffSetSpare {
+  set: string
+  why: 'five' | 'slot' | 'empty'
+}
+
+/**
+ * Why a finished spare that sets a piece's bar (`Candidate.spare`) is of another set, when the build counts the piece
+ * as one of its sets: they'd wear the spare as their off-set piece and keep a 4pc. Swapping it in for what they wear in
+ * its slot (`outgoing`, that piece's set) leaves four of some other set (`sets` as `wornSets` counts them). Null for an
+ * off-set candidate, which meets every spare anyway, for a spare of the piece's own set, and for a spare that counts
+ * toward a set they wear.
+ */
+export function offSetSpare(
+  piece: Pick<Piece, 'setKey'>,
+  cand: Pick<Candidate, 'setMatch'>,
+  spare: Pick<Piece, 'setKey'>,
+  sets: Record<string, number>,
+  outgoing: string | undefined,
+): OffSetSpare | null {
+  if (cand.setMatch.kind === 'off' || spare.setKey === piece.setKey) return null
+  const after = { ...sets }
+  if (outgoing) after[outgoing]--
+  after[spare.setKey] = (after[spare.setKey] ?? 0) + 1
+  const kept = Object.keys(after).find((s) => s !== spare.setKey && after[s] >= 4)
+  if (!kept) return null
+  return { set: kept, why: outgoing === kept ? 'five' : outgoing ? 'slot' : 'empty' }
 }
 
 /** The build's 4pc set the character wears (`sets` as `wornSets` counts them), which the build sticks to. */
@@ -525,19 +593,27 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
       if (wearable(cand.ref, piece)) offer(spares.wearable, key, cand.expected, piece.id)
     }
   })
+  //    A piece still to level also has to be able to finish past the leveling floor, a share of a typical good +20 for
+  //    the build and main stat, so a mediocre piece isn't leveled just because what's worn is worse.
   pieces.forEach((piece, i) => {
     for (const cand of perPiece[i]) {
       const { ref } = cand
+      const toLevel = piece.owner !== ref.char && !finished(piece)
       let bar = piece.owner === ref.char ? null : barFor(ref.char, ref.build, piece.slotKey)
       const pool = cand.setMatch.kind === 'off' ? spares.any : spares.wearable
-      const spare = piece.owner !== ref.char && !finished(piece) ? pool.get(`${ref.char}|${ref.buildIdx}|${piece.slotKey}`) : undefined
+      const spare = toLevel ? pool.get(`${ref.char}|${ref.buildIdx}|${piece.slotKey}`) : undefined
       if (spare && (bar === null || spare.value > bar + 1e-9)) {
         bar = spare.value
         cand.spare = spare.id
       }
       cand.bar = bar
       cand.chance = cand.gate === 'fail' ? 0 : chanceToBeat(piece, ref.build.substats, bar)
-      cand.passChance = cand.gate !== 'fail' && cand.chance >= settings.minUpgradeChance - 1e-9
+      const floor = toLevel && cand.gate !== 'fail' ? levelFloor(ref.build, piece, settings) : null
+      if (floor !== null && (bar === null || floor > bar + 1e-9)) {
+        cand.floor = floor
+        cand.floorChance = chanceToBeat(piece, ref.build.substats, floor)
+      }
+      cand.passChance = cand.gate !== 'fail' && keepChance(cand) >= settings.minUpgradeChance - 1e-9
       // A finished piece takes no cap place: it's kept if it beats what's worn.
       if (finished(piece) && !piece.owner) cand.inCap = cand.passChance
     }
@@ -595,7 +671,7 @@ function compareCandidates(a: Candidate, b: Candidate): number {
   return (
     level(b) - level(a) ||
     (a.rank ?? Infinity) - (b.rank ?? Infinity) ||
-    b.chance - a.chance ||
+    keepChance(b) - keepChance(a) ||
     b.expected - a.expected
   )
 }
@@ -609,6 +685,7 @@ function verdictFor(
   setFor: (ref: ActiveBuild, piece: Piece) => SetMatch,
   offStanding: (piece: Piece) => OffStanding | null,
   pieceById: (id: string) => Piece | undefined,
+  offSetOf: (piece: Piece, cand: Candidate, spare: Piece) => OffSetSpare | null,
 ): Evaluation {
   const base = { piece, candidates, nextStop: null as number | null }
   if (piece.rarity !== 5) {
@@ -643,22 +720,36 @@ function verdictFor(
     grade = 'marginal'
     // Only pieces still to level reach here: a finished one takes no cap place.
     const who = whoFor(best.ref, activeBuilds)
-    const slots = slotPlural(piece.slotKey)
+    const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
     reason =
       best.rank === undefined
-        ? `Redundant: #${best.offRank} of the off-set ${slots} for ${who}, and ${onlyTopKept(settings.capOffSet)} (Settings → Off-set pieces)`
-        : `Redundant: #${best.rank} of the ${slots} for ${who}, and ${onlyTopKept(best.ref.cap)} (Settings → Keep cap)`
+        ? `Redundant: #${best.offRank} off-set ${slot} for ${who}, ${topKept(settings.capOffSet)}`
+        : `Redundant: #${best.rank} ${slot} for ${who}, ${topKept(best.ref.cap)}`
   } else if (best && best.gate !== 'fail' && piece.level === 20) {
     // A finished piece that's decent for someone is a backup, not fodder: only feed what fails the gate.
     grade = 'marginal'
-    reason = `Backup: doesn't beat ${characterName(best.ref.char)}'s current ${piece.slotKey}${forBuild(best.ref, activeBuilds)} (${num(best.expected)} vs ${num(best.bar ?? 0)})`
+    reason = `Backup: doesn't beat ${characterName(best.ref.char)}'s current${forBuild(best.ref, activeBuilds)} · ${num(best.expected)} vs ${num(best.bar ?? 0)}`
   } else if (best && best.gate !== 'fail') {
     grade = 'toss'
     const whose = `${characterName(best.ref.char)}'s`
     const spare = best.spare ? pieceById(best.spare) : undefined
-    reason = best.spare
-      ? `${pct(best.chance)} chance to beat ${whose} best spare${forBuild(best.ref, activeBuilds)}, a +20 ${spare ? `${setName(spare.setKey)} ` : ''}${piece.slotKey}, which already beats what they wear`
-      : `${pct(best.chance)} chance to beat ${whose} current ${piece.slotKey}${forBuild(best.ref, activeBuilds)}`
+    // A chance just under the minimum mustn't read as the minimum itself.
+    const short = (x: number) => (pct(x) === pct(settings.minUpgradeChance) ? `under ${pct(x)}` : pct(x))
+    if (best.floor !== undefined && best.chance >= settings.minUpgradeChance - 1e-9) {
+      // Likely enough to beat what they have, but not to end up a good piece: the leveling floor turned it away.
+      const typical = referenceValue(best.ref.build, piece.mainStatKey)
+      const theirs =
+        best.bar === null
+          ? 'nothing usable worn'
+          : `${pct(best.chance)} to beat ${best.spare ? 'spare' : 'current'} (${pct(best.bar / typical)})`
+      reason = `${short(best.floorChance!)} to reach ${pct(settings.levelFloor)} floor (${num(best.floor)}) for ${whoFor(best.ref, activeBuilds)} · ${theirs}`
+    } else {
+      // A spare of another set, for a build that runs this piece's set, only counts because they'd wear it off-set.
+      const label = spare && offSetOf(piece, best, spare) ? 'off-set:' : 'spare'
+      reason = best.spare
+        ? `${short(best.chance)} to beat ${whose} ${label}${spare ? ` +${spare.level} ${setName(spare.setKey)}` : ''}${forBuild(best.ref, activeBuilds)}`
+        : `${short(best.chance)} to beat ${whose} current${forBuild(best.ref, activeBuilds)}`
+    }
   } else if (best) {
     grade = 'toss'
     const who = whoFor(best.ref, activeBuilds)
@@ -667,11 +758,11 @@ function verdictFor(
       .map((s) => statShort(s.key))
     reason = best.rescore
       ? piece.level < 4
-        ? `Starting rolls too low: projected ${num(best.expected)} for ${who} with the 4th line +4 reveals (need ${num(best.rescore.bar)})`
-        : `Rolls fell short: projected ${num(best.expected)} for ${who} (need ${num(best.rescore.bar)})`
+        ? `Starting rolls low: ${num(best.expected)} / ${num(best.rescore.bar)} for ${who} (incl. +4 line)`
+        : `Rolls short: ${num(best.expected)} / ${num(best.rescore.bar)} for ${who}`
       : tooFewLines(best)
-        ? `Too few useful lines: only ${used.join(' + ')} is a stat ${who} uses (needs ${MIN_USEFUL_LINES})`
-        : `Subs too weak: best ${num(best.lineScore)} for ${who} (need ${num(best.threshold)})`
+        ? `${used.length} useful line${used.length === 1 ? '' : 's'} for ${who}${used.length ? ` (${used.join(' + ')})` : ''}, needs ${MIN_USEFUL_LINES}`
+        : `Subs weak: ${num(best.lineScore)} / ${num(best.threshold)} for ${who}`
   } else {
     grade = 'toss'
     reason = noFitReason(piece, settings, activeBuilds, config, setFor, offStanding)
@@ -713,13 +804,12 @@ function noFitReason(
   offStanding: (piece: Piece) => OffStanding | null,
 ): string {
   const set = setName(piece.setKey)
-  const slot = SLOT_LABEL[piece.slotKey].toLowerCase()
   // An off-set candidate only needs the main stat, so its absence means nobody wants that main stat at all.
   if (offSetAllowed(settings.offSet, piece)) return `No active character wants ${statShort(piece.mainStatKey)} ${slotPlural(piece.slotKey)}`
-  const standing = describeOffStanding(offStanding(piece), slot)
+  const standing = describeOffStanding(offStanding(piece))
   const users = activeBuilds.filter((ref) => matchSet(ref.build, piece.setKey, config, settings.setMatch))
   if (users.length && users.every((ref) => !setFor(ref, piece))) {
-    return `${set} users already wear a set they rank as high or higher${standing}`
+    return `${set} users wear a set ranked as high${standing}`
   }
   const usesSet = users.length > 0
   if (!usesSet || piece.slotKey === 'flower' || piece.slotKey === 'plume') {
@@ -743,14 +833,11 @@ export interface OffStanding {
   better: number
 }
 
-function describeOffStanding(s: OffStanding | null, slot: string): string {
+function describeOffStanding(s: OffStanding | null): string {
   if (!s) return ''
-  if (s.gain < 0.05) return ` · as an off-set ${slot} it wouldn't beat what anyone wears`
+  if (s.gain < 0.05) return ' · no off-set use'
   const name = characterName(s.char)
-  const who = s.build ? `${name}'s ${s.build} build` : name
-  const from = s.bar === null ? 'nothing usable' : num(s.bar)
-  const rest = s.better
-    ? `, but ${s.better} other spare${s.better === 1 ? '' : 's'} would gain ${s.build ? 'that build' : name} more`
-    : `, more than any other spare would: Settings → Off-set "Any" keeps it`
-  return ` · as an off-set ${slot}: +${num(s.gain)} for ${who} (${from} → ${num((s.bar ?? 0) + s.gain)})${rest}`
+  const who = s.build ? `${name} (${s.build})` : name
+  const rest = s.better ? `, ${s.better} spare${s.better === 1 ? '' : 's'} better` : ', best spare (Off-set: Any keeps it)'
+  return ` · off-set: +${num(s.gain)} for ${who}${rest}`
 }

@@ -1,15 +1,17 @@
 // Closest build: for one piece, which build is nearest to keeping it, and what in that build stands in the way.
 import { applyEdits, type BuildEdit, type MainSlot } from './builds'
-import { commitmentOf, judge, wornSets, type ActiveBuild, type Candidate } from './evaluate'
+import { commitmentOf, judge, keepChance, offSetSpare, wornSets, type ActiveBuild, type Candidate, type OffSetSpare } from './evaluate'
 import type { Piece } from './load'
 import { mainStatOk, matchSet, offSetAllowed } from './match'
+import { chanceToBeat, expectedFinal } from './projection'
 import type { ArtifactConfig, Settings } from './types'
 
 /**
  * Where a piece stands with a build:
  * - keep: kept for it;
  * - cut: passes every layer but the cap (or the off-set lane's cap);
- * - chance: passes the substats, but isn't likely enough to beat what the character wears;
+ * - chance: passes the substats, but isn't likely enough to beat what the character wears, or to finish past the
+ *   leveling floor (`Candidate.floor`);
  * - substats: fails the substat gate.
  */
 export type FitOutcome = 'keep' | 'cut' | 'chance' | 'substats'
@@ -119,6 +121,43 @@ export function bestOtherSpare(piece: Piece, pieces: Piece[], ref: ActiveBuild, 
     if (!best || c.expected > best.cand.expected) best = { piece: p, cand: c }
   }
   return best
+}
+
+/**
+ * A piece still to level measured against a finished spare (`Candidate.spare`), with what the character wears in that
+ * slot beside it: the spare alone hides that the piece may well beat what's worn, and when the spare is of another set
+ * though the build runs the piece's own, why they could wear it (`offSetSpare`).
+ */
+export interface SpareContext {
+  spare: Piece
+  /** What they wear in the slot, when it's usable for the build: its value, and the piece's chance to finish past it. */
+  worn: { piece: Piece; value: number; chance: number } | null
+  /** They'd wear the spare as their off-set piece, keeping a 4pc. */
+  offSet: OffSetSpare | null
+  /**
+   * They wear the piece's set: four or more of it, or two for a build that takes it for a 2pc pair. A build that runs
+   * the set while its character wears another is better shown what the piece does against what they wear now.
+   */
+  runsSet: boolean
+}
+
+/** The spare a candidate is measured against, with what's worn beside it (`SpareContext`). Null without a spare. */
+export function spareContext(piece: Piece, cand: Candidate, pieces: Piece[]): SpareContext | null {
+  const spare = cand.spare ? pieces.find((p) => p.id === cand.spare) : undefined
+  if (!spare) return null
+  const { ref } = cand
+  const theirs = pieces.filter((p) => p.owner === ref.char)
+  const eq = theirs.find((p) => p.slotKey === piece.slotKey)
+  const usable = eq && eq.rarity === 5 && mainStatOk(ref.build, eq) ? eq : null
+  const value = usable ? expectedFinal(usable, ref.build.substats) : null
+  const sets: Record<string, number> = {}
+  for (const p of theirs) sets[p.setKey] = (sets[p.setKey] ?? 0) + 1
+  return {
+    spare,
+    worn: usable && value !== null ? { piece: usable, value, chance: chanceToBeat(piece, ref.build.substats, value) } : null,
+    offSet: offSetSpare(piece, cand, spare, sets, eq?.setKey),
+    runsSet: (sets[piece.setKey] ?? 0) >= (cand.setMatch.kind === '2pc' ? 2 : 4),
+  }
 }
 
 /** The tier edits that make the piece's set count for the build, as the evaluation's set layer judges it. */
@@ -242,7 +281,7 @@ function nearness(f: BuildFit, settings: Settings): number {
   switch (f.outcome) {
     case 'keep':
     case 'chance':
-      return c.chance
+      return keepChance(c)
     case 'cut':
       // Places past the cap: the slot's, or its off-set lane's when it never reached the slot's pool.
       return c.rank !== undefined ? c.ref.cap - c.rank : settings.capOffSet - (c.offRank ?? Infinity)

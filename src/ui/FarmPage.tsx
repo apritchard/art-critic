@@ -45,7 +45,7 @@ function Now({ char, slot, value, worn }: { char: string; slot: SlotKey; value: 
   if (!p) return <span className="warn">empty</span>
   if (p.rarity !== 5) return <span className="warn">{p.rarity}★</span>
   return (
-    <span className="warn" title="The build doesn't list this main stat for the slot">
+    <span className="warn" title="Unlisted main stat">
       {statShort(p.mainStatKey)} main ✗
     </span>
   )
@@ -79,8 +79,8 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
   const [scope, setScope] = useLocal<FarmScope>('farm:for', 'building')
   const { plan, worn } = useFarmPlan(result, scope)
   const feedOrBox = useMemo(
-    () => (resource === 'fodder' ? planFeedOrBox(result, plan, data.materials, settings.minUpgradeChance) : null),
-    [resource, result, plan, data.materials, settings.minUpgradeChance],
+    () => (resource === 'fodder' ? planFeedOrBox(result, plan, data.materials, settings) : null),
+    [resource, result, plan, data.materials, settings],
   )
   const domainOf = useMemo(
     () => new Map((domains?.domains ?? []).flatMap((d) => d.sets.map((s) => [s, d.domain] as const))),
@@ -100,7 +100,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
           <button
             className={scope === 'building' ? 'on' : ''}
             onClick={() => setScope('building')}
-            title="Who you're building now: pin characters with 📌 in the Characters tab"
+            title="Pin with 📌 in Characters"
           >
             📌 Building ({buildingCount})
           </button>
@@ -112,29 +112,24 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
           </button>
         </div>
         {scope === 'building' && plan.scope !== 'building' && (
-          <span className="muted">
-            Nobody is on the Building list (📌 in the Characters tab), so{' '}
-            {plan.scope === 'priority' ? '★ Priority characters count' : 'everyone counts'}.
-          </span>
+          <span className="muted">No 📌 Building: ranking {plan.scope === 'priority' ? '★ Priority' : 'everyone'}</span>
         )}
         {scope === 'priority' && plan.scope === 'all' && (
-          <span className="warn">No ★ Priority characters yet (set them in Characters → Roster), so everyone counts.</span>
+          <span className="warn">No ★ Priority: ranking everyone</span>
         )}
       </div>
       <p className="sub-note">
-        Gains are in roll value: 1.0 ≈ one max roll of a stat the build fully wants. New pieces are measured against what
-        each character wears after the{' '}
+        Gains in rolls · after{' '}
         <a href={charactersHref('quick')}>
           {plan.swaps.length} free upgrade{plan.swaps.length === 1 ? '' : 's'}
-        </a>{' '}
-        in Characters → Quick wins.
+        </a>
       </p>
 
       {resource === 'resin' && (
         <>
           <Section
             title="Where to spend resin"
-            note={`Expected gain from ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, about ${resinDrops.toFixed(1)} five-star drops), summed over ${scopeLabel}. A domain splits its drops between its two sets. It's the per-drop gain times the drops, so slightly optimistic: a second upgrade to the same slot has to beat the first. Gains assume what each character wears now, so "Level first" flags pieces of those sets you already have to level for them.`}
+            note={`Gain per ${RESIN_SHOWN} resin (${RESIN_SHOWN / RESIN_PER_RUN} runs, ≈${resinDrops.toFixed(1)} 5★ drops, split between a domain's 2 sets), Σ ${scopeLabel}. Slightly optimistic. "Level first": pieces of those sets still to level.`}
           >
             {domains ? (
               <>
@@ -147,7 +142,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
                 />
                 {plan.noDomain.length > 0 && (
                   <p className="sub-note">
-                    Not from any domain (Strongbox or bosses only): {plan.noDomain.map(setName).join(', ')}.
+                    No domain: {plan.noDomain.map(setName).join(', ')}
                   </p>
                 )}
               </>
@@ -157,7 +152,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
           </Section>
           <Section
             title="Who gains most from new pieces"
-            note="Every active character, by expected gain from one piece of the set they should farm. Chance = how often that piece beats what they wear."
+            note="By gain per on-set drop. Chance = beats current."
           >
             <Beneficiaries rows={plan.characters} domainOf={domainOf} />
           </Section>
@@ -167,7 +162,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
       {resource === 'strongbox' && (
         <Section
           title="Strongbox"
-          note={`Expected gain from one full batch: ${STRONGBOX_BATCH * 3} five-star pieces in, ${STRONGBOX_BATCH} of the chosen set out. Summed over ${scopeLabel}. Strongbox pieces start with 4 lines more often (34% vs 20%). "Level first" flags pieces of the set you already have to level for those characters.`}
+          note={`Gain per batch (${STRONGBOX_BATCH * 3} 5★ in, ${STRONGBOX_BATCH} out), Σ ${scopeLabel}. 4-line odds 34% vs 20%.`}
         >
           <SourceTable
             rows={plan.strongbox}
@@ -178,7 +173,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
             describe={(s) => domainOf.get(s.key) ?? 'no domain'}
           />
           {plan.noStrongbox.length > 0 && (
-            <p className="sub-note">Not in the Strongbox yet: {plan.noStrongbox.map(setName).join(', ')}.</p>
+            <p className="sub-note">Not in Strongbox: {plan.noStrongbox.map(setName).join(', ')}</p>
           )}
           <StrongboxSets />
         </Section>
@@ -187,7 +182,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
       {resource === 'elixir' && (
         <Section
           title="Sanctifying Elixir"
-          note={`One craft per character, ranked per Elixir by what it adds beyond the drops ~${FARM_BUDGET_RUNS} domain runs would likely bring. Easy slots (flower, plume, ATK% sands) rarely win. Assumes 4 starting lines and at least 2 upgrades on the chosen lines; check the set is craftable.`}
+          note={`Per Elixir, beyond ~${FARM_BUDGET_RUNS} runs of drops. Assumes 4 lines, ≥ 2 upgrades on chosen lines.`}
         >
           <Elixirs picks={plan.elixirs} worn={worn} />
         </Section>
@@ -196,7 +191,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
       {resource === 'fodder' && feedOrBox && (
         <Section
           title="Feed or box"
-          note={`Whether the +0 pieces marked to unlock do more as EXP for the To level queue or as Strongbox input, for ${scopeLabel}. A crafted piece has to be leveled too, so both are compared by expected gain per EXP, counting a craft's ${CRAFT_INPUTS} pieces as the EXP they'd give. Pieces past +0 marked to unlock are always fed: they carry the EXP spent on them.`}
+          note={`+0 unlocks as queue EXP vs Strongbox input, by gain per EXP (a craft's ${CRAFT_INPUTS} pieces count as their EXP), for ${scopeLabel}. Leveled unlocks always feed.`}
         >
           <FeedOrBoxPanel f={feedOrBox} />
         </Section>
@@ -206,7 +201,7 @@ export function FarmPage({ result, resource }: { result: EvaluationResult; resou
         <Section
           title="Best pieces to level"
           count={feedOrBox.queue.count}
-          note={`The To level queue's unequipped pieces for ${scopeLabel}, best expected gain per EXP first: the order the split above spends EXP on them. Each is leveled for the build it gains most and costs the EXP it's likely to take under the app's rule: level to the next stop, and carry on only while it can still beat the best that character has and, when your EXP can't cover the whole queue, while that's worth its EXP at what EXP brings elsewhere. A piece dropped part way gives back 80% of the EXP put into it when fed, so its EXP is counted net of that, and the gain counts only what a finished piece brings. Pieces above the line are what your EXP on hand pays for. Tick one once you've leveled it to its next stop; L does the same in the Artifacts grid.`}
+          note={`Queue for ${scopeLabel} by gain per EXP; line = where EXP on hand runs out; EXP net of 80% refund.`}
         >
           <LevelQueue queue={feedOrBox.queue} />
         </Section>
@@ -234,17 +229,17 @@ export function QuickWins({ result }: { result: EvaluationResult }) {
     <div className="page farm">
       <Section
         title="Free upgrades"
-        note="Spare +20s that beat what someone wears without breaking a set bonus or dropping their Energy Recharge below their build's minimum. 📌 Building characters come first and get first pick of a spare two people want, then ★ Priority characters, then everyone else, biggest gain first. Tick one once you've equipped it in-game: every tab then treats it as worn until your next export."
+        note="Spare +20s that beat current, keeping set bonuses and ER minimum. 📌 then ★ pick first. Tick once equipped."
         count={plan.swaps.length}
       >
         <EquipLog />
         <Swaps swaps={plan.swaps} worn={worn} equip={(s) => equip(s.piece.id, s.char)} />
         {plan.erHeld > 0 && (
           <p className="sub-note">
-            {plan.erHeld} more held back: they&apos;d take someone below their build&apos;s ER minimum (set in Builds).
+            {plan.erHeld} held back: below ER minimum
           </p>
         )}
-        {!er && <p className="sub-note warn">No weapon data (data/game-data.json), so ER isn&apos;t checked.</p>}
+        {!er && <p className="sub-note warn">No weapon data: ER not checked</p>}
       </Section>
     </div>
   )
@@ -258,15 +253,15 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
   const { done, toggleDone } = useStore()
   const { pieces, funded } = queue
   const [shown, more] = useMore(pieces, 15)
-  if (!pieces.length) return <p className="sub-note">Nothing in the queue gains these characters anything.</p>
+  if (!pieces.length) return <p className="sub-note">Nothing to level for them</p>
   return (
     <>
       <p className="sub-note">
         {funded === pieces.length
-          ? `Your EXP on hand pays for all ${pieces.length}.`
+          ? `EXP covers all ${pieces.length}`
           : funded > 0
-            ? `Your EXP on hand pays for the first ${funded} (about ${expText(queue.fundedExp)}); the other ${pieces.length - funded} wait for more.`
-            : "Your EXP on hand doesn't reach any of them: the split above spends it on Strongbox crafts first, or there's none."}
+            ? `EXP covers ${funded} of ${pieces.length} (${expText(queue.fundedExp)})`
+            : 'EXP covers none (crafts first, or none on hand)'}
       </p>
       <table className="farm-table level-queue">
         <thead>
@@ -274,14 +269,14 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
             <th />
             <th>Piece</th>
             <th>For</th>
-            <th title="Chance it ends up beating the best they have, once it reaches +20">Chance</th>
-            <th className="num" title="Average improvement once finished, counting a miss or a piece dropped part way as 0">
+            <th title="vs best they have, at +20">Chance</th>
+            <th className="num" title="Miss or drop = 0">
               Gain
             </th>
-            <th className="num" title="EXP it's likely to take before it's finished or dropped, less the 80% a piece dropped part way gives back when fed">
+            <th className="num" title="Likely EXP, net of 80% refund">
               EXP
             </th>
-            <th className="num" title="Expected gain per 100k EXP: what the list is ranked by">
+            <th className="num" title="Gain per 100k EXP (ranked by)">
               Per 100k
             </th>
           </tr>
@@ -293,7 +288,7 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
               <Fragment key={q.piece.id}>
                 {i === funded && funded > 0 && (
                   <tr className="budget-line">
-                    <td colSpan={7}>Your EXP on hand runs out here: the pieces below wait for more.</td>
+                    <td colSpan={7}>EXP on hand runs out</td>
                   </tr>
                 )}
                 <tr className={[leveled ? 'done' : '', q.funded ? '' : 'unfunded'].filter(Boolean).join(' ')}>
@@ -301,7 +296,7 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
                     <button
                       className={`tick${leveled ? ' on' : ''}`}
                       onClick={() => toggleDone(`lvl:${q.piece.id}`)}
-                      title={leveled ? 'Marked leveled: click to undo' : `Leveled it to +${nextStop(q.piece)} in-game`}
+                      title={leveled ? 'Leveled: click to undo' : `Mark leveled to +${nextStop(q.piece)}`}
                     >
                       ✓
                     </button>
@@ -310,7 +305,7 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
                     <span title={SLOT_LABEL[q.piece.slotKey]}>{SLOT_ICON[q.piece.slotKey]}</span> {setName(q.piece.setKey)} ·{' '}
                     <b>{statShort(q.piece.mainStatKey)}</b> · +{q.piece.level} → <b>+{nextStop(q.piece)}</b>
                     <div className="sub-note">{shortSubs(q.piece)}</div>
-                    <a className="link find" href={inventoryHref(q.piece.id)} title="Show it in the Artifacts grid, outlined, to find it in-game">
+                    <a className="link find" href={inventoryHref(q.piece.id)} title="Show in grid">
                       find in grid
                     </a>
                   </td>
@@ -344,7 +339,7 @@ const BAR_SPAN = 3
 
 /** Where the +0 tosses do more, as a marker between feeding and boxing, and how many of each. */
 function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
-  if (!f.tosses) return <p className="sub-note">No +0 pieces are marked to unlock, so there&apos;s nothing to feed or box.</p>
+  if (!f.tosses) return <p className="sub-note">No +0s marked to unlock</p>
   const times = (r: number) => (r >= 10 ? `${Math.round(r)}` : r.toFixed(1))
   const { ratio } = f
   const lean = Math.min(BAR_SPAN, Math.max(-BAR_SPAN, Math.log2(Math.max(ratio, 2 ** -BAR_SPAN))))
@@ -362,14 +357,12 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
   const align = pos < 12 ? 'start' : pos > 88 ? 'end' : ''
   const title = [
     f.bestCraft
-      ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)} rolls per 100k EXP (its ${CRAFT_INPUTS} pieces count as the ${expText(CRAFT_INPUTS * FEED_EXP)} EXP they'd give, and leveling what comes out takes ${expText(f.bestCraft.levelExp)} on average, since most are dropped at +0 or their first stop).`
+      ? `Best craft: ${setName(f.bestCraft.set)}, ${per100k(f.bestCraft.rate)}/100k EXP (inputs ${expText(CRAFT_INPUTS * FEED_EXP)} + ≈${expText(f.bestCraft.levelExp)} to level)`
       : f.tosses < CRAFT_INPUTS
-        ? `Too few +0s for a Strongbox craft, which takes ${CRAFT_INPUTS}.`
-        : `No Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces.`,
-    f.price > 0
-      ? `The best use your EXP can't pay for: ${per100k(f.price)} rolls per 100k EXP.`
-      : 'Your EXP covers everything worth leveling.',
-  ].join(' ')
+        ? `Craft needs ${CRAFT_INPUTS} +0s`
+        : `No craft worth ${CRAFT_INPUTS} pieces`,
+    f.price > 0 ? `Best unfunded: ${per100k(f.price)}/100k EXP` : 'EXP covers everything',
+  ].join(' · ')
   const crafts = f.box / CRAFT_INPUTS
   const sets = f.crafts.map((c) => `${c.count} ${setName(c.set)}`).join(', ')
   return (
@@ -395,34 +388,28 @@ function FeedOrBoxPanel({ f }: { f: FeedOrBox }) {
                 , then feed the other <b>{f.feed.toLocaleString()}</b>
               </>
             )}
-            .{' '}
-            {f.feed >= CRAFT_INPUTS &&
-              (f.price > 0
-                ? 'Past that, a craft gains less than the EXP it would take from the To level queue.'
-                : 'Past that, more crafts would add almost nothing.')}
+            {f.feed >= CRAFT_INPUTS && (f.price > 0 ? ' · more crafts gain less than queue EXP' : ' · more crafts add ~nothing')}
           </>
         ) : (
           <>
             Feed all <b>{f.tosses.toLocaleString()}</b>:{' '}
             {f.tosses < CRAFT_INPUTS
-              ? `a Strongbox craft takes ${CRAFT_INPUTS}.`
+              ? `craft needs ${CRAFT_INPUTS}`
               : !f.bestCraft
-                ? `no Strongbox craft would add enough to be worth its ${CRAFT_INPUTS} pieces${f.price > 0 ? '' : ', and your EXP already covers everything worth leveling'}.`
+                ? `no craft worth ${CRAFT_INPUTS} pieces`
                 : ratio < 1
-                  ? `even the best craft, ${setName(f.bestCraft.set)}, gains less per EXP than the To level queue.`
-                  : `the best craft, ${setName(f.bestCraft.set)}, would do about as well per EXP as the To level queue, but your EXP runs out first.`}
+                  ? `best craft (${setName(f.bestCraft.set)}) < queue per EXP`
+                  : `best craft (${setName(f.bestCraft.set)}) ≈ queue, but EXP runs out first`}
           </>
         )}
       </p>
       <p className="sub-note">
-        EXP on hand: {f.materials === null ? 'materials aren’t in this export, so they’re not counted' : `${expText(f.materials)} in materials`},{' '}
-        {expText(f.leveled.exp)} from {f.leveled.count} leveled piece{f.leveled.count === 1 ? '' : 's'} marked to unlock, and{' '}
-        {expText(f.tosses * FEED_EXP)} if every +0 is fed.
-        {f.committed > 0 && ` Finishing equipped pieces takes ${expText(f.committed)} of it first.`} The To level queue&apos;s{' '}
-        {f.queue.count} pieces would take about {expText(f.queue.exp)} to play out (net of what dropped pieces give back)
+        EXP: {f.materials === null ? 'materials not in export' : `${expText(f.materials)} materials`} +{' '}
+        {expText(f.leveled.exp)} leveled unlocks + {expText(f.tosses * FEED_EXP)} +0s
+        {f.committed > 0 && ` · ${expText(f.committed)} to equipped first`} · queue of {f.queue.count} ≈ {expText(f.queue.exp)},{' '}
         {f.queue.funded < f.queue.count
-          ? `; this split pays for the ${f.queue.funded} that gain most per EXP (${expText(f.queue.fundedExp)}).`
-          : `, and this split pays for all of them${f.left >= 1000 ? `, with ${expText(f.left)} to spare` : ''}.`}
+          ? `split covers ${f.queue.funded} (${expText(f.queue.fundedExp)})`
+          : `split covers all${f.left >= 1000 ? `, ${expText(f.left)} spare` : ''}`}
       </p>
     </div>
   )
@@ -476,7 +463,7 @@ export function EquipLog({ char }: { char?: string }) {
   if (!list.length) return null
   return (
     <div className="equip-log">
-      <span className="muted">Equipped since this export (counted as worn until your next export):</span>
+      <span className="muted">Equipped since export (worn until next):</span>
       {list.map(({ e, at, p, was }) => {
         if (!p) return null
         return (
@@ -511,7 +498,7 @@ function Swaps({ swaps, worn, equip }: { swaps: Swap[]; worn: WornAt; equip: (s:
             <th />
             <th>Character</th>
             <th>Spare</th>
-            <th title="Substat value of the worn piece → the spare, for this character's build. Where their total ER is known, ER lines are left out here and the change in the total is counted below.">
+            <th title="Worn → spare value (ER counted as total change)">
               Now → spare
             </th>
           </tr>
@@ -521,7 +508,7 @@ function Swaps({ swaps, worn, equip }: { swaps: Swap[]; worn: WornAt; equip: (s:
             return (
               <tr key={s.piece.id}>
                 <td>
-                  <button className="tick" onClick={() => equip(s)} title="Equipped it in-game: treat it as worn from now on">
+                  <button className="tick" onClick={() => equip(s)} title="Counted as worn until next export">
                     ✓
                   </button>
                 </td>
@@ -534,7 +521,7 @@ function Swaps({ swaps, worn, equip }: { swaps: Swap[]; worn: WornAt; equip: (s:
                   <b>{statShort(s.piece.mainStatKey)}</b>
                   <div className="sub-note">{shortSubs(s.piece)}</div>
                   {s.mainFrom && (
-                    <div className="sub-note warn" title="Scores compare substats only, so this trade isn't weighed: check it in-game">
+                    <div className="sub-note warn" title="Main stat not scored">
                       Main stat changes: {statShort(s.mainFrom)} → {statShort(s.piece.mainStatKey)}
                     </div>
                   )}
@@ -731,9 +718,9 @@ function Elixirs({ picks, worn }: { picks: ElixirPick[]; worn: WornAt }) {
           <tr>
             <th>Character</th>
             <th>Craft</th>
-            <th title="Value of what they wear in that slot now">Now</th>
-            <th title="Expected gain once leveled to +20, and the chance it beats what they wear">Gain</th>
-            <th title={`Domain runs it takes on average to expect as big an upgrade in this slot (${FARM_BUDGET_RUNS} runs' worth is credited to farming)`}>
+            <th title="Current value">Now</th>
+            <th title="+20 gain · chance vs current">Gain</th>
+            <th title={`Runs for as big an upgrade (${FARM_BUDGET_RUNS} credited to farming)`}>
               Farming instead
             </th>
             <th title="Elixirs per craft">Cost</th>
@@ -804,8 +791,8 @@ function Beneficiaries({ rows, domainOf }: { rows: CharacterFarm[]; domainOf: Ma
           <tr>
             <th>Character</th>
             <th>Wears</th>
-            <th title="Chance one on-set domain piece beats what they wear">Chance</th>
-            <th title="Expected gain per on-set domain piece">Gain</th>
+            <th title="Per on-set drop, vs current">Chance</th>
+            <th title="Per on-set drop">Gain</th>
             <th title="Where that gain comes from">Weak spots</th>
             <th>Farm</th>
           </tr>
@@ -850,7 +837,7 @@ export function TradeNote({ trade }: { trade: SetTrade | null | undefined }) {
   if (!trade?.lost.length) return null
   const list = (bonuses: SetTrade['lost']) => bonuses.map((b) => `${setName(b.set)} ${b.pieces}pc`).join(' and the ')
   return (
-    <div className="sub-note" title="Still a set combination this build lists (Builds tab)">
+    <div className="sub-note" title="Listed set combo">
       {trade.gained.length
         ? `Trades the ${list(trade.lost)} for the ${list(trade.gained)}`
         : `Gives up the ${list(trade.lost)}, which this build doesn't need`}
@@ -861,7 +848,7 @@ export function TradeNote({ trade }: { trade: SetTrade | null | undefined }) {
 /** The part of a gain that comes from the change in the character's total ER (see erChangeValue). */
 export function ErGainNote({ gain, er }: { gain: number; er: ErTotals | null | undefined }) {
   if (Math.abs(gain) < 0.05 || er?.cap == null) return null
-  const title = "ER counts at the build's ER weight up to its target (6.48% = one max roll) and nothing past it"
+  const title = 'ER weighted up to target (6.48% = 1 roll), 0 past it'
   return gain > 0 ? (
     <div className="sub-note good" title={title}>
       +{gain.toFixed(1)} for ER toward {er.cap}%
@@ -886,7 +873,7 @@ export function ErChange({ er, approx }: { er: ErTotals | null; approx?: boolean
   // Red when it takes them (further) below their build's minimum.
   const short = er.need !== null && er.to < er.need && er.to < er.from
   return (
-    <div className={`sub-note${short ? ' warn' : ''}`} title="Total Energy Recharge: base, ascension, weapon, artifacts and 2pc bonuses">
+    <div className={`sub-note${short ? ' warn' : ''}`} title="Total ER">
       ER {er.from.toFixed(0)}% → {approx && '~'}
       {er.to.toFixed(0)}%{er.need !== null && <span className="muted"> (needs {erTargetText(er.need, er.cap ?? null)})</span>}
     </div>
@@ -897,7 +884,7 @@ export function ErChange({ er, approx }: { er: ErTotals | null; approx?: boolean
 function CharName({ c }: { c: { char: string; ref: { priority: string; building?: boolean } } }) {
   return (
     <span className="char-name">
-      <a className="char-link" href={charactersHref({ char: c.char })} title="Every way to improve their pieces">
+      <a className="char-link" href={charactersHref({ char: c.char })} title="Improve">
         {characterName(c.char)}
       </a>
       {marks(c.ref)}
@@ -945,7 +932,7 @@ function WeakSpots({ c }: { c: CharacterFarm }) {
         <span
           key={s}
           className="spot"
-          title={`${SLOT_LABEL[s]}: ${pct(c.odds.slots[s].gain / c.odds.gain)} of the gain${c.bars[s] === null ? '. Nothing usable worn there (empty, 4★ or wrong main stat)' : ''}`}
+          title={`${SLOT_LABEL[s]}: ${pct(c.odds.slots[s].gain / c.odds.gain)} of gain${c.bars[s] === null ? ' · nothing usable worn' : ''}`}
         >
           {SLOT_ICON[s]} {pct(c.odds.slots[s].gain / c.odds.gain)}
           {c.bars[s] === null && <span className="warn"> (none)</span>}

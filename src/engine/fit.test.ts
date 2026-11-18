@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { applyEdits } from './builds'
 import { defaultSettings, evaluate } from './evaluate'
-import { bestOtherSpare, fitPiece, piecesAhead, type BuildFit } from './fit'
+import { bestOtherSpare, fitPiece, piecesAhead, spareContext, type BuildFit } from './fit'
 import { loadPieces } from './load'
 import { mainStatOk } from './match'
 import type { ArtifactConfig, BuildConfig, GoodArtifact, GoodCharacter, Settings } from './types'
@@ -141,7 +141,7 @@ describe('closest build', () => {
   it('drops a tier-1 worn set to tier 2 so another set can outrank it', () => {
     const piece = art({ setKey: 'ShimenawasReminiscence' })
     const { ev, fits, after } = setup({ Diluc: [build()] }, [...wornSet('GladiatorsFinale', 'Diluc'), piece])
-    expect(ev.reason).toMatch(/already wear a set they rank as high/)
+    expect(ev.reason).toMatch(/users wear a set ranked as high/)
     expect(fits[0]).toMatchObject({
       setIssue: 'worn',
       worn: { set: 'GladiatorsFinale', tier: 1 },
@@ -298,6 +298,41 @@ describe('closest build', () => {
     expect(bestOtherSpare(pieces[6], pieces, ref, cfg, settings)).toBeNull()
     // As an off-set flower, the Scarlet Proof one is judged as if the off-set slot moved there: the other is its rival.
     expect(bestOtherSpare(pieces[5], pieces, ref, cfg, settings)?.piece.id).toBe(pieces[6].id)
+  })
+
+  it("shows what's worn beside the spare, and why a spare of another set counts for a build on the piece's set", () => {
+    const strong = [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 21 }, { key: 'atk_', value: 5.8 }, { key: 'hp', value: 299 }]
+    const weak = [{ key: 'def', value: 23 }, { key: 'hp', value: 299 }, { key: 'atk_', value: 5.8 }, { key: 'critRate_', value: 3.1 }]
+    // A Gladiator's Finale flower still to level, its average between what Diluc wears and the spare.
+    const piece = art({ setKey: 'GladiatorsFinale', substats: [{ key: 'critRate_', value: 3.9 }, { key: 'critDMG_', value: 7.8 }, { key: 'atk_', value: 5.8 }, { key: 'def', value: 23 }] })
+    const run = (flowerSet: string, spareSet: string, pieceSet = 'GladiatorsFinale') => {
+      const worn = [...wornSet('GladiatorsFinale', 'Diluc'), art({ setKey: flowerSet, location: 'Diluc', level: 20, substats: weak })]
+      const spare = art({ setKey: spareSet, level: 20, totalRolls: 9, substats: strong })
+      const { fits, pieces } = setup({ Diluc: [build()] }, [...worn, spare, { ...piece, setKey: pieceSet }], { offSet: 'any' })
+      const fit = fits.find((f) => f.ref.char === 'Diluc')!
+      expect(fit.cand.spare).toBe(pieces[5].id)
+      return { ctx: spareContext(pieces[6], fit.cand, pieces)!, fit, pieces }
+    }
+
+    // He wears all five Gladiator's Finale pieces, so a Scarlet Proof spare can go on off-set.
+    const five = run('GladiatorsFinale', 'ScarletProof')
+    expect(five.ctx.offSet).toEqual({ set: 'GladiatorsFinale', why: 'five' })
+    expect(five.ctx.worn?.piece.id).toBe(five.pieces[4].id)
+    // Far likelier to beat the weak flower he wears than the spare.
+    expect(five.ctx.worn!.chance).toBeGreaterThan(five.fit.cand.chance)
+    // His flower is his off-set piece already.
+    expect(run('ScarletProof', 'ScarletProof').ctx.offSet).toEqual({ set: 'GladiatorsFinale', why: 'slot' })
+    // A spare of the piece's own set needs no explaining.
+    expect(run('GladiatorsFinale', 'GladiatorsFinale').ctx.offSet).toBeNull()
+    expect(five.ctx.runsSet).toBe(true)
+
+    // The build runs Shimenawa's Reminiscence, but he wears Gladiator's Finale, which outranks it: it counts only as his
+    // off-set piece, up against the spare, and he doesn't wear its set.
+    const other = run('GladiatorsFinale', 'ScarletProof', 'ShimenawasReminiscence')
+    expect(other.fit.onSet).toBe(true)
+    expect(other.fit.sidelined?.issue).toBe('worn')
+    expect(other.ctx.runsSet).toBe(false)
+    expect(other.ctx.worn?.piece.setKey).toBe('GladiatorsFinale')
   })
 
   it('judges builds that are switched off when no evaluation is passed', () => {

@@ -17,9 +17,9 @@ import { RosterPage } from './RosterPage'
 import { charactersHref, replaceHash, type CharactersRoute, type CharactersView } from './routes'
 
 const VIEW_LABEL: Record<CharactersView, { label: string; title: string }> = {
-  board: { label: 'Board', title: 'Everyone at a glance: weak slots, and the free swaps, rerolls and pieces to level waiting for them' },
-  quick: { label: 'Quick wins', title: 'Free upgrades: spare +20s to equip now' },
-  roster: { label: 'Roster', title: 'Who counts (★ Priority, Normal, Ignore) and which builds they run' },
+  board: { label: 'Board', title: 'Weak slots and fixes waiting' },
+  quick: { label: 'Quick wins', title: 'Spare +20s to equip now' },
+  roster: { label: 'Roster', title: 'Who counts, which builds' },
 }
 
 /**
@@ -83,11 +83,11 @@ const pct = (q: number) => `${Math.round(q * 100)}%`
 
 type BoardSort = 'min' | 'avg' | 'free' | 'new' | 'name'
 const SORT_LABEL: Record<BoardSort, { label: string; title: string }> = {
-  min: { label: 'Weakest slot', title: 'Lowest-rated slot first: who is least built' },
-  avg: { label: 'Average', title: 'Lowest average of the five slots first (an empty or unusable slot counts as 0%)' },
-  free: { label: 'Free gain', title: 'Most to gain from free upgrades first: spares to equip now' },
-  new: { label: 'New piece', title: 'Most to gain from one new on-set piece first: who to farm for' },
-  name: { label: 'Name', title: 'A to Z (📌 Building first, and ★ Priority first while "★ first" is ticked)' },
+  min: { label: 'Weakest slot', title: 'Lowest slot first' },
+  avg: { label: 'Average', title: 'Lowest average first (empty = 0%)' },
+  free: { label: 'Free gain', title: 'Most free-swap gain first' },
+  new: { label: 'New piece', title: 'Most gain per on-set drop first' },
+  name: { label: 'Name', title: 'A to Z' },
 }
 
 const hasFix = (r: BoardRow) => SLOTS.some((s) => r.fixes[s].swap || r.fixes[s].reroll || r.fixes[s].level)
@@ -139,16 +139,9 @@ function Board({ result }: { result: EvaluationResult }) {
     <div className="page board">
       <Info id="board" heading={<h2>Who needs help</h2>}>
         <p>
-          Each slot shows how good the piece worn there is for the build they wear: 100% is a typical well-rolled +20
-          with that main stat. Red slots are where a new piece helps most; – is empty, a 4★ piece, or a main stat the
-          build doesn&apos;t list.
-        </p>
-        <p>
-          Under a slot, <span className="fix swap">⇄</span> is a free upgrade to equip now (a spare +20, see Quick wins),{' '}
-          <span className="fix reroll">⟳</span> a Dust reroll worth half a roll or more (of the worn piece or a spare), and{' '}
-          <span className="fix level">⬆</span> a piece to level worth half a roll or more once finished. Hover a slot for
-          what they are. <b>Free gain</b> sums the free upgrades; <b>New piece</b> is the expected gain from one on-set
-          domain piece, as on the Spend tab. Click a character for every option slot by slot.
+          Slot % = worn vs typical good +20 (– empty / 4★ / unlisted main). <span className="fix swap">⇄</span> free swap ·{' '}
+          <span className="fix reroll">⟳</span> reroll ≥ 0.5 · <span className="fix level">⬆</span> level ≥ 0.5. <b>Free gain</b>{' '}
+          = Σ swaps; <b>New piece</b> = gain per on-set drop.
         </p>
       </Info>
       <div className="roster-tools">
@@ -161,10 +154,10 @@ function Board({ result }: { result: EvaluationResult }) {
             </button>
           ))}
         </div>
-        <label className="check" title="★ Priority characters before the rest (📌 Building ones always come first)">
+        <label className="check" title="★ Priority before the rest">
           <input type="checkbox" checked={starFirst} onChange={(e) => setStarFirst(e.target.checked)} /> ★ first
         </label>
-        <label className="check" title="Only characters with a free swap, reroll or piece to level waiting">
+        <label className="check" title="Only rows with ⇄, ⟳ or ⬆">
           <input type="checkbox" checked={onlyFixes} onChange={(e) => setOnlyFixes(e.target.checked)} /> With a fix waiting
         </label>
         <span className="muted">
@@ -219,7 +212,7 @@ function BoardLine({ r, multi }: { r: BoardRow; multi: boolean }) {
         <div className="sub-note">
           {multi && r.ref && <>{r.ref.build.name} · </>}
           {r.er !== null && (
-            <span className={under ? 'warn' : ''} title="Total Energy Recharge as worn, against the build's ER target">
+            <span className={under ? 'warn' : ''} title="Worn ER vs target">
               ER {r.er.toFixed(0)}%{r.need !== null && (under ? ` (needs ${erTargetText(r.need, r.cap)})` : '')}
             </span>
           )}
@@ -238,13 +231,13 @@ function BoardLine({ r, multi }: { r: BoardRow; multi: boolean }) {
 function SlotCell({ slot, rating, fixes }: { slot: SlotKey; rating: number | null; fixes: SlotFixes }) {
   const { swap, reroll, level } = fixes
   const lines = [
-    `${SLOT_LABEL[slot]}: ${rating === null ? 'nothing usable worn' : `${pct(rating)} of a typical good piece`}`,
+    `${SLOT_LABEL[slot]}: ${rating === null ? 'nothing usable worn' : pct(rating)}`,
     swap &&
-      `⇄ Equip the spare ${setName(swap.piece.setKey)} ${statShort(swap.piece.mainStatKey)}: +${swapGain(swap).toFixed(1)}${swap.mainFrom ? ` (main stat changes from ${statShort(swap.mainFrom)})` : ''}`,
+      `⇄ Equip ${setName(swap.piece.setKey)} ${statShort(swap.piece.mainStatKey)}: +${swapGain(swap).toFixed(1)}${swap.mainFrom ? ` (main ${statShort(swap.mainFrom)} →)` : ''}`,
     reroll &&
-      `⟳ Reroll ${reroll.spare ? `the spare ${setName(reroll.piece.setKey)} ${statShort(reroll.piece.mainStatKey)}` : 'the worn piece'}, picking ${reroll.chosen.map(statShort).join(' + ')}: +${reroll.gain.toFixed(2)} on average, ${Math.round(reroll.chance * 100)}% to come out better`,
+      `⟳ Reroll ${reroll.spare ? `spare ${setName(reroll.piece.setKey)} ${statShort(reroll.piece.mainStatKey)}` : 'worn'} (${reroll.chosen.map(statShort).join(' + ')}): +${reroll.gain.toFixed(2)}, ${Math.round(reroll.chance * 100)}%`,
     level &&
-      `⬆ Level the ${setName(level.piece.setKey)} ${statShort(level.piece.mainStatKey)} +${level.piece.level}: +${level.gain.toFixed(2)} expected once finished, ${Math.round(level.chance * 100)}% to beat the best they have`,
+      `⬆ Level ${setName(level.piece.setKey)} ${statShort(level.piece.mainStatKey)} +${level.piece.level}: +${level.gain.toFixed(2)}, ${Math.round(level.chance * 100)}%`,
   ].filter(Boolean)
   return (
     <td className={`qcell ${qualityClass(rating)}`} title={lines.join('\n')}>

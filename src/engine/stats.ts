@@ -86,9 +86,8 @@ export const SLOT_LABEL: Record<SlotKey, string> = {
 /** "flowers", "sands": a slot's pieces in running text. */
 export const slotPlural = (slot: SlotKey) => (slot === 'sands' ? 'sands' : `${SLOT_LABEL[slot].toLowerCase()}s`)
 
-/** What a cap of `n` means in a reason: "only the top 3 are kept". Settings' slider tops out at 99 for no cap. */
-export const onlyTopKept = (n: number) =>
-  !Number.isFinite(n) || n >= 99 ? 'every one is kept' : n === 1 ? 'only the best one is kept' : `only the top ${n} are kept`
+/** What a cap of `n` means in a reason: "top 3 kept". Settings' slider tops out at 99 for no cap. */
+export const topKept = (n: number) => (!Number.isFinite(n) || n >= 99 ? 'no cap' : `top ${n} kept`)
 
 const SET_NAMES: Record<string, string> = {
   ADayCarvedFromRisingWinds: 'A Day Carved From Rising Winds',

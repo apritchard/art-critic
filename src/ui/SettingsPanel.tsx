@@ -6,21 +6,21 @@ import { useStore } from '../state/store'
 const UNLIMITED = 99
 
 const SET_MATCH: Record<SetMatchMode, { label: string; help: string }> = {
-  '4pc-t12': { label: '4pc sets, tier 1–2', help: "A piece counts for a character only if its set is one of their best or good 4pc sets." },
-  '4pc-all': { label: '4pc sets, all tiers', help: 'Also counts tier-3 fallback sets.' },
+  '4pc-t12': { label: '4pc sets, tier 1–2', help: 'Tier 1–2 4pc sets count.' },
+  '4pc-all': { label: '4pc sets, all tiers', help: 'Also tier-3 fallbacks.' },
   config: {
     label: 'Config rule (4pc + 2pc)',
-    help: "Also counts sets whose 2pc fits one of the build's 2-piece pairs, such as any HP +20% set for Nilou. Only a few builds list pairs by default.",
+    help: "Also sets whose 2pc fits one of the build's 2-piece pairs.",
   },
 }
 
 const OFF_SET: Record<OffSetMode, { label: string; help: string }> = {
-  off: { label: 'Off', help: 'Only pieces from the build’s own sets count.' },
+  off: { label: 'Off', help: 'Only the build’s own sets count.' },
   rare: {
     label: 'Rare main stats',
-    help: 'Elemental/Physical DMG, EM and Healing goblets, CRIT, EM and Healing circlets, ER and EM sands: the slots where the right main stat is hard to get.',
+    help: 'DMG/EM/Healing goblets, CRIT/EM/Healing circlets, ER/EM sands.',
   },
-  any: { label: 'Any slot', help: 'Any piece with an acceptable main stat can be the off-set piece. Slower and keeps more.' },
+  any: { label: 'Any slot', help: 'Any acceptable main stat. Keeps more.' },
 }
 
 export function SettingsPanel({ result }: { result: EvaluationResult }) {
@@ -76,15 +76,12 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
           <input type="checkbox" checked={settings.commitToWornSet} onChange={(e) => set('commitToWornSet')(e.target.checked)} /> Stick to
           the set a character wears
         </label>
-        <p className="hint">
-          Once someone wears one of their 4pc sets, another set&apos;s pieces only count for them if it&apos;s ranked a better
-          tier (worth switching to). Equal or lower tiers can still fill their off-set slot.
-        </p>
+        <p className="hint">Once a 4pc is worn, other sets count only if ranked better; lower tiers can still go off-set.</p>
       </Field>
 
       <Field
         title="Off-set pieces"
-        help="A 4pc build has one free slot, so a piece from any set can earn its place there. It still has to pass the substat and upgrade checks, and each build keeps only its best few off-set candidates in each slot, ranked by gain over what it wears there."
+        help="Any set can fill a 4pc build's free slot; best few per slot kept, by gain over current."
       >
         <div className="seg">
           {(Object.keys(OFF_SET) as OffSetMode[]).map((m) => (
@@ -101,45 +98,34 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
 
       <Field
         title="2 · Substat thresholds"
-        help="Sum of the build's weights over the starting lines (CRIT Rate and CRIT DMG are 1.0 each). Pieces past +0 are re-scored on their projected value instead."
+        help="Σ weights over starting lines (CR, CD = 1.0 each). Past +0: projected value."
       >
         <Slider label="4-line drop" value={settings.threshold4Line} min={1} max={3} step={0.05} onChange={set('threshold4Line')} fmt={(v) => v.toFixed(2)} />
         <Slider label="3-line drop" value={settings.threshold3Line} min={1} max={3} step={0.05} onChange={set('threshold3Line')} fmt={(v) => v.toFixed(2)} />
         <label className="check">
           <input type="checkbox" checked={settings.critCircletRule} onChange={(e) => set('critCircletRule')(e.target.checked)} /> Always
-          level CRIT circlets with the other CRIT stat as a line
+          level CRIT circlets with the other CRIT line
         </label>
         <label className="check">
           <input type="checkbox" checked={settings.scaleForMainStat} onChange={(e) => set('scaleForMainStat')(e.target.checked)} />{' '}
           Scale for the main stat
         </label>
-        <p className="hint">
-          A piece can&apos;t roll its main stat as a substat. Nilou&apos;s HP% sands can reach 1.10 at best (ER, EM and flat
-          HP) where her plume can reach 2.10, so its bar is 1.10 / 2.10 of the plume&apos;s: the same share of what&apos;s
-          possible.
-        </p>
+        <p className="hint">Bar scaled by what the main stat leaves possible (it can&apos;t roll as a sub).</p>
         <label className="check">
           <input type="checkbox" checked={settings.scaleLowBuilds} onChange={(e) => set('scaleLowBuilds')(e.target.checked)} />{' '}
           Scale for builds with few useful stats
         </label>
-        <p className="hint">
-          Builds whose four best weights add up to less than a typical CRIT DPS&apos;s 3.05 (single-stat supports like Nilou,
-          Kazuha or Xilonen) need the same share of what they can reach. Nilou&apos;s plume bar goes from 1.75 to 1.75 × 2.10
-          / 3.05 = 1.20: HP% + EM passes, flat HP + ER + EM doesn&apos;t. Builds at 3.05 or more, like Skirk, are unchanged.
-        </p>
+        <p className="hint">Top 4 weights under 3.05: bar scaled to what the build can reach.</p>
         <label className="check">
           <input type="checkbox" checked={settings.requireTwoLines} onChange={(e) => set('requireTwoLines')(e.target.checked)} />{' '}
           Need at least two useful lines at +0
         </label>
-        <p className="hint">
-          Scaling can bring the bar low enough for one line to clear it: an EM goblet for an EM support needs only 0.57,
-          and a single ER line (0.60) gets there. With this on, a +0 also needs two lines the build uses at all.
-        </p>
+        <p className="hint">Stops one line clearing a scaled-down bar.</p>
       </Field>
 
       <Field
         title="3 · Upgrade chance"
-        help="Chance that the finished piece beats what that character wears in the slot now. 0% turns this check off."
+        help="Chance the +20 beats current, or a better spare. 0% = off."
       >
         <Slider
           label="Minimum"
@@ -150,11 +136,30 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
           onChange={set('minUpgradeChance')}
           fmt={(v) => `${Math.round(v * 100)}%`}
         />
+        <Slider
+          label="Leveling floor"
+          value={settings.levelFloor}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={set('levelFloor')}
+          fmt={(v) => (v > 0 ? `${Math.round(v * 100)}%` : 'Off')}
+        />
+        <p className="hint">Also needs that chance to pass this share of a typical +20 (Board&apos;s 100%). +20s exempt. 0% = off.</p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={settings.levelFloorExemptRare}
+            onChange={(e) => set('levelFloorExemptRare')(e.target.checked)}
+          />{' '}
+          Rare main stats are exempt
+        </label>
+        <p className="hint">DMG/EM/Healing goblets, CRIT/EM/Healing circlets, ER/EM sands: hard to farm.</p>
       </Field>
 
       <Field
         title="4 · Keep cap"
-        help="Per character, build and slot, keep only the best few unequipped pieces (spare +20s count). The rest are marked Marginal."
+        help="Best few unequipped per character, build and slot (spare +20s count); the rest Marginal."
       >
         <Slider label="Normal" value={settings.capNormal} min={1} max={UNLIMITED} step={1} onChange={set('capNormal')} fmt={capFmt} capped />
         <Slider label="Priority" value={settings.capPriority} min={1} max={UNLIMITED} step={1} onChange={set('capPriority')} fmt={capFmt} capped />
@@ -164,16 +169,19 @@ export function SettingsPanel({ result }: { result: EvaluationResult }) {
         </label>
       </Field>
 
-      <Field title="Roster" help="Treat characters in the config you don't own yet as Normal, with empty slots.">
+      <Field title="Roster" help="Unowned config characters count as Normal, empty slots.">
         <label className="check">
           <input type="checkbox" checked={settings.includeUnowned} onChange={(e) => set('includeUnowned')(e.target.checked)} /> Plan for
           characters I don't own
         </label>
       </Field>
 
-      <button className="ghost" onClick={resetSettings}>
-        Reset to config defaults ({config.scoringDefaults.levelThreshold4Line} / {config.scoringDefaults.levelThreshold3Line}, 20%, cap
-        3/5, 1 off-set per slot, stick to worn set)
+      <button
+        className="ghost"
+        onClick={resetSettings}
+        title={`${config.scoringDefaults.levelThreshold4Line} / ${config.scoringDefaults.levelThreshold3Line}, 20%, 80% floor, cap 3/5, 1 off-set per slot, stick to worn set`}
+      >
+        Reset to defaults
       </button>
     </div>
   )

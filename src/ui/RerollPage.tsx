@@ -67,22 +67,9 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
         }
       >
         <p>
-          Dust of Enlightenment re-rolls a +20 piece&apos;s upgrades from its starting values. You pick two lines and at
-          least that many upgrades land on them; the suggestion is the two this build weights most. You can keep the old
-          stats, so a reroll never loses anything: what matters is how likely it comes out better, and by how much. When
-          the piece&apos;s ER line is needed to keep its wearer at their build&apos;s ER minimum, results that lose it count
-          as no change, and the pick may include ER.
-        </p>
-        <p>
-          <b>Spare</b> +20s are listed too, each for the character it would gain most
-          {firstPick ? ` (${firstPick} first)` : ''}: one whose main stat their build takes and whose set keeps their set
-          bonuses. Its reroll has to beat the piece it would replace, without taking them below their ER minimum. The free
-          upgrades in Characters → Quick wins are left out, both their spares and the slots they fill: equip those first,
-          and they&apos;re judged here as worn pieces.
-        </p>
-        <p>
-          A gain of {PRIORITY_STEPS[0]} rolls or more gets the Artifacts grid&apos;s ⟳ badge, shaded the same way
-          {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}; from {HIGH_PRIORITY_GAIN} it&apos;s high priority.
+          Pick 2 lines, guaranteed upgrades on them; you can keep the old stats. Spares go to whoever gains most
+          {firstPick ? ` (${firstPick} first)` : ''}, vs what they&apos;d replace; Quick wins spares excluded. ⟳ badge ≥{' '}
+          {PRIORITY_STEPS[0]}, high ≥ {HIGH_PRIORITY_GAIN}.
         </p>
       </Info>
       <div className="roster-tools">
@@ -95,7 +82,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
           ))}
         </div>
         <div className="seg small">
-          <button className={sort === 'gain' ? 'on' : ''} onClick={() => setSort('gain')} title="Average gain per Dust spent">
+          <button className={sort === 'gain' ? 'on' : ''} onClick={() => setSort('gain')} title="Gain per Dust">
             Gain per Dust
           </button>
           <button className={sort === 'chance' ? 'on' : ''} onClick={() => setSort('chance')}>
@@ -109,7 +96,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
           <button className={which === 'worn' ? 'on' : ''} onClick={() => setWhich('worn')} title="Pieces your characters wear">
             Worn ({listed.length - spareCount})
           </button>
-          <button className={which === 'spare' ? 'on' : ''} onClick={() => setWhich('spare')} title="Unequipped +20s, for the character each would gain most">
+          <button className={which === 'spare' ? 'on' : ''} onClick={() => setWhich('spare')} title="Unequipped +20s, for whoever gains most">
             Spare ({spareCount})
           </button>
         </div>
@@ -126,11 +113,11 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
             <th />
             <th>Character</th>
             <th>Piece</th>
-            <th title="Value now → average after a reroll (you'd keep whichever is better). A spare's is for the character it would go to.">
+            <th title="Now → average after (keep the better)">
               Now → avg
             </th>
-            <th title="Chance the reroll comes out better: for a spare, better than the piece it would replace">Better</th>
-            <th title="Average improvement, counting a worse roll as no change: for a spare, over the piece it would replace">Gain</th>
+            <th title="Chance to beat now (spare: what it replaces)">Better</th>
+            <th title="Worse roll = 0">Gain</th>
             <th title="The two lines to pick">Pick</th>
             <th title="Dust of Enlightenment per reroll">Dust</th>
           </tr>
@@ -148,7 +135,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                 </td>
                 <td>
                   <span className="char-name">
-                    <a className="char-link" href={charactersHref({ char: o.ref.char })} title="Every way to improve their pieces">
+                    <a className="char-link" href={charactersHref({ char: o.ref.char })} title="Improve">
                       {characterName(o.ref.char)}
                     </a>
                     {marks(o.ref)}
@@ -161,7 +148,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   <a
                     className="link"
                     href={inventoryHref(o.piece.id)}
-                    title="Show this piece in the Artifacts grid, outlined, at its row and place in the row"
+                    title="Show in grid"
                   >
                     find in grid
                   </a>
@@ -169,16 +156,15 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   {o.spare && <SpareNote o={o} feed={evaluations.get(o.piece.id)?.recommendLock === false} />}
                   {o.elsewhere && (
                     <div className="sub-note warn">
-                      As is, it&apos;s an upgrade for {characterName(o.elsewhere.char)} (
-                      {o.elsewhere.from === null ? 'nothing usable' : o.elsewhere.from.toFixed(1)} → {o.elsewhere.to.toFixed(1)}):
-                      consider moving it instead.
+                      Already an upgrade for {characterName(o.elsewhere.char)} (
+                      {o.elsewhere.from === null ? 'nothing usable' : o.elsewhere.from.toFixed(1)} → {o.elsewhere.to.toFixed(1)})
                     </div>
                   )}
                 </td>
                 <td className="num">
                   {o.current.toFixed(1)} → {o.expected.toFixed(1)}
                   {o.spare && (
-                    <div className="sub-note" title="The piece it would replace, which a reroll has to beat">
+                    <div className="sub-note" title="What it replaces">
                       vs {o.spare.bar.toFixed(1)} worn
                     </div>
                   )}
@@ -190,7 +176,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   {badge ? (
                     <span
                       className={`inv-up card-gain t${badge.tier}`}
-                      title={`${badge.high ? 'High priority: the' : 'The'} Artifacts grid marks this piece ⟳, shaded by this gain${badge.tier === 0 ? " (grey: the character isn't ★ or 📌)" : ''}`}
+                      title={`Grid ⟳ badge${badge.high ? ' (high)' : ''}${badge.tier === 0 ? ' · grey: not ★ or 📌' : ''}`}
                     >
                       ⟳ {o.gain.toFixed(2)}
                     </span>
@@ -201,7 +187,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                 <td>
                   <span className="nowrap">{o.chosen.map(statShort).join(' + ')}</span>
                   {o.erBound && (
-                    <div className="sub-note" title="Results that would cost ER this character needs count as no change">
+                    <div className="sub-note" title="Losing needed ER = no change">
                       keeps needed ER
                     </div>
                   )}
@@ -220,8 +206,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
       )}
       {plan.wrongMain > 0 && (
         <p className="sub-note">
-          {plan.wrongMain} worn +20s aren&apos;t listed because their main stat doesn&apos;t fit the build; a reroll can&apos;t
-          fix that. See Characters → Quick wins, or allow the main stat in Builds.
+          {plan.wrongMain} worn +20s with unlisted main stats skipped
         </p>
       )}
     </div>
@@ -234,15 +219,15 @@ function SpareNote({ o, feed }: { o: RerollOption; feed: boolean }) {
   return (
     <>
       <div className="sub-note">
-        <span className="tier">spare</span> In place of their {setName(replaces.setKey)} {SLOT_LABEL[replaces.slotKey].toLowerCase()}
+        <span className="tier">spare</span> replaces {setName(replaces.setKey)} {SLOT_LABEL[replaces.slotKey].toLowerCase()}
         {replaces.mainStatKey !== o.piece.mainStatKey && (
-          <span className="warn" title="Scores compare substats only, so the main stat trade is yours to judge">
+          <span className="warn" title="Main stat not scored">
             {' '}
             ({statShort(replaces.mainStatKey)} → {statShort(o.piece.mainStatKey)} main)
           </span>
         )}
       </div>
-      {feed && <div className="sub-note warn">Triage marks it to feed: keep it locked if you&apos;ll reroll it.</div>}
+      {feed && <div className="sub-note warn">Marked to feed: keep locked</div>}
     </>
   )
 }

@@ -126,14 +126,14 @@ export function App() {
         </button>
         <LoadExportButton onFile={store.loadExportFile} />
         {building.length > 0 && (
-          <div className="building-strip" title="Who you're building now: first in lists, first pick of free upgrades, and what farming can be ranked for">
+          <div className="building-strip" title="First in lists, swaps and farming">
             <span className="muted">📌 Building</span>
             {building.map((c) => (
               <span key={c} className="chip building">
-                <a href={charactersHref({ char: c })} title={`Every way to improve ${characterName(c)}'s pieces`}>
+                <a href={charactersHref({ char: c })} title={`Improve ${characterName(c)}`}>
                   {characterName(c)}
                 </a>
-                <button className="chip-x" onClick={() => toggleBuilding(c, false)} title={`Take ${characterName(c)} off the Building list`}>
+                <button className="chip-x" onClick={() => toggleBuilding(c, false)} title="Remove from Building">
                   ✕
                 </button>
               </span>
@@ -150,7 +150,7 @@ export function App() {
             <a
               className="chip"
               href={charactersHref('quick')}
-              title="Equips you've ticked since this export; every tab counts them as worn. Undo them in Characters → Quick wins."
+              title="Counted as worn until next export · undo in Quick wins"
             >
               ✎ {store.equips.length} equipped since export
             </a>
@@ -160,7 +160,7 @@ export function App() {
 
       {store.saveError && (
         <div className="banner">
-          Your changes aren't saved yet ({store.saveError}). Retrying every few seconds: is the dev server still running?
+          Not saved ({store.saveError}), retrying — is the dev server up?
         </div>
       )}
       {store.newExport && (

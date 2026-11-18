@@ -45,15 +45,12 @@ export const per100k = (rate: number) => (rate * 1e5).toFixed(2)
 /** A piece leveling advice holds: kept, but not worth its EXP right now. */
 export const isHeld = (level: LevelPriority | null | undefined) => level?.value?.worth === false
 
-/**
- * "0.84 rolls per 100k EXP", or for a held piece why it's held: "Not worth its EXP right now: 0.16 rolls per 100k
- * EXP, and your EXP brings 0.47 on the pieces it pays for".
- */
+/** "0.84/100k EXP", or for a held piece: "Held: 0.16/100k EXP vs 0.47 elsewhere". */
 export function valueLine(v: LevelValue): string {
-  const rate = `${per100k(v.rate)} rolls per 100k EXP`
-  if (v.worth) return v.price > 0 ? `${rate}, past the ${per100k(v.price)} your EXP brings at the margin` : rate
-  if (v.price >= MAX_PRICE) return 'Not worth its EXP right now: your EXP on hand all goes to pieces for the characters Spend → Rank for counts'
-  return `Not worth its EXP right now: ${rate}, and your EXP brings ${per100k(v.price)} on the pieces it pays for${v.first ? '' : ' (after those for the characters Spend → Rank for counts)'}`
+  const rate = `${per100k(v.rate)}/100k EXP`
+  if (v.worth) return v.price > 0 ? `${rate} vs ${per100k(v.price)} marginal` : rate
+  if (v.price >= MAX_PRICE) return 'Held: EXP on hand all goes to Rank for characters'
+  return `Held: ${rate} vs ${per100k(v.price)} elsewhere${v.first ? '' : ' (after Rank for)'}`
 }
 
 /** Colors a substat by how much the build weighs it. */
@@ -149,7 +146,7 @@ export function ArtifactCard(props: Props) {
               e.stopPropagation()
               onInspect()
             }}
-            title="Open it beside the list: its verdict, the build nearest to keeping it (Closest build) and what stands in the way"
+            title="Open in inspector"
           >
             inspect
           </button>
@@ -159,7 +156,7 @@ export function ArtifactCard(props: Props) {
             className="link"
             href={buildsHref({ piece: piece.id })}
             onClick={(e) => e.stopPropagation()}
-            title="Open the build nearest to keeping this piece in the Builds tab, with what stands in the way"
+            title="Closest build in Builds tab"
           >
             closest build
           </a>
@@ -169,7 +166,7 @@ export function ArtifactCard(props: Props) {
             className="link"
             href={inventoryHref(piece.id)}
             onClick={(e) => e.stopPropagation()}
-            title="Show this piece in the Artifacts grid, outlined, at its row and place in the row"
+            title="Show in grid"
           >
             find in grid
           </a>
@@ -196,7 +193,7 @@ export function ReasonText({ ev }: { ev: Evaluation }) {
   return (
     <>
       {ev.reason.slice(0, at)}
-      <a className="char-link" href={buildHref(c, ev.piece)} onClick={(e) => e.stopPropagation()} title="Open this build in the Builds tab">
+      <a className="char-link" href={buildHref(c, ev.piece)} onClick={(e) => e.stopPropagation()} title="Open build">
         {name}
       </a>
       {ev.reason.slice(at + name.length)}
@@ -240,7 +237,7 @@ const MAX_CHIPS = 5
  * then each character it could go to, with the chance it ends up beating what they wear now.
  */
 function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority | null }) {
-  const { config } = useStore()
+  const { config, settings } = useStore()
   const shown = ev.candidates
     .filter((c) => c.gate !== 'fail' && (c.chance > 0 || c.ref.char === ev.piece.owner))
     .sort(
@@ -257,7 +254,7 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
       {gain && (
         <span
           className={`inv-up card-gain t${gain.tier}`}
-          title={`Expected gain once finished: +${gain.gain.toFixed(2)} rolls over the best ${characterName(gain.char)} has (what they wear, or a better spare +20), counting a miss as 0 (${pct(gain.chance)} to beat it). The same number as the Inventory's ⬆ badge; "Expected gain" sorts by it.`}
+          title={`+${gain.gain.toFixed(2)} over ${characterName(gain.char)}'s best (miss = 0) · ${pct(gain.chance)} to beat`}
         >
           ⬆ +{gain.gain.toFixed(2)} {characterName(gain.char)}
           {marks({ priority: gain.star ? 'priority' : 'normal', building: gain.building })}
@@ -266,10 +263,10 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
       {priority?.value && (
         <span
           className={`chance value${isHeld(priority) ? ' held' : ''}`}
-          title={`${valueLine(priority.value)}. "Best value" sorts by it.`}
+          title={valueLine(priority.value)}
         >
           {isHeld(priority) ? '⏸ hold · ' : ''}
-          <b>{per100k(priority.value.rate)}</b> per 100k EXP
+          <b>{per100k(priority.value.rate)}</b>/100k EXP
         </span>
       )}
       {shown.slice(0, MAX_CHIPS).map((c) => {
@@ -277,23 +274,21 @@ function ChanceRow({ ev, priority }: { ev: Evaluation; priority: LevelPriority |
         const title = [
           c.ref.build.name,
           `at +20 ≈ ${c.expected.toFixed(2)}`,
-          worn
-            ? 'already wearing it'
-            : c.bar === null
-              ? 'nothing usable in that slot now'
-              : c.spare
-                ? `best spare +20 ${c.bar.toFixed(2)}, better than what they wear`
-                : `now wears ${c.bar.toFixed(2)}`,
-          c.rank ? `#${c.rank} of ${c.rankOf} candidates` : '',
+          worn ? 'worn' : c.bar === null ? 'nothing usable worn' : `${c.spare ? 'spare' : 'current'} ${c.bar.toFixed(2)}`,
+          c.floor !== undefined ? `${pct(c.floorChance!)} past floor (${c.floor.toFixed(2)})` : '',
+          c.rank ? `#${c.rank}/${c.rankOf}` : '',
         ]
           .filter(Boolean)
           .join(' · ')
+        // Likely to beat what they have, but not to reach the leveling floor: say that's what keeps it out.
+        const belowFloor = !worn && c.floor !== undefined && !c.passChance && c.chance >= settings.minUpgradeChance - 1e-9
         return (
           <span key={`${c.ref.char}|${c.ref.buildIdx}`} className={`chance ${c.inCap || worn ? 'in' : c.passChance ? 'cut' : 'out'}`} title={title}>
             {characterName(c.ref.char)}
             {marks(c.ref)}
             {config.characters[c.ref.char].builds.length > 1 && <small> ({c.ref.build.name})</small>}{' '}
             <b>{worn ? 'worn' : pct(c.chance)}</b>
+            {belowFloor && <small> · floor {pct(c.floorChance!)}</small>}
           </span>
         )
       })}
@@ -309,11 +304,9 @@ export function BuildTable({ piece, candidates }: { piece: Piece; candidates: Ca
         <tr>
           <th>Character</th>
           <th>Set</th>
-          <th title="+0: weight of starting lines vs threshold. Later: projected value vs re-score bar.">Gate</th>
-          <th title="Expected value at +20, in weighted max-roll units">At +20</th>
-          <th title="What it has to beat, same units: what this character wears in the slot, or their best spare +20 when that's better">
-            To beat
-          </th>
+          <th title="+0: line weight / threshold · later: projected / bar">Gate</th>
+          <th title="Expected +20 value, in rolls">At +20</th>
+          <th title="Current, or spare +20 if better · floor if higher">To beat</th>
           <th>Beat</th>
           <th>Rank</th>
         </tr>
@@ -322,7 +315,7 @@ export function BuildTable({ piece, candidates }: { piece: Piece; candidates: Ca
         {candidates.slice(0, 12).map((c) => (
           <tr key={`${c.ref.char}|${c.ref.buildIdx}`} className={c.inCap ? 'in' : c.passChance ? 'cut' : 'out'}>
             <td>
-              <a className="char-link" href={buildHref(c, piece)} title="Open this build in the Builds tab">
+              <a className="char-link" href={buildHref(c, piece)} title="Open build">
                 {characterName(c.ref.char)}
               </a>
               {marks(c.ref)}
@@ -341,8 +334,14 @@ export function BuildTable({ piece, candidates }: { piece: Piece; candidates: Ca
                   : `${c.lineScore.toFixed(2)} / ${c.threshold.toFixed(2)}${tooFewLines(c) ? ` · ${c.usefulLines} useful line` : ''}`}
             </td>
             <td>{c.expected.toFixed(2)}</td>
-            <td>{c.bar === null ? 'nothing usable' : c.spare ? `${c.bar.toFixed(2)} (spare +20)` : c.bar.toFixed(2)}</td>
-            <td className={c.gate !== 'fail' && !c.passChance ? 'bad' : ''}>{c.gate === 'fail' ? '–' : pct(c.chance)}</td>
+            <td>
+              {c.bar === null ? 'nothing usable' : c.spare ? `${c.bar.toFixed(2)} (spare +20)` : c.bar.toFixed(2)}
+              {c.floor !== undefined && <div className="sub-note">floor {c.floor.toFixed(2)}</div>}
+            </td>
+            <td className={c.gate !== 'fail' && !c.passChance ? 'bad' : ''}>
+              {c.gate === 'fail' ? '–' : pct(c.chance)}
+              {c.floor !== undefined && <div className="sub-note">floor {pct(c.floorChance!)}</div>}
+            </td>
             <td>{c.rank ? `#${c.rank}/${c.rankOf}, ${c.ref.cap >= 99 ? 'all' : `top ${c.ref.cap}`} kept` : '–'}</td>
           </tr>
         ))}

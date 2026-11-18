@@ -24,16 +24,16 @@ const SORT_LABEL: Record<SortMode, string> = {
 const LEVEL_ONLY: SortMode[] = ['gain', 'value']
 
 export const SHOW_LABEL: Record<ShowFilter, { label: string; title: string }> = {
-  changes: { label: 'Lock changes', title: 'Pieces whose lock should change: LOCK to keep, UNLOCK to feed' },
-  level: { label: 'To level', title: 'The To level queue: every piece worth leveling, locked or not, plus equipped pieces worth finishing' },
-  all: { label: 'Everything', title: 'Every piece, whatever its verdict' },
+  changes: { label: 'Lock changes', title: 'LOCK to keep, UNLOCK to feed' },
+  level: { label: 'To level', title: 'Worth leveling, plus equipped to finish' },
+  all: { label: 'Everything', title: 'Every piece' },
 }
 
 export const LEVEL_LABEL: Record<LevelFilter, { label: string; title: string }> = {
   any: { label: 'Any', title: 'Any level' },
-  fresh: { label: '+0', title: 'Pieces still at +0 (the old Triage tab)' },
-  started: { label: '+1–19', title: 'Pieces partly leveled (the old In progress tab)' },
-  spare20: { label: '+20 spare', title: 'Unequipped +20s (the old +20 review tab)' },
+  fresh: { label: '+0', title: 'Still at +0' },
+  started: { label: '+1–19', title: 'Partly leveled' },
+  spare20: { label: '+20 spare', title: 'Unequipped +20s' },
 }
 
 const levelOk: Record<LevelFilter, (e: Evaluation) => boolean> = {
@@ -331,7 +331,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
           <button
             className={set === OFF_SET ? 'rail-item active' : 'rail-item'}
             onClick={() => pickSet(OFF_SET)}
-            title="Pieces kept as a character's one off-set piece, whatever their set"
+            title="Kept as off-set pieces, any set"
           >
             <span className="rail-name">◇ Off-set picks</span>
             <span className="counts">
@@ -409,7 +409,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
             ))}
           </select>
           {leveling && (
-            <label className="check" title="Pieces that could go to a 📌 Building character come first, then ★ Priority ones">
+            <label className="check" title="📌 Building first, then ★ Priority">
               <input type="checkbox" checked={priorityFirst} onChange={(e) => (setPriorityFirst(e.target.checked), setFocus(0))} /> 📌
               ★ first
             </label>
@@ -421,25 +421,17 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
 
         {leveling && (
           <div className="set-info">
-            Level each piece only to its next stop: every 4 levels adds one roll. Then re-export and the piece is re-scored
-            with the new roll, so it either continues or gets fed. Each chip is the chance it beats what that character
-            wears once it reaches +20. <ExpNote advice={advice} />
+            <ExpNote advice={advice} />
           </div>
         )}
         {set === OFF_SET && (
           <div className="set-info">
-            <b>Off-set picks</b>: pieces kept to fill a character&apos;s one free slot, whatever their set. In-game, filter
-            by slot and main stat instead of set.
+            <b>Off-set picks</b>: filter by slot + main stat in-game
           </div>
         )}
         {set !== 'all' && set !== OFF_SET && (
           <div className="set-info">
-            <b>{setName(set)}</b>: filter by this set in-game.{' '}
-            {users.length ? (
-              <>4pc users: {users.map(userLabel).join(', ')}</>
-            ) : (
-              <>No active character uses it as a 4pc set.</>
-            )}
+            <b>{setName(set)}</b> · {users.length ? <>4pc users: {users.map(userLabel).join(', ')}</> : 'no 4pc users'}
           </div>
         )}
 
@@ -468,41 +460,34 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
         </div>
         <div className="keys">
           <kbd>↑</kbd>
-          <kbd>↓</kbd> move · <kbd>Space</kbd> {leveling ? 'leveled' : 'done'} &amp; next · <kbd>Z</kbd> undo · a card&apos;s
-          &quot;inspect&quot; opens it beside the list
+          <kbd>↓</kbd> move · <kbd>Space</kbd> {leveling ? 'leveled' : 'done'} &amp; next · <kbd>Z</kbd> undo
         </div>
       </section>
     </div>
   )
 }
 
-const SCOPE_LABEL = { building: '📌 Building characters', priority: '★ Priority characters', all: 'every character' } as const
+const SCOPE_LABEL = { building: '📌 Building', priority: '★ Priority', all: 'everyone' } as const
 
 /**
- * What EXP is worth when leveling, as levelingAdvice prices it: "Your 12.3M EXP on hand covers every piece for 📌
- * Building characters; everyone else's are worth leveling from 0.61 rolls per 100k EXP. ⏸ marks the 224 held …".
+ * What EXP is worth when leveling, as levelingAdvice prices it: "12.3M EXP · 📌 Building ≥ 0.61/100k · others ≥
+ * 0.30/100k · ⏸ 22 held".
  */
 function ExpNote({ advice }: { advice: LevelingAdvice }) {
   const { hand, price, restPrice, scope } = advice
   const all = [...advice.pieces.values()]
   const held = all.filter((a) => !a.worth).length
   const exp = `${(Math.max(0, hand.budget) / 1e6).toFixed(1)}M`
-  const rate = (p: number) => `${(p * 1e5).toFixed(2)} rolls per 100k EXP`
-  const first = price > 0 ? `goes furthest on pieces for ${SCOPE_LABEL[scope]} worth ${rate(price)} or more` : `covers every piece for ${SCOPE_LABEL[scope]}`
+  const rate = (p: number) => `${(p * 1e5).toFixed(2)}/100k`
+  const first = price > 0 ? `${SCOPE_LABEL[scope]} ≥ ${rate(price)}` : `${SCOPE_LABEL[scope]} all covered`
   const others = all.some((a) => !a.first)
     ? restPrice >= MAX_PRICE
-      ? "; none is left for everyone else's"
+      ? 'others: none left'
       : restPrice > 0
-        ? `; everyone else's need ${rate(restPrice)} from what's left`
-        : ", with enough left for everyone else's"
-    : ''
-  return (
-    <>
-      Your {exp} EXP on hand (Spend → Fodder) {first}
-      {others}. {held > 0 ? `⏸ marks the ${held} on hold: still kept, but not worth their EXP right now. ` : ''}
-      &quot;Best value&quot; sorts by gain per EXP; Spend → Rank for picks whose pieces get the EXP first.
-    </>
-  )
+        ? `others ≥ ${rate(restPrice)}`
+        : 'others covered'
+    : null
+  return <>{[`${exp} EXP`, first, others, held > 0 ? `⏸ ${held} held` : null].filter(Boolean).join(' · ')}</>
 }
 
 function Counts({ lock, unlock, level }: { lock: number; unlock: number; level: number }) {
@@ -525,5 +510,5 @@ function railTitle(set: string, result: EvaluationResult): string {
   const users = result.setUsers[set] ?? []
   return users.length
     ? `4pc users: ${users.map((u) => `${characterName(u.char)}${u.twoPieceOnly ? ' (2pc)' : ''}`).join(', ')}`
-    : 'No active character uses this as a 4pc set'
+    : 'No 4pc users'
 }

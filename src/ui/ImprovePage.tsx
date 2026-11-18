@@ -25,8 +25,8 @@ const GUARANTEE: Record<Guarantee, string> = { 2: 'Normal (2)', 3: 'Advanced (3)
 type RailSort = 'min' | 'avg' | 'name'
 const RAIL_SORT: Record<RailSort, { label: string; title: string }> = {
   min: { label: 'Min', title: 'Weakest equipped piece' },
-  avg: { label: 'Avg', title: 'Average of the five equipped pieces (an empty or unusable slot counts as 0%)' },
-  name: { label: 'A–Z', title: 'By name, 📌 Building first; the number is their weakest equipped piece' },
+  avg: { label: 'Avg', title: 'Average (empty = 0%)' },
+  name: { label: 'A–Z', title: 'By name; number = weakest piece' },
 }
 
 /** Every build of a character as something the planners can judge, active or not. */
@@ -187,7 +187,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
             </span>
           )}
         </span>
-        <a className="link" href={buildsHref({ char, idx: ref.buildIdx })} title="Change this build's sets, main stats, weights or ER target in the Builds tab">
+        <a className="link" href={buildsHref({ char, idx: ref.buildIdx })} title="Edit in Builds">
           Edit build →
         </a>
       </div>
@@ -217,11 +217,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
         <span className="muted">· weakest first</span>
       </div>
       <p className="hint">
-        <b>Chance</b> is how likely an option beats what {characterName(char)} wears in that slot; <b>Avg gain</b> is the
-        improvement in roll value, counting a miss as no change. <b>Free</b> options cost nothing; <b>From others</b> takes a
-        piece someone who counts is wearing; <b>Spend</b> costs EXP, Dust, Elixirs or resin (domain odds per {RESIN_SHOWN}{' '}
-        resin, Strongbox odds per batch of {STRONGBOX_BATCH}). Small gains, other characters&apos; pieces and pieces that
-        would break a set bonus are folded under each slot.
+        Chance vs current · Avg gain: miss = 0 · domain per {RESIN_SHOWN} resin, Strongbox per {STRONGBOX_BATCH}
       </p>
       <div className="roster-tools">
         <span className="muted">Reroll guarantee</span>
@@ -234,7 +230,7 @@ function Detail({ char, result }: { char: string; result: EvaluationResult }) {
         </div>
         <label
           className="check"
-          title={`Untick to list only ${ownSets(plan).map(setName).join(' or ')} pieces: ${plan.status.kind === 'none' ? 'the sets they should farm, since they wear no 4pc' : 'the 4pc set they wear'}. Rerolls of the worn piece, Elixirs, the Strongbox and domains always show.`}
+          title={`Off: only ${ownSets(plan).map(setName).join(' or ')} pieces`}
         >
           <input type="checkbox" checked={otherSets} onChange={(e) => setOtherSets(e.target.checked)} /> Pieces from other sets
         </label>
@@ -255,15 +251,15 @@ function SetLine({ plan }: { plan: ImprovePlan }) {
   const st = plan.status
   const wears =
     st.kind === 'listed'
-      ? `Wears 4pc ${setName(st.set)} (tier ${st.tier})`
+      ? `4pc ${setName(st.set)} (t${st.tier})`
       : st.kind === 'twoPiece'
-        ? `Wears 4pc ${setName(st.set)}, which this build only wants for its 2pc`
+        ? `4pc ${setName(st.set)} (2pc only)`
         : st.kind === 'unlisted'
-          ? `Wears 4pc ${setName(st.set)}, which this build doesn't list`
-          : 'No 4pc set on'
+          ? `4pc ${setName(st.set)} (unlisted)`
+          : 'No 4pc'
   return (
     <>
-      {wears} · new pieces from {plan.targets.map(setName).join(' or ')}
+      {wears} · farm {plan.targets.map(setName).join(' or ')}
     </>
   )
 }
@@ -279,18 +275,14 @@ function OffSetLine({ plan }: { plan: ImprovePlan }) {
   if (onSet < 4) return null
   if (onSet === 5) {
     return (
-      <p className="sub-note">
-        All five are {setName(st.set)}: any one slot can take an off-set piece and keep the 4pc, but only one, so the
-        options marked &quot;off-set slot&quot; in different slots are alternatives.
-      </p>
+      <p className="sub-note">All 5 {setName(st.set)}: one slot can go off-set</p>
     )
   }
   const off = plan.slots.find((s) => s.worn?.setKey !== st.set)!
   return (
     <p className="sub-note">
       Off-set slot: {SLOT_ICON[off.slot]} {SLOT_LABEL[off.slot].toLowerCase()}
-      {off.worn ? ` (${setName(off.worn.setKey)})` : ' (empty)'}. A piece of another set in any other slot would break
-      the 4pc unless {setName(st.set)} moves into the {SLOT_LABEL[off.slot].toLowerCase()} too.
+      {off.worn ? ` (${setName(off.worn.setKey)})` : ' (empty)'}
     </p>
   )
 }
@@ -385,8 +377,8 @@ function SlotSection({ s, plan, only }: { s: SlotPlan; plan: ImprovePlan; only: 
           <>
             Wears {setName(s.worn.setKey)} · <b>{statShort(s.worn.mainStatKey)}</b> · +{s.worn.level}
             {s.worn.rarity !== 5 && ` · ${s.worn.rarity}★`} — {shortSubs(s.worn)}
-            {s.now !== null ? ` (${s.now.toFixed(1)})` : ' (main stat not listed for this build)'}
-            {equippedHere && <span className="muted"> · equipped since the export</span>}
+            {s.now !== null ? ` (${s.now.toFixed(1)})` : ' (unlisted main)'}
+            {equippedHere && <span className="muted"> · equipped since export</span>}
           </>
         ) : (
           'Nothing equipped'
@@ -397,8 +389,8 @@ function SlotSection({ s, plan, only }: { s: SlotPlan; plan: ImprovePlan; only: 
           <thead>
             <tr>
               <th>Option</th>
-              <th title="Chance it beats what's worn now">Chance</th>
-              <th title="Average improvement, counting a miss as no change">Avg gain</th>
+              <th title="vs current">Chance</th>
+              <th title="Miss = 0">Avg gain</th>
               <th>Cost</th>
             </tr>
           </thead>
@@ -434,7 +426,7 @@ function SlotSection({ s, plan, only }: { s: SlotPlan; plan: ImprovePlan; only: 
       )}
       {otherSets > 0 && (
         <p className="sub-note">
-          {otherSets} piece{otherSets === 1 ? '' : 's'} from other sets hidden (tick &quot;Pieces from other sets&quot; above).
+          {otherSets} from other sets hidden
         </p>
       )}
     </section>
@@ -446,7 +438,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
   const name = characterName(plan.ref.char)
   const equipButton = (p: Piece) => (
     <div>
-      <button className="link" onClick={() => equip(p)} title="Equipped it in-game: treat it as worn until your next export">
+      <button className="link" onClick={() => equip(p)} title="Counted as worn until next export">
         Equip
       </button>
     </div>
@@ -525,7 +517,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
         <>
           {pieceLine(o)}
           <div className={`sub-note${listed ? '' : ' warn'}`}>
-            {listed ? 'In the To level queue' : `Marked to unlock: lock it if you level it for ${name}`}
+            {listed ? 'In To level queue' : `Marked to unlock: lock if leveling for ${name}`}
           </div>
         </>
       ),
@@ -566,8 +558,8 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
           {o.chosen.map(statShort).join(' + ')}
           <div className="sub-note">{shortSubs(o.piece)}</div>
           {s.now !== null && o.bar < s.now - 0.05 && (
-            <div className="sub-note" title="Their ER is past their target without it, so neither piece's ER line counts, as for a reroll of the worn piece">
-              vs {o.bar.toFixed(1)} worn, not counting ER past their target
+            <div className="sub-note" title="ER past target: ER lines don't count">
+              vs {o.bar.toFixed(1)} worn, ER past target
             </div>
           )}
           <FitNote o={o} plan={plan} />
@@ -591,7 +583,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
         <>
           {' '}
           {setName(e.set)} · <b>{statShort(e.main)}</b>, pick {e.chosen.map(statShort).join(' + ')}
-          <div className="sub-note">Farming instead: {runs(e.drops)} for as big an upgrade</div>
+          <div className="sub-note">or {runs(e.drops)}</div>
         </>
       ),
       chance: e.chance,
@@ -638,10 +630,10 @@ function FitNote({ o, plan }: { o: PieceOption; plan: ImprovePlan }) {
     if (o.fit.trade) return <TradeNote trade={o.fit.trade} />
     if (st.kind === 'none' || o.piece.setKey === st.set) return null
     const allFive = plan.slots.every((x) => x.worn?.setKey === st.set)
-    return <div className="sub-note">uses the off-set slot{allFive ? ' (only one slot can)' : ''}</div>
+    return <div className="sub-note">off-set slot{allFive ? ' (one only)' : ''}</div>
   }
   if (o.fit.kind === 'switch') {
-    return <div className="sub-note warn">only with 4pc {setName(o.piece.setKey)} (tier {o.fit.tier})</div>
+    return <div className="sub-note warn">only with 4pc {setName(o.piece.setKey)} (t{o.fit.tier})</div>
   }
-  return <div className="sub-note warn">breaks the {setName(o.fit.set)} set bonus</div>
+  return <div className="sub-note warn">breaks {setName(o.fit.set)} bonus</div>
 }

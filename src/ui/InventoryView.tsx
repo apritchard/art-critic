@@ -27,19 +27,16 @@ const MAX_COLS = 16
 /** Spend → Dust's "Rerolled it" marks. */
 export const rerollKey = (id: string) => `reroll:${id}`
 
-/** The suffix of an ordinal: 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st. */
-export const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'))
-
 /** "CD 7.8" or "HP 299": short enough for a grid cell. */
 const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s.value.toFixed(1) : Math.round(s.value)}`
 
-/** "Level to +4: +0.85 rolls expected for Xingqiu ★, 34% to beat the best they have. 0.84 rolls per 100k EXP". */
+/** "⬆+4 (high): +0.85 Xingqiu ★ · 34% · 0.84/100k EXP". */
 export const levelLine = (level: LevelPriority) =>
-  `${isHeld(level) ? `Hold, then level to +${level.next}` : `Level to +${level.next}`}${level.high ? ' (high priority)' : ''}: +${level.gain.toFixed(2)} rolls expected for ${characterName(level.char)}${marks({ priority: level.star ? 'priority' : 'normal', building: level.building })}, ${Math.round(level.chance * 100)}% to beat the best they have${level.value ? `. ${valueLine(level.value)}` : ''}`
+  `${isHeld(level) ? '⏸' : '⬆'}+${level.next}${level.high ? ' (high)' : ''}: +${level.gain.toFixed(2)} ${characterName(level.char)}${marks({ priority: level.star ? 'priority' : 'normal', building: level.building })} · ${Math.round(level.chance * 100)}%${level.value ? ` · ${valueLine(level.value)}` : ''}`
 
-/** "Reroll: +1.03 rolls expected for Xingqiu ★, 100% to come out better. Pick CR + ATK%; 1 Dust". */
+/** "⟳ (high): +1.03 Xingqiu ★ · 100% vs 2.5 worn · CR + ATK% · 1 Dust". */
 export const rerollLine = (reroll: RerollPriority) =>
-  `Reroll${reroll.high ? ' (high priority)' : ''}: +${reroll.gain.toFixed(2)} rolls expected for ${characterName(reroll.char)}${marks({ priority: reroll.star ? 'priority' : 'normal', building: reroll.building })}, ${Math.round(reroll.chance * 100)}% to ${reroll.bar === null ? 'come out better' : `beat the ${reroll.bar.toFixed(1)} they wear`}. Pick ${reroll.chosen.map(statShort).join(' + ')}; ${reroll.cost} Dust`
+  `⟳${reroll.high ? ' (high)' : ''}: +${reroll.gain.toFixed(2)} ${characterName(reroll.char)}${marks({ priority: reroll.star ? 'priority' : 'normal', building: reroll.building })} · ${Math.round(reroll.chance * 100)}%${reroll.bar === null ? '' : ` vs ${reroll.bar.toFixed(1)} worn`} · ${reroll.chosen.map(statShort).join(' + ')} · ${reroll.cost} Dust`
 
 interface Props {
   result: EvaluationResult
@@ -247,7 +244,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               </option>
             ))}
           </select>
-          <label className="check" title="Pieces per row in your game's inventory: 8 on PC">
+          <label className="check" title="Game's pieces per row (8 on PC)">
             Per row
             <input
               type="number"
@@ -259,16 +256,16 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               onChange={(e) => setCols(Number(e.target.value) || 0)}
             />
           </label>
-          <label className="check" title="Each piece's substats, colored by how much the build it's judged for weighs them">
+          <label className="check" title="Colored by build weight">
             <input type="checkbox" checked={showSubs} onChange={(e) => setShowSubs(e.target.checked)} /> Substats
           </label>
-          <label className="check" title="Match the game's Equipped filter: off for Not Equipped">
+          <label className="check" title="Game's Equipped filter">
             <input type="checkbox" checked={withEquipped} onChange={(e) => setWithEquipped(e.target.checked)} /> Include
             equipped
           </label>
           <label
             className="check"
-            title="The game puts locked pieces first, but only re-sorts when the inventory is opened again. Tick this after reopening it to order by the lock states your done marks say."
+            title="Order by done marks (game re-sorts on reopen)"
           >
             <input type="checkbox" checked={reopened} onChange={(e) => setReopened(e.target.checked)} /> Reopened since
             marking
@@ -278,40 +275,39 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
         {set ? (
           <>
             <p className="hint">
-              In-game: Filter → Set → <b>{setName(set)}</b>
-              {withEquipped ? '' : ', Not Equipped'}, with "order obtained" off. {ordered.length} pieces:{' '}
-              <span className="c-lock">▲ lock {toLock.length}</span> · <span className="c-unlock">▼ unlock {toUnlock.length}</span>
+              Filter: <b>{setName(set)}</b>
+              {withEquipped ? '' : ' · Not Equipped'} · order obtained off — {ordered.length} ·{' '}
+              <span className="c-lock">▲{toLock.length}</span> <span className="c-unlock">▼{toUnlock.length}</span>
               {left.length < toLock.length + toUnlock.length && ` · ${toLock.length + toUnlock.length - left.length} done`} ·{' '}
               <span className="c-heat">
-                ⬆ level {toLevel.length - held.length}
-                {high.length > 0 && `, ${high.length} high priority`}
-                {held.length > 0 && ` · ⏸ hold ${held.length}`}
+                ⬆{toLevel.length - held.length}
+                {high.length > 0 && ` (${high.length} high)`}
+                {held.length > 0 && ` · ⏸${held.length}`}
               </span>
               {toReroll.length > 0 && (
                 <>
                   {' · '}
                   <span className="c-heat">
-                    ⟳ reroll {toReroll.length}
-                    {highReroll.length > 0 && `, ${highReroll.length} high priority`}
+                    ⟳{toReroll.length}
+                    {highReroll.length > 0 && ` (${highReroll.length} high)`}
                   </span>
                 </>
               )}
               {hiddenRerolls > 0 && (
                 <>
                   {' · '}
-                  <button className="link" onClick={() => setWithEquipped(true)} title="Include equipped pieces">
-                    ⟳ {hiddenRerolls} equipped worth rerolling
+                  <button className="link" onClick={() => setWithEquipped(true)} title="Include equipped">
+                    ⟳{hiddenRerolls} equipped
                   </button>
                 </>
               )}
-              .{' '}
+              {' · '}
               {spotAt >= 0 && (
                 <b className="inv-spot-note">
-                  Outlined: the piece you followed, row {Math.floor(spotAt / cols) + 1}, {(spotAt % cols) + 1}
-                  {ordinal((spotAt % cols) + 1)} from the left.{' '}
+                  followed: row {Math.floor(spotAt / cols) + 1}, col {(spotAt % cols) + 1} ·{' '}
                 </b>
               )}
-              {spot && !jumpEv && <b className="inv-spot-note">The piece you followed isn&apos;t in this export. </b>}
+              {spot && !jumpEv && <b className="inv-spot-note">followed piece not in export · </b>}
               {left.length > 0 ? (
                 <button className="link" onClick={() => markAll(true)}>
                   Mark all done
@@ -325,7 +321,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               )}
             </p>
             <p className="keys inv-keys">
-              Click a piece to inspect it · its <b>LOCK</b>/<b>UNLOCK</b> bar marks it done · <kbd>←</kbd>
+              Click: inspect · <b>LOCK</b>/<b>UNLOCK</b> bar: done · <kbd>←</kbd>
               <kbd>→</kbd>
               <kbd>↑</kbd>
               <kbd>↓</kbd> move · <kbd>Space</kbd> done &amp; next · <kbd>L</kbd> leveled · <kbd>R</kbd> rerolled ·{' '}
@@ -352,31 +348,16 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
               ))}
             </div>
             <p className="sub-note inv-key">
-              <span className="inv-up t0">⬆+4</span> worth leveling (the To level queue), to the stop shown. Hotter means a
-              bigger expected gain once finished{anyStar ? ' for a 📌 Building or ★ Priority character' : ''}, in rolls, the
-              same scale in every set:{' '}
+              <span className="inv-up t0">⬆+4</span> level to stop · heat = gain in rolls{anyStar ? ' (📌/★)' : ''}{' '}
               {PRIORITY_STEPS.map((s, i) => (
                 <span key={s} className={`inv-up t${i + 1}`}>
                   {s}
                   {i === PRIORITY_STEPS.length - 1 ? '+' : ''}
                 </span>
-              ))}
-              . From {HIGH_PRIORITY_GAIN} it counts as high priority. Re-export after leveling; mark it leveled with{' '}
-              <kbd>L</kbd> or in the inspector. <span className="inv-up t2 held">⏸+8</span> is kept but on hold: not
-              worth its EXP right now, since your EXP on hand does more on other pieces (hover for both rates). Its color
-              is still its expected gain.
-            </p>
-            <p className="sub-note inv-key">
-              <span className="inv-up t2">⟳</span> a +20 worth a Dust of Enlightenment reroll, with the {GUARANTEE[guarantee]}{' '}
-              guarantee picked in Spend → Dust: a worn piece, or a spare that rerolled could beat what someone wears.
-              It&apos;s shaded the same way by the expected gain from one reroll
-              {anyStar ? ' for a 📌 Building or ★ Priority character' : ''}, from {PRIORITY_STEPS[0]}. A worn piece worth more
-              moved to someone else gets none. Mark it rerolled with <kbd>R</kbd> or in the inspector.
-            </p>
-            <p className="sub-note">
-              The order is level, then flower → circlet, then locked first, then pieces that started with 4 lines,
-              then newest first. The export only has 5★ pieces, so 4★ pieces of this set in your inventory will shift
-              the grid.
+              ))}{' '}
+              (high ≥ {HIGH_PRIORITY_GAIN}) · <span className="inv-up t2 held">⏸+8</span> held: EXP better spent elsewhere ·{' '}
+              <span className="inv-up t2">⟳</span> reroll worth it ({GUARANTEE[guarantee]}) · order: level, slot, locked,
+              4-line, newest; 4★ shift it
             </p>
           </>
         ) : (

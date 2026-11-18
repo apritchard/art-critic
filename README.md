@@ -31,7 +31,7 @@ Go through your inventory one set at a time, with the game open alongside.
 
 Click any piece to open it in the inspector. It shows why the piece got its verdict, who it's for, and **Closest build**: what would have to change for a build to keep it. Edit a build right there and the verdict updates.
 
-![Closest build on a Noblesse Oblige flower marked UNLOCK: Lisa's build passes it on every layer except the cap, with the three flowers ranked above it](docs/screenshots/closest-build.png)
+![Closest build on a Wanderer's Troupe sands marked UNLOCK: Tighnari's build passes it on every layer except the cap, with the three sands ranked above it](docs/screenshots/closest-build.png)
 
 Also in the Artifacts tab:
 
@@ -76,7 +76,7 @@ Click a character to open their page. It lists every way to improve each slot, w
 
 ![Where to spend resin: domains ranked by expected gain per 200 resin, with the characters each one helps](docs/screenshots/resin.png)
 
-![Feed or box, and the best pieces to level: the EXP on hand pays for the first 49 pieces in the queue](docs/screenshots/fodder.png)
+![Feed or box, and the best pieces to level: the EXP on hand covers the first 101 of the 160 pieces in the queue](docs/screenshots/fodder.png)
 
 ![Spend → Dust: +20s ranked by gain per Dust, with the chance a reroll comes out better and the two lines to pick](docs/screenshots/dust.png)
 
@@ -87,7 +87,7 @@ A piece is kept for a character's build when:
 1. its set is one of the build's 4pc sets, or it's good enough to be the build's one off-set piece;
 2. its main stat suits the slot;
 3. its substats clear the build's bar;
-4. it has at least a 20% chance to end up better than what they wear once leveled;
+4. it has at least a 20% chance to end up better than what they wear once leveled, and, if it still needs leveling, to end up a good piece: 80% of a typical well-rolled +20 for that build (CRIT circlets and other rare main stats are exempt);
 5. it's among the best 3 candidates for that slot (5 for ★ Priority characters).
 
 Values are counted in rolls: one max CRIT Rate roll is 1.0. Energy Recharge counts toward each build's target and is worth nothing past it.

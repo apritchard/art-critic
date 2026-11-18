@@ -1530,6 +1530,12 @@ button.fit-section-head {
   color: var(--faint);
 }
 
+/* Under a row a spare stops: how they'd wear it, and the piece's chance against what they wear. */
+.fit-also {
+  font-size: 11px;
+  color: var(--faint);
+}
+
 .o-keep .fit-what,
 .fit-sum.o-keep {
   color: var(--keep);

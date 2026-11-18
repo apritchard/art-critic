@@ -41,6 +41,7 @@ describe.skipIf(!exportFile)('real export', () => {
       commitToWornSet: false,
       offSet: 'off' as const,
       minUpgradeChance: 0,
+      levelFloor: 0,
       capNormal: Infinity,
     }
     const { evaluations } = evaluate(pieces, data.characters, config, settings, roster)

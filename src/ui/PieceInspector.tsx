@@ -13,7 +13,7 @@ import { buildsHref } from './routes'
 export type Dock = 'auto' | 'side' | 'bottom'
 
 const DOCK_LABEL: Record<Dock, { label: string; title: string }> = {
-  auto: { label: 'Auto', title: 'At the side, or at the bottom while the window is taller than wide' },
+  auto: { label: 'Auto', title: 'Side, or bottom when portrait' },
   side: { label: '◨', title: 'Dock at the side' },
   bottom: { label: '⬓', title: 'Dock at the bottom' },
 }
@@ -122,8 +122,8 @@ export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDo
           </div>
           <p className="hint">
             {!ev
-              ? "That piece isn't in this export. If you've leveled it since, open it again from the grid."
-              : 'No active build has this slot, so there is nothing to compare it with.'}
+              ? 'Not in this export (leveled since?)'
+              : 'No active build has this slot'}
           </p>
         </div>
       </Frame>
@@ -135,7 +135,7 @@ export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDo
     <a
       className="link fit-edit"
       href={buildsHref({ char: target.char, idx: target.idx, piece: ev.piece.owner ? undefined : ev.piece.id })}
-      title="Open this build in the Builds tab to change its weights; Back returns here"
+      title="Edit weights in Builds (Back returns)"
     >
       edit in Builds →
     </a>
@@ -178,7 +178,7 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action ${ev.action}${isDone ? ' is-done' : ''}`}
             onClick={() => toggleDone(id)}
-            title={isDone ? 'Marked done: click to undo' : "Click once you've done it in-game (Space)"}
+            title={isDone ? 'Done: click to undo' : 'Mark done (Space)'}
           >
             {isDone ? '✓ done' : ev.action === 'lock' ? '🔒 LOCK it' : '🔓 UNLOCK it'}
           </button>
@@ -187,7 +187,7 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action level${leveled ? ' is-done' : ''}`}
             onClick={() => toggleDone(levelKey(id))}
-            title={leveled ? 'Marked leveled: click to undo' : "Click once you've leveled it in-game (L)"}
+            title={leveled ? 'Leveled: click to undo' : 'Mark leveled (L)'}
           >
             {leveled ? '✓ leveled' : `${isHeld(level) ? '⏸' : '⬆'} leveled to +${level.next}`}
           </button>
@@ -196,13 +196,13 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action level${rerolled ? ' is-done' : ''}`}
             onClick={() => toggleDone(rerollKey(id))}
-            title={rerolled ? 'Marked rerolled: click to undo' : "Click once you've rerolled it in-game (R)"}
+            title={rerolled ? 'Rerolled: click to undo' : 'Mark rerolled (R)'}
           >
             {rerolled ? '✓ rerolled' : '⟳ rerolled'}
           </button>
         )}
         {onFind && ev.piece.rarity === 5 && (
-          <button className="link" onClick={onFind} title="Show it in the grid, in the game's order">
+          <button className="link" onClick={onFind} title="Show in grid">
             find in grid
           </button>
         )}

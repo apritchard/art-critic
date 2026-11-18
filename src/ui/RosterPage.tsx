@@ -49,10 +49,7 @@ export function RosterPage({ result }: { result: EvaluationResult }) {
   return (
     <div className="page roster">
       <p className="hint">
-        Only <b>Priority</b> and <b>Normal</b> characters count when judging artifacts. Priority characters keep up to{' '}
-        {settings.capPriority} candidates per slot instead of {settings.capNormal}. Slot cells show how good the equipped
-        piece is for that build (100% ≈ a typical well-rolled +20 with that main stat, which can&apos;t also be a substat);
-        weak cells are where new pieces have the best odds.
+        ★ {settings.capPriority} / Normal {settings.capNormal} kept per slot; Ignore doesn&apos;t count. Slot % as on Board.
       </p>
       <div className="roster-tools">
         <input placeholder="Search characters…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -72,7 +69,7 @@ export function RosterPage({ result }: { result: EvaluationResult }) {
                 {SLOT_ICON[s]}
               </th>
             ))}
-            <th title="Unequipped pieces kept mainly for this character">Kept</th>
+            <th title="Spares kept mainly for them">Kept</th>
           </tr>
         </thead>
         <tbody>
@@ -121,12 +118,12 @@ function Row({
             <>
               <td rowSpan={span}>
                 <BuildingToggle char={c.char} />{' '}
-                <a className="char-name char-link" href={charactersHref({ char: c.char })} title="All the ways to improve their pieces">
+                <a className="char-name char-link" href={charactersHref({ char: c.char })} title="Improve">
                   {characterName(c.char)}
                 </a>
                 <div className="sub-note">
                   {c.owned ? `Lv ${c.level}` : 'not owned'}
-                  {er !== null && <span title="Total Energy Recharge: base, ascension, weapon, artifacts and 2pc bonuses"> · ER {er.toFixed(0)}%</span>}
+                  {er !== null && <span title="Total ER as worn"> · ER {er.toFixed(0)}%</span>}
                   {c.confidence === 'speculative' && ' · speculative build'}
                 </div>
               </td>
@@ -159,14 +156,14 @@ function Row({
                 />{' '}
                 {b.name}
                 {b.idx === wornIdx && (
-                  <span className="worn-tag" title="Their equipped pieces fit this build best">
+                  <span className="worn-tag" title="Worn pieces fit this build best">
                     wearing
                   </span>
                 )}
               </label>
             )}
             {er !== null && needs[b.idx] !== null && er < needs[b.idx]! && (
-              <div className="sub-note warn" title="This build's ER minimum, from its ER target in Builds">
+              <div className="sub-note warn" title="Build's ER minimum">
                 ER under {needs[b.idx]}%
               </div>
             )}
@@ -177,7 +174,7 @@ function Row({
               <td
                 key={s}
                 className={`qcell ${qualityClass(q.quality)}${b.enabled ? '' : ' build-off'}`}
-                title={q.value === null ? 'Nothing usable for this build: empty, 4★ or a main stat it doesn’t list' : `Value ${q.value.toFixed(2)}`}
+                title={q.value === null ? 'Empty, 4★ or unlisted main' : `Value ${q.value.toFixed(2)}`}
               >
                 {q.quality === null ? '–' : `${Math.round(q.quality * 100)}%`}
               </td>

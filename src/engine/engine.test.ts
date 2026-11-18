@@ -312,7 +312,7 @@ describe('evaluate', () => {
     expect(good.action).toBeNull()
     expect(bad.verdict).toBe('trash')
     expect(bad.action).toBe('unlock')
-    expect(bad.reason).toMatch(/Subs too weak/)
+    expect(bad.reason).toMatch(/^Subs weak: /)
   })
 
   it('judges a 3-liner at +0 as it will be at +4, and levels it straight to +8', () => {
@@ -326,7 +326,8 @@ describe('evaluate', () => {
     const low = threeLiner({ substats: lines, unactivatedSubstats: [{ key: 'enerRech_', value: 4.5 }] })
     // Each piece once leveled to +4: its 4th line revealed, and no roll added.
     const at4 = (p: GoodArtifact) => ({ ...p, level: 4, substats: [...p.substats, ...p.unactivatedSubstats!], unactivatedSubstats: [], totalRolls: 4 })
-    const [good, weak, good4, weak4] = run([threeLiner(), low, at4(threeLiner()), at4(low)], { capNormal: 9 }).evaluations
+    // No leveling floor: with nothing worn, it would ask more of these weak double-CRIT flowers than the rule tested here.
+    const [good, weak, good4, weak4] = run([threeLiner(), low, at4(threeLiner()), at4(low)], { capNormal: 9, levelFloor: 0 }).evaluations
     expect(good.verdict).toBe('level')
     expect(good.nextStop).toBe(8)
     expect(good.best!.rescore).not.toBeNull()
@@ -337,16 +338,16 @@ describe('evaluate', () => {
     expect(weak.best!.lineScore).toBeGreaterThanOrEqual(weak.best!.threshold)
     expect(weak.verdict).toBe('trash')
     expect(weak.nextStop).toBeNull()
-    expect(weak.reason).toBe('Starting rolls too low: projected 2.48 for Diluc with the 4th line +4 reveals (need 2.55)')
+    expect(weak.reason).toBe('Starting rolls low: 2.48 / 2.55 for Diluc (incl. +4 line)')
     expect(weak4.grade).toBe(weak.grade)
-    expect(weak4.reason).toMatch(/^Rolls fell short: projected 2.48/)
+    expect(weak4.reason).toMatch(/^Rolls short: 2.48 \/ /)
   })
 
   it('applies the cap to pieces still to level', () => {
     const grades = run([art(), art({ lock: false }), art()]).evaluations.map((e) => e.grade)
     expect(grades.filter((g) => g === 'keep')).toHaveLength(2)
     const cut = run([art(), art({ lock: false }), art()]).evaluations.find((e) => e.grade === 'marginal')!
-    expect(cut.reason).toBe('Redundant: #3 of the flowers for Diluc, and only the top 2 are kept (Settings → Keep cap)')
+    expect(cut.reason).toBe('Redundant: #3 flower for Diluc, top 2 kept')
   })
 
   it('takes finished spares out of the cap, and measures pieces still to level against the best of them', () => {
@@ -380,7 +381,7 @@ describe('evaluate', () => {
     expect(contender.grade).toBe('keep')
     // A weak piece is measured against the spare, not against an empty slot.
     expect(weak.grade).toBe('toss')
-    expect(weak.reason).toMatch(/chance to beat Diluc's best spare, a \+20 Gladiator's Finale flower, which already beats what they wear$/)
+    expect(weak.reason).toMatch(/to beat Diluc's spare \+20 Gladiator's Finale$/)
   })
 
   it("measures pieces on the worn set only against spares the character could put on without breaking it", () => {
@@ -429,6 +430,10 @@ describe('evaluate', () => {
     // Wearing all five, he could put the spare on and keep the 4pc, so it raises the bar.
     const [, full] = judged('GladiatorsFinale')
     expect(full.best?.spare).toBe(kept.piece.id)
+    // A long shot's reason says why a Gladiator's Finale flower is up against one of another set.
+    const longShot = run([...worn('GladiatorsFinale'), spare, art()], { offSet: 'any' }).evaluations.at(-1)!
+    expect(longShot.grade).toBe('toss')
+    expect(longShot.reason).toMatch(/to beat Diluc's off-set: \+20 Scarlet Proof$/)
   })
 
   it('names the build in a reason when the character has more than one', () => {
@@ -436,7 +441,7 @@ describe('evaluate', () => {
     const data: GoodExport = { format: 'GOOD', version: 3, characters: owned, artifacts: [art(), art({ lock: false }), art()] }
     const cut = evaluate(loadPieces(data), owned, two, { ...defaultSettings(two), capNormal: 2 }, {}).evaluations.find((e) => e.grade === 'marginal')!
     // The bracket is left out: the rest of the name tells the builds apart.
-    expect(cut.reason).toMatch(/^Redundant: #3 of the flowers for Diluc's (DPS|Vape) build, and only the top 2 are kept/)
+    expect(cut.reason).toMatch(/^Redundant: #3 flower for Diluc \((DPS|Vape)\), top 2 kept$/)
   })
 
   it('drops pieces that cannot beat the equipped one', () => {
@@ -454,7 +459,97 @@ describe('evaluate', () => {
     const evs = run([worn, art()]).evaluations
     expect(evs[0].verdict).toBe('equipped')
     expect(evs[1].grade).toBe('toss')
-    expect(evs[1].reason).toMatch(/chance to beat Diluc/)
+    expect(evs[1].reason).toMatch(/to beat Diluc's current$/)
+  })
+
+  describe('leveling floor', () => {
+    // A poor flower for Diluc to wear: 1.34, about 23% of a typical good one (5.83 for this build).
+    const poor = art({
+      level: 20,
+      totalRolls: 9,
+      location: 'Diluc',
+      substats: [
+        { key: 'critRate_', value: 3.9 },
+        { key: 'def', value: 60 },
+        { key: 'hp', value: 800 },
+        { key: 'eleMas', value: 40 },
+      ],
+    })
+    // ATK% + CRIT DMG with flat ATK and DEF%: passes the gate (2.05) and surely beats the poor one, but projects 3.83.
+    const middling = art({
+      substats: [
+        { key: 'def_', value: 6.6 },
+        { key: 'atk_', value: 4.7 },
+        { key: 'atk', value: 16 },
+        { key: 'critDMG_', value: 6.2 },
+      ],
+    })
+    const good = art({
+      substats: [
+        { key: 'critRate_', value: 3.9 },
+        { key: 'critDMG_', value: 7.8 },
+        { key: 'atk_', value: 5.8 },
+        { key: 'atk', value: 19 },
+      ],
+    })
+    const typical = lineCeiling(W, 'hp') * 0.85 * 2.25
+
+    it("tosses a piece that beats what's worn but can't end up good", () => {
+      const [, mid, top] = run([poor, middling, good]).evaluations
+      expect(mid.grade).toBe('toss')
+      expect(mid.best!.chance).toBeGreaterThan(0.9)
+      expect(mid.best!.floor).toBeCloseTo(0.8 * typical, 9)
+      expect(mid.best!.floorChance).toBeLessThan(0.2)
+      expect(mid.reason).toMatch(/^\d+% to reach 80% floor \(4\.67\) for Diluc · \d+% to beat current \(23%\)$/)
+      // Gains are still over what's worn: the floor only decides whether it's worth leveling.
+      expect(top.grade).toBe('keep')
+      expect(top.best!.bar).toBeCloseTo(expectedFinal(poor, W), 9)
+      expect(top.best!.floorChance).toBeGreaterThan(0.2)
+      expect(top.reason).toMatch(/past the 80% floor/)
+      expect(run([poor, middling, good], { levelFloor: 0 }).evaluations[1].grade).toBe('keep')
+    })
+
+    it("doesn't apply to finished pieces, or where what's worn is past it", () => {
+      // A finished +20 needs no more EXP: it's kept if it beats what's worn.
+      const finished = art({
+        level: 20,
+        totalRolls: 9,
+        substats: [
+          { key: 'atk_', value: 14.6 },
+          { key: 'atk', value: 33 },
+          { key: 'critDMG_', value: 12.4 },
+          { key: 'def_', value: 6.6 },
+        ],
+      })
+      const [, done] = run([poor, finished]).evaluations
+      expect(done.verdict).toBe('spare')
+      expect(done.best!.floor).toBeUndefined()
+      // Against a good worn flower the floor is lower than the bar, so the chance to beat that decides alone.
+      const strong = art({ ...poor, substats: [{ key: 'critRate_', value: 10.5 }, { key: 'critDMG_', value: 21 }, { key: 'atk_', value: 10 }, { key: 'atk', value: 19 }] })
+      const [, vsStrong] = run([strong, good]).evaluations
+      expect(vsStrong.best!.bar).toBeGreaterThan(0.8 * typical)
+      expect(vsStrong.best!.floor).toBeUndefined()
+    })
+
+    it('leaves rare main stats out unless told otherwise', () => {
+      // A CRIT Rate circlet with nothing worn there: anything is an upgrade, but this one projects only 2.53.
+      const circlet = art({
+        slotKey: 'circlet',
+        mainStatKey: 'critRate_',
+        substats: [
+          { key: 'atk_', value: 4.7 },
+          { key: 'atk', value: 16 },
+          { key: 'enerRech_', value: 5.2 },
+          { key: 'def_', value: 6.6 },
+        ],
+      })
+      const [exempt] = run([circlet]).evaluations
+      expect(exempt.grade).toBe('keep')
+      expect(exempt.best!.floor).toBeUndefined()
+      const [floored] = run([circlet], { levelFloorExemptRare: false }).evaluations
+      expect(floored.grade).toBe('toss')
+      expect(floored.reason).toMatch(/floor \([\d.]+\) for Diluc · nothing usable worn$/)
+    })
   })
 
   it('keeps decent +20s as locked backups and feeds only what fails the gate', () => {
@@ -510,7 +605,7 @@ describe('evaluate', () => {
     })
     const ev = run([borderline]).evaluations[0]
     expect(ev.verdict).toBe('stop')
-    expect(ev.reason).toMatch(/Rolls fell short/)
+    expect(ev.reason).toMatch(/Rolls short/)
   })
 
   it('needs two lines the build uses at +0, however low scaling takes the bar', () => {
@@ -536,7 +631,7 @@ describe('evaluate', () => {
     const thin = judge(erOnly)
     expect(thin.best!.lineScore).toBeGreaterThanOrEqual(thin.best!.threshold)
     expect(thin.verdict).toBe('trash')
-    expect(thin.reason).toBe('Too few useful lines: only ER is a stat Diluc uses (needs 2)')
+    expect(thin.reason).toBe('1 useful line for Diluc (ER), needs 2')
     expect(judge(erOnly, false).verdict).toBe('level')
     // ER and CRIT Rate: two lines, so it passes.
     expect(judge(goblet([{ key: 'def_', value: 6.6 }, { key: 'enerRech_', value: 6.5 }, { key: 'critRate_', value: 3.1 }])).verdict).toBe('level')
@@ -600,7 +695,7 @@ describe('evaluate', () => {
       // Diluc wears nothing in the goblet slot, so the goblet's whole projected value is the gain.
       const alone = reasonFor([atkGoblet])
       expect(alone.verdict).toBe('trash')
-      expect(alone.reason).toMatch(/No active character uses 4pc Scarlet Proof · as an off-set goblet: \+[\d.]+ for Diluc \(nothing usable → [\d.]+\), more than any other spare would/)
+      expect(alone.reason).toMatch(/^No active character uses 4pc Scarlet Proof · off-set: \+[\d.]+ for Diluc, best spare \(Off-set: Any keeps it\)$/)
       // A stronger spare in the same slot outranks it.
       const better = art({
         setKey: 'ScarletProof',
@@ -613,7 +708,7 @@ describe('evaluate', () => {
           { key: 'hp', value: 299 },
         ],
       })
-      expect(reasonFor([atkGoblet, better]).reason).toMatch(/but 1 other spare would gain Diluc more/)
+      expect(reasonFor([atkGoblet, better]).reason).toMatch(/, 1 spare better$/)
       // Nobody can use the main stat at all: nothing to add.
       expect(reasonFor([{ ...goblet, mainStatKey: 'def_' }]).reason).toBe('No active character uses 4pc Scarlet Proof')
     })
@@ -634,7 +729,7 @@ describe('evaluate', () => {
       const [cut, kept] = run([goblet, betterGoblet]).evaluations
       expect(kept.grade).toBe('keep')
       expect(cut.grade).toBe('marginal')
-      expect(cut.reason).toBe('Redundant: #2 of the off-set goblets for Diluc, and only the best one is kept (Settings → Off-set pieces)')
+      expect(cut.reason).toBe('Redundant: #2 off-set goblet for Diluc, top 1 kept')
       expect(run([goblet, betterGoblet], { capOffSet: 2 }).evaluations.every((e) => e.grade === 'keep')).toBe(true)
     })
 
@@ -664,7 +759,7 @@ describe('evaluate', () => {
       // Wears tier-1 Gladiator; a tier-2 Shimenawa flower can't be used without breaking it.
       const evs = run([...wearing('GladiatorsFinale'), flower('ShimenawasReminiscence')]).evaluations
       expect(evs[4].verdict).toBe('trash')
-      expect(evs[4].reason).toMatch(/already wear a set they rank as high or higher/)
+      expect(evs[4].reason).toMatch(/users wear a set ranked as high/)
       const loose = run([...wearing('GladiatorsFinale'), flower('ShimenawasReminiscence')], { commitToWornSet: false })
       expect(loose.evaluations[4].verdict).toBe('level')
     })

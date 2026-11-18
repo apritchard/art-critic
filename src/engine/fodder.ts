@@ -1,7 +1,7 @@
 // Feed or box: whether the +0 pieces Triage marks to unlock are worth more as EXP for the Level up queue or as
 // Strongbox input. Both end up as expected gain, and both cost EXP to get there (a crafted piece has to be leveled
 // too), so the two are compared by gain per EXP.
-import type { ActiveBuild, Candidate, EvaluationResult } from './evaluate'
+import { levelFloor, type ActiveBuild, type Candidate, type EvaluationResult } from './evaluate'
 import {
   dropPool,
   expectedBestOf,
@@ -27,8 +27,14 @@ import {
   STEP,
 } from './projection'
 import { ROLL_TIERS } from './stats'
-import type { GoodArtifact } from './types'
+import type { GoodArtifact, Settings } from './types'
 import { SLOTS } from './types'
+
+/**
+ * The app's rule for when a piece is worth leveling on, from Settings: the minimum chance to beat what the character
+ * has, and the leveling floor it must be able to finish past too.
+ */
+export type LevelRule = Pick<Settings, 'minUpgradeChance' | 'levelFloor' | 'levelFloorExemptRare'>
 
 /** EXP to take a 5★ piece from each level to the next, +0 → +1 first: 16,300 to +4 and 270,475 to +20. */
 export const LEVEL_EXP = [
@@ -141,6 +147,7 @@ export function chanceFrom(value: number, lineW: number[], rolls: number, bar: n
  */
 export interface LevelingPath {
   start: LevelStart
+  /** What gains are measured over: what the character has. */
   bar: number | null
   /** One per stop to the next: its EXP, and whether an upgrade roll lands there (a 3-liner's +4 is folded into +8). */
   steps: { exp: number; roll: boolean }[]
@@ -150,12 +157,19 @@ export interface LevelingPath {
   moves: number[]
   /** Value offsets the path can reach, 0 to size − 1. */
   size: number
-  /** allowed[k][i]: at stop k (1 to steps − 1) and offset i, the chance to beat the bar is still at the minimum. */
+  /**
+   * allowed[k][i]: at stop k (1 to steps − 1) and offset i, the chance to beat the bar, and the leveling floor when
+   * that's higher, is still at the minimum.
+   */
   allowed: Uint8Array[]
 }
 
-/** Sets up a piece's road to +20 for `outlookAt`. */
-export function levelingPath(start: LevelStart, bar: number | null, minChance: number): LevelingPath {
+/**
+ * Sets up a piece's road to +20 for `outlookAt`. `floor` is the leveling floor (`Candidate.floor`): when it's above the
+ * bar, the piece goes on only while it's likely enough to finish past it, though gains are still over the bar.
+ */
+export function levelingPath(start: LevelStart, bar: number | null, minChance: number, floor: number | null = null): LevelingPath {
+  const stopBar = floor !== null && (bar === null || floor > bar) ? floor : bar
   const steps: LevelingPath['steps'] = []
   const rollsAt: number[] = [start.rolls]
   let { level, rolls } = start
@@ -178,7 +192,7 @@ export function levelingPath(start: LevelStart, bar: number | null, minChance: n
   const allowed: Uint8Array[] = [new Uint8Array(size).fill(1)]
   for (let k = 1; k < steps.length; k++) {
     const ok = new Uint8Array(size)
-    for (let i = 0; i < size; i++) ok[i] = chanceFrom(start.base + i * STEP, start.lineW, rollsAt[k], bar) >= minChance ? 1 : 0
+    for (let i = 0; i < size; i++) ok[i] = chanceFrom(start.base + i * STEP, start.lineW, rollsAt[k], stopBar) >= minChance ? 1 : 0
     allowed.push(ok)
   }
   return { start, bar, steps, spent, moves, size, allowed }
@@ -274,8 +288,8 @@ export function outlookAt(p: LevelingPath, price: number): Outlook {
 export const worthIt = (o: Outlook, price: number) => o.gain > price * o.net + 1e-12
 
 /** `outlookAt` for a piece set up and priced in one go. */
-export function levelingOutlook(s: LevelStart, bar: number | null, minChance: number, price = 0): Outlook {
-  return outlookAt(levelingPath(s, bar, minChance), price)
+export function levelingOutlook(s: LevelStart, bar: number | null, minChance: number, price = 0, floor: number | null = null): Outlook {
+  return outlookAt(levelingPath(s, bar, minChance, floor), price)
 }
 
 /** One set's Strongbox crafts, as the split weighs them. */
@@ -375,27 +389,32 @@ const freshPieces = () => (fresh ??= simulatePieces({ n: FRESH_SAMPLES, seed: 4,
 
 /**
  * One set's crafts for the characters farming it. A crafted piece is leveled for whichever of them it's likeliest to
- * beat what they have, by the same rule as the queue (levelingOutlook at EXP worth `price`), which sets its EXP (net
- * of what a dropped piece gives back) and first-craft gain; one not worth its EXP at that price is fed at +0.
+ * beat what they have, by the same rule as the queue (levelingOutlook at EXP worth `price`, leveling floor included),
+ * which sets its EXP (net of what a dropped piece gives back) and first-craft gain; one not worth its EXP at that price,
+ * or unlikely to reach the floor, is fed at +0.
  * Later crafts add less, the way the best of k pieces improves on the best of k − 1 (expectedBestOf).
  */
-export function craftCurve(set: string, chars: CharacterFarm[], minChance: number, price = 0): CraftCurve | null {
+export function craftCurve(set: string, chars: CharacterFarm[], rule: LevelRule, price = 0): CraftCurve | null {
+  const minChance = rule.minUpgradeChance
   const farming = chars.filter((c) => c.targets.includes(set))
   if (!farming.length) return null
   let exp = 0
   let first = 0
   const pieces = freshPieces()
   for (const p of pieces) {
-    let top: { chance: number; start: LevelStart; bar: number | null } | null = null
+    let top: { chance: number; start: LevelStart; bar: number | null; floor: number | null } | null = null
     for (const c of farming) {
-      if (!mainStatOk(c.ref.build, { slotKey: p.slot, mainStatKey: p.main })) continue
+      const kind = { slotKey: p.slot, mainStatKey: p.main }
+      if (!mainStatOk(c.ref.build, kind)) continue
       const start = freshStart(p, c.ref.build.substats)
       const bar = c.bars[p.slot]
+      const floor = levelFloor(c.ref.build, kind, rule)
       const chance = chanceFrom(start.base, start.lineW, start.rolls, bar)
-      if (chance >= minChance && (!top || chance > top.chance)) top = { chance, start, bar }
+      const reaches = floor === null || chanceFrom(start.base, start.lineW, start.rolls, floor) >= minChance
+      if (chance >= minChance && reaches && (!top || chance > top.chance)) top = { chance, start, bar, floor }
     }
     if (!top) continue
-    const o = levelingOutlook(top.start, top.bar, minChance, price)
+    const o = levelingOutlook(top.start, top.bar, minChance, price, top.floor)
     if (!worthIt(o, price)) continue
     exp += o.net
     first += o.gain
@@ -470,9 +489,9 @@ export function planFeedOrBox(
   result: EvaluationResult,
   plan: FarmPlan,
   materials: Record<string, number> | undefined,
-  minChance: number,
+  rule: LevelRule,
   /** levelingAdvice for the same scope, when it's already worked out. */
-  advice: LevelingAdvice = levelingAdvice(result, materials, plan.scope, minChance),
+  advice: LevelingAdvice = levelingAdvice(result, materials, plan.scope, rule.minUpgradeChance),
 ): FeedOrBox {
   const { tosses, leveled, committed, materials: matExp, budget } = advice.hand
   // The queue: unequipped pieces for the characters in scope, leveled with EXP at the price that clears the EXP on hand.
@@ -485,7 +504,7 @@ export function planFeedOrBox(
   const inScopeChars = plan.characters.filter((c) => inFarmScope(plan.scope, c.ref))
   const curves = plan.strongbox
     .slice(0, CRAFT_SETS)
-    .map((s) => craftCurve(s.key, inScopeChars, minChance, advice.price))
+    .map((s) => craftCurve(s.key, inScopeChars, rule, advice.price))
     .filter((c): c is CraftCurve => !!c)
   const a = allocate(queue, curves, budget, tosses)
   const { best, rate: bestRate, ratio } = boxRatio(curves, a, tosses)
@@ -629,7 +648,12 @@ export function levelingAdvice(
       if (!top || gain > top.gain) top = { c, gain }
     }
     if (!top) continue
-    entries.push({ piece: p, c: top.c, first, path: levelingPath(startOf(p, top.c.ref.build.substats), top.c.bar, minChance) })
+    entries.push({
+      piece: p,
+      c: top.c,
+      first,
+      path: levelingPath(startOf(p, top.c.ref.build.substats), top.c.bar, minChance, top.c.floor ?? null),
+    })
   }
   const matExp = materialsExp(materials)
   const budget = (matExp ?? 0) + leveled.exp - committed + tosses * FEED_EXP

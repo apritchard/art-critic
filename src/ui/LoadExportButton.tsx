@@ -28,7 +28,7 @@ export function LoadExportButton({ onFile }: { onFile: (file: File) => Promise<v
         className="ghost"
         disabled={busy}
         onClick={() => input.current?.click()}
-        title="Choose an Irminsul export anywhere on this PC. It's copied into imports/ and loaded."
+        title="Copy an export into imports/ and load it"
       >
         {busy ? 'Loading…' : 'Load export…'}
       </button>
