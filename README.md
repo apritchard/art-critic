@@ -37,7 +37,7 @@ Also in the Artifacts tab:
 
 - **Set brief:** above the grid, who uses the set, the main stats and substats they want, and how many pieces are kept for each. Click a character, tier or stat to see the set as if those builds were switched off: the pieces that would change are outlined.
 - **List view:** a card per piece, across all sets or one. Filter to lock changes, pieces to level, or everything, at any level.
-- **⟳ badge:** a +20 worth a Dust of Enlightenment reroll.
+- **⟳ badge:** a piece worth a Dust of Enlightenment reroll: a +20, or a +12 or +16 whose early rolls missed but whose starting lines make it worth finishing to reroll.
 - **4L / 3L:** how many lines each piece dropped with, still shown at +20, where the game sorts 4-liners first.
 - **Layout:** the inspector docks at the side or the bottom (handy on a portrait monitor), and the set rail folds away.
 
@@ -73,7 +73,7 @@ Click a character to open their page. It lists every way to improve each slot, w
 
 - **Resin:** domains by expected gain per 200 resin, who each one helps, and pieces you already have that you should level first.
 - **Strongbox:** the best set to craft. **Elixirs:** the best Sanctifying Elixir craft for each character.
-- **Dust:** +20s ranked by how much one reroll would help, with the two lines to pick.
+- **Dust:** +20s ranked by how much one reroll would help, with the two lines to pick, and pieces from +12 worth leveling to +20 to reroll.
 - **Fodder:** whether to feed your +0 unlocks or turn them in to the Strongbox, and the best pieces to spend EXP on.
 
 ![Where to spend resin: domains ranked by expected gain per 200 resin, with the characters each one helps](docs/screenshots/resin.png)

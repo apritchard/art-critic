@@ -94,6 +94,13 @@ export interface RerollPriority {
   chosen: string[]
   /** Dust of Enlightenment per reroll. */
   cost: number
+  /** A piece still to level: leveled to +20 first (RerollOption.finish). */
+  finish: { level: number; exp: number } | null
+  /**
+   * Someone ranked below `char` whom it already upgrades as it is (RerollOption.elsewhere): noted, since moving it
+   * is an option, but `char` comes first.
+   */
+  elsewhere: { char: string; from: number | null; to: number } | null
   /** How many of PRIORITY_STEPS the gain reaches (1–4); 0 when the wearer isn't ★ or Building and someone else is ★. */
   tier: number
   /** Tier 2 or more: a gain of at least HIGH_PRIORITY_GAIN. */
@@ -101,15 +108,15 @@ export interface RerollPriority {
 }
 
 /**
- * A +20 worth a Dust of Enlightenment reroll, rated like a piece to level: its expected gain from one reroll (for a
- * spare, over what the character it would go to wears), tiered by PRIORITY_STEPS when that character is ★ (or
- * anyone, when `anyStar` says nobody is). The gain, not the gain
+ * A piece worth a Dust of Enlightenment reroll (a +20, or one from +12 leveled to +20 first), rated like a piece to
+ * level: its expected gain from one reroll (for a spare, over what the character it would go to wears), tiered by
+ * PRIORITY_STEPS when that character is ★ (or anyone, when `anyStar` says nobody is). The gain, not the gain
  * per Dust the Reroll tab sorts by, so a tier means the same as the leveling badge's. Null below the first step,
- * which almost every worn +20 would reach, and for a piece worth more moved to someone else (RerollOption.elsewhere):
- * rerolling would throw that away.
+ * which almost every worn +20 would reach, and for a piece worth more moved to someone ranked at least as high as
+ * its wearer (RerollOption.elsewhere): rerolling would throw that away. Someone ranked below doesn't stop it.
  */
 export function rerollPriority(o: RerollOption, anyStar: boolean): RerollPriority | null {
-  if (o.elsewhere || o.gain < PRIORITY_STEPS[0] - 1e-9) return null
+  if ((o.elsewhere && !o.elsewhere.below) || o.gain < PRIORITY_STEPS[0] - 1e-9) return null
   const tier = standing(o.ref, anyStar) > 0 ? gainTier(o.gain) : 0
   return {
     gain: o.gain,
@@ -120,6 +127,8 @@ export function rerollPriority(o: RerollOption, anyStar: boolean): RerollPriorit
     building: !!o.ref.building,
     chosen: o.chosen,
     cost: o.cost,
+    finish: o.finish && { level: o.finish.level, exp: o.finish.exp },
+    elsewhere: o.elsewhere && { char: o.elsewhere.char, from: o.elsewhere.from, to: o.elsewhere.to },
     tier,
     high: tier >= 2,
   }

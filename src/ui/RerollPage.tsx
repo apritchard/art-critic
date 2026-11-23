@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { EvaluationResult } from '../engine/evaluate'
 import { HIGH_PRIORITY_GAIN, PRIORITY_STEPS, rerollPriority } from '../engine/inventory'
-import { planRerolls, upgradeCounts, type Guarantee, type RerollOption } from '../engine/reroll'
+import { planRerolls, REROLL_FROM, upgradeCounts, type Guarantee, type RerollOption } from '../engine/reroll'
 import { characterName, isPercent, SLOT_LABEL, setName, statShort } from '../engine/stats'
 import { useStore } from '../state/store'
 import { SLOT_ICON } from './ArtifactCard'
-import { ErChange } from './FarmPage'
+import { ErChange, expText } from './FarmPage'
 import { Info } from './Info'
 import { useLocal } from './local'
 import { marks } from './marks'
@@ -18,6 +18,19 @@ export const GUARANTEE: Record<Guarantee, string> = { 2: 'Normal (2)', 3: 'Advan
 /** The guaranteed upgrades picked at the top of this tab, which the Inventory's ⟳ badges use too. */
 export const useGuarantee = () => useLocal<Guarantee>('reroll:guarantee', 2)
 
+/** "level +16 → +20 first (117k EXP)": a piece still to level, which has to reach +20 before its reroll. */
+export const finishNote = (f: { level: number; exp: number }) => `level +${f.level} → +20 first (${expText(f.exp)} EXP)`
+
+/** "3.1 → 7.1": what a worn piece does for someone else as it is (RerollOption.elsewhere). */
+const moveText = (e: { from: number | null; to: number }) => `${e.from === null ? 'nothing usable' : e.from.toFixed(1)} → ${e.to.toFixed(1)}`
+
+/**
+ * "As it is, already an upgrade for Kujou Sara (3.1 → 7.1), who ranks below Sandrone": someone the piece suits
+ * better, but who doesn't stop the reroll counting for `char`.
+ */
+export const belowNote = (char: string, e: { char: string; from: number | null; to: number }) =>
+  `As it is, already an upgrade for ${characterName(e.char)} (${moveText(e)}), who ranks below ${characterName(char)}`
+
 type RerollSort = 'gain' | 'chance'
 type RerollWhich = 'all' | 'worn' | 'spare'
 
@@ -29,20 +42,22 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
   const [sort, setSort] = useLocal<RerollSort>('reroll:sort', 'gain')
   const [priorityFirst, setPriorityFirst] = useLocal('reroll:priorityFirst', true)
   const [which, setWhich] = useLocal<RerollWhich>('reroll:which', 'all')
+  const [unfinished, setUnfinished] = useLocal('reroll:unfinished', true)
   const [query, setQuery] = useState('')
   const [all, setAll] = useState(false)
   const plan = useMemo(() => planRerolls(result, pieces, guarantee, er, config), [result, pieces, guarantee, er, config])
   const evaluations = useMemo(() => new Map(result.evaluations.map((e) => [e.piece.id, e])), [result])
 
-  const listed = plan.options.filter((o) => o.gain > 0)
+  const listed = plan.options.filter((o) => o.gain > 0 && (unfinished || !o.finish))
   const spareCount = listed.filter((o) => o.spare).length
+  const unfinishedCount = plan.options.filter((o) => o.gain > 0 && o.finish).length
   const rows = useMemo(() => {
     const key = (o: RerollOption) => (sort === 'gain' ? o.gain / o.cost : o.chance)
     const prio = (o: RerollOption) => (priorityFirst ? (o.ref.building ? 2 : o.ref.priority === 'priority' ? 1 : 0) : 0)
     return listed
       .filter((o) => (which === 'all' || (which === 'spare') === !!o.spare) && characterName(o.ref.char).toLowerCase().includes(query.toLowerCase()))
       .sort((a, b) => prio(b) - prio(a) || key(b) - key(a) || b.gain - a.gain)
-  }, [plan, sort, priorityFirst, which, query])
+  }, [plan, sort, priorityFirst, which, unfinished, query])
   const shown = all ? rows : rows.slice(0, 30)
   // The Inventory's ⟳ badge: the expected gain on the leveling badge's steps, for a ★ character while anyone is ★.
   const anyStar = result.activeBuilds.some((r) => r.priority === 'priority')
@@ -68,7 +83,8 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
       >
         <p>
           Pick 2 lines, guaranteed upgrades on them; you can keep the old stats. Spares go to whoever gains most
-          {firstPick ? ` (${firstPick} first)` : ''}, vs what they&apos;d replace; Quick wins spares excluded. ⟳ badge ≥{' '}
+          {firstPick ? ` (${firstPick} first)` : ''}, vs what they&apos;d replace; Quick wins spares excluded. Pieces from +
+          {REROLL_FROM} are leveled to +20 first, and measured against what they&apos;d be there. ⟳ badge ≥{' '}
           {PRIORITY_STEPS[0]}, high ≥ {HIGH_PRIORITY_GAIN}.
         </p>
       </Info>
@@ -96,10 +112,14 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
           <button className={which === 'worn' ? 'on' : ''} onClick={() => setWhich('worn')} title="Pieces your characters wear">
             Worn ({listed.length - spareCount})
           </button>
-          <button className={which === 'spare' ? 'on' : ''} onClick={() => setWhich('spare')} title="Unequipped +20s, for whoever gains most">
+          <button className={which === 'spare' ? 'on' : ''} onClick={() => setWhich('spare')} title="Unequipped pieces, for whoever gains most">
             Spare ({spareCount})
           </button>
         </div>
+        <label className="check" title={`Pieces at +${REROLL_FROM} to +19, leveled to +20 before the reroll`}>
+          <input type="checkbox" checked={unfinished} onChange={(e) => setUnfinished(e.target.checked)} /> Level to +20 first (
+          {unfinishedCount})
+        </label>
         <label className="check">
           <input type="checkbox" checked={priorityFirst} onChange={(e) => setPriorityFirst(e.target.checked)} /> 📌 Building, ★
           Priority first
@@ -153,16 +173,29 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                     find in grid
                   </a>
                   <Lines o={o} />
+                  {o.finish && <div className="sub-note">{finishNote(o.finish)}</div>}
                   {o.spare && <SpareNote o={o} feed={evaluations.get(o.piece.id)?.recommendLock === false} />}
-                  {o.elsewhere && (
-                    <div className="sub-note warn">
-                      Already an upgrade for {characterName(o.elsewhere.char)} (
-                      {o.elsewhere.from === null ? 'nothing usable' : o.elsewhere.from.toFixed(1)} → {o.elsewhere.to.toFixed(1)})
-                    </div>
-                  )}
+                  {o.elsewhere &&
+                    (o.elsewhere.below ? (
+                      <div className="sub-note" title="They rank below the wearer (📌 Building, then ★ Priority), so the reroll still counts">
+                        {belowNote(o.ref.char, o.elsewhere)}
+                      </div>
+                    ) : (
+                      <div className="sub-note warn" title="Rerolling would throw that away: no ⟳ badge">
+                        Already an upgrade for {characterName(o.elsewhere.char)} ({moveText(o.elsewhere)})
+                      </div>
+                    ))}
                 </td>
                 <td className="num">
-                  {o.current.toFixed(1)} → {o.expected.toFixed(1)}
+                  {o.finish ? (
+                    <span title={`${o.current.toFixed(1)} now at +${o.finish.level}, ${o.finish.value.toFixed(1)} on average at +20`}>
+                      {o.finish.value.toFixed(1)}
+                      <span className="muted"> at +20</span>
+                    </span>
+                  ) : (
+                    o.current.toFixed(1)
+                  )}{' '}
+                  → {o.expected.toFixed(1)}
                   {o.spare && (
                     <div className="sub-note" title="What it replaces">
                       vs {o.spare.bar.toFixed(1)} worn
@@ -193,7 +226,14 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
                   )}
                   <ErChange er={o.er && { from: o.er.now, to: o.er.after, need: o.er.need, cap: o.er.cap }} approx />
                 </td>
-                <td className="num">{o.cost}</td>
+                <td className="num">
+                  {o.cost}
+                  {o.finish && (
+                    <div className="sub-note" title={`EXP to level it from +${o.finish.level} to +20 first`}>
+                      +{expText(o.finish.exp)} EXP
+                    </div>
+                  )}
+                </td>
               </tr>
             )
           })}
@@ -206,7 +246,7 @@ export function RerollPage({ result }: { result: EvaluationResult }) {
       )}
       {plan.wrongMain > 0 && (
         <p className="sub-note">
-          {plan.wrongMain} worn +20s with unlisted main stats skipped
+          {plan.wrongMain} worn pieces with unlisted main stats skipped
         </p>
       )}
     </div>

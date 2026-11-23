@@ -18,7 +18,7 @@ import { isHeld, LinesTag, SLOT_ICON, valueLine, verdictLabel, weightClass } fro
 import { levelKey } from './ListView'
 import { useLocal } from './local'
 import { marks } from './marks'
-import { GUARANTEE, useGuarantee } from './RerollPage'
+import { belowNote, finishNote, GUARANTEE, useGuarantee } from './RerollPage'
 
 /** The game's inventory shows 8 pieces per row on PC. */
 const DEFAULT_COLS = 8
@@ -35,9 +35,12 @@ const shortSub = (s: GoodSubstat) => `${statShort(s.key)} ${isPercent(s.key) ? s
 export const levelLine = (level: LevelPriority) =>
   `${isHeld(level) ? '⏸' : '⬆'}+${level.next}${level.high ? ' (high)' : ''}: +${level.gain.toFixed(2)} ${characterName(level.char)}${marks({ priority: level.star ? 'priority' : 'normal', building: level.building })} · ${Math.round(level.chance * 100)}%${level.value ? ` · ${valueLine(level.value)}` : ''}`
 
-/** "⟳ (high): +1.03 Xingqiu ★ · 100% vs 2.5 worn · CR + ATK% · 1 Dust". */
+/**
+ * "⟳ (high): +1.03 Xingqiu ★ · 100% vs 2.5 worn · CR + ATK% · 1 Dust", and for a piece still to level
+ * "· level +16 → +20 first (117k EXP)".
+ */
 export const rerollLine = (reroll: RerollPriority) =>
-  `⟳${reroll.high ? ' (high)' : ''}: +${reroll.gain.toFixed(2)} ${characterName(reroll.char)}${marks({ priority: reroll.star ? 'priority' : 'normal', building: reroll.building })} · ${Math.round(reroll.chance * 100)}%${reroll.bar === null ? '' : ` vs ${reroll.bar.toFixed(1)} worn`} · ${reroll.chosen.map(statShort).join(' + ')} · ${reroll.cost} Dust`
+  `⟳${reroll.high ? ' (high)' : ''}: +${reroll.gain.toFixed(2)} ${characterName(reroll.char)}${marks({ priority: reroll.star ? 'priority' : 'normal', building: reroll.building })} · ${Math.round(reroll.chance * 100)}%${reroll.bar === null ? '' : ` vs ${reroll.bar.toFixed(1)} worn`} · ${reroll.chosen.map(statShort).join(' + ')} · ${reroll.cost} Dust${reroll.finish ? ` · ${finishNote(reroll.finish)}` : ''}`
 
 interface Props {
   result: EvaluationResult
@@ -467,7 +470,7 @@ function Cell({
   toggle: (id: string) => void
   level: LevelPriority | null
   leveled: boolean
-  /** A +20 worth rerolling. Never alongside `level`, which is only for pieces below +20. */
+  /** Worth rerolling: a +20, or a piece from +12 leveled to +20 first, which can also be in the To level queue (`level`). */
   reroll: RerollPriority | null
   rerolled: boolean
   showSubs: boolean
@@ -492,11 +495,14 @@ function Cell({
     was && wasLine(was),
     level && `${leveled ? 'Marked leveled. ' : ''}${levelLine(level)}`,
     reroll && `${rerolled ? 'Marked rerolled. ' : ''}${rerollLine(reroll)}`,
+    reroll?.elsewhere && belowNote(reroll.char, reroll.elsewhere),
   ]
     .filter(Boolean)
     .join('\n')
   const hold = isHeld(level)
-  const heat = level && !leveled ? (hold ? 0 : level.tier) : reroll && !rerolled ? reroll.tier : null
+  // The hotter of the two badges still to act on.
+  const heats = [level && !leveled ? (hold ? 0 : level.tier) : null, reroll && !rerolled ? reroll.tier : null].filter((t) => t !== null)
+  const heat = heats.length ? Math.max(...heats) : null
   const act = e.action ? `act-${e.action}` : 'idle'
   const bar = !!e.action || !!was
   const cls = ['inv-cell', act, isDone ? 'done' : '', heat !== null ? `t${heat}` : '', bar ? 'has-act' : ''].filter(Boolean).join(' ')
@@ -508,12 +514,16 @@ function Cell({
       <button className={cls} title={title} onClick={() => onSelect(p.id)} aria-pressed={selected}>
         {p.lock && <span className="inv-lock">🔒</span>}
         <LinesTag piece={p} className="inv-lines" />
-        {level && (
-          <span className={`inv-up t${level.tier}${leveled ? ' leveled' : hold ? ' held' : ''}`}>
-            {leveled ? '✓' : hold ? '⏸' : '⬆'}+{level.next}
+        {(level || reroll) && (
+          <span className="inv-badges">
+            {level && (
+              <span className={`inv-up t${level.tier}${leveled ? ' leveled' : hold ? ' held' : ''}`}>
+                {leveled ? '✓' : hold ? '⏸' : '⬆'}+{level.next}
+              </span>
+            )}
+            {reroll && <span className={`inv-up t${reroll.tier}${rerolled ? ' leveled' : ''}`}>{rerolled ? '✓⟳' : '⟳'}</span>}
           </span>
         )}
-        {reroll && <span className={`inv-up t${reroll.tier}${rerolled ? ' leveled' : ''}`}>{rerolled ? '✓⟳' : '⟳'}</span>}
         <span className="inv-icon">{SLOT_ICON[p.slotKey]}</span>
         <span className="inv-main">{statShort(p.mainStatKey)}</span>
         <span className="inv-level">

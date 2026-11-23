@@ -7,6 +7,7 @@ import { BuildTable, isHeld, WasLine } from './ArtifactCard'
 import { FitPanel, useFitting } from './FitPanel'
 import { levelLine, rerollKey, rerollLine } from './InventoryView'
 import { levelKey } from './ListView'
+import { belowNote } from './RerollPage'
 import { buildsHref } from './routes'
 
 /** Where the inspector sits: beside the grid, under it, or (auto) under it while the window is portrait. */
@@ -224,6 +225,11 @@ function Actions({ result, id, rerolls, advice, onFind, was }: Pick<Props, 'resu
       {really && <WasLine was={really} />}
       {level && level.char && <p className="sub-note">{levelLine(level)}</p>}
       {reroll && <p className="sub-note">{rerollLine(reroll)}</p>}
+      {reroll?.elsewhere && (
+        <p className="sub-note warn" title="They rank below the wearer (📌 Building, then ★ Priority), so the reroll still counts">
+          {belowNote(reroll.char, reroll.elsewhere)}
+        </p>
+      )}
       {showBuilds && <BuildTable piece={ev.piece} candidates={ev.candidates} />}
     </div>
   )

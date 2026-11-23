@@ -331,7 +331,7 @@ function LevelQueue({ queue }: { queue: FeedOrBox['queue'] }) {
 }
 
 /** EXP as "9.2M", "186k" or "940". */
-const expText = (x: number) => (x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : x >= 1e3 ? `${Math.round(x / 1e3)}k` : `${Math.round(x)}`)
+export const expText = (x: number) => (x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : x >= 1e3 ? `${Math.round(x / 1e3)}k` : `${Math.round(x)}`)
 /** Gain per EXP, in rolls per 100k EXP. */
 const per100k = (rate: number) => (rate * 1e5).toFixed(2)
 /** The bar runs to 2^BAR_SPAN (8×) each way. */

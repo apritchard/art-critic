@@ -165,7 +165,13 @@ describe('reroll priority', () => {
   it('skips small gains and pieces worth moving instead', () => {
     // Nearly every worn +20 gains something from a reroll: below the first step isn't worth a badge.
     expect(rerollPriority(opt(0.49), true)).toBeNull()
-    expect(rerollPriority(opt(1.5, 'priority', { elsewhere: { char: 'Xilonen', from: 1, to: 4 } }), true)).toBeNull()
+    expect(rerollPriority(opt(1.5, 'priority', { elsewhere: { char: 'Xilonen', from: 1, to: 4, below: false } }), true)).toBeNull()
+  })
+
+  it('keeps the badge when the piece only suits someone ranked lower, and says so', () => {
+    const o = rerollPriority(opt(1.5, 'priority', { elsewhere: { char: 'KujouSara', from: 3.1, to: 7.1, below: true } }), true)
+    expect(o).toMatchObject({ tier: 2, high: true, elsewhere: { char: 'KujouSara', from: 3.1, to: 7.1 } })
+    expect(rerollPriority(opt(1.5), true)?.elsewhere).toBeNull()
   })
 
   it('counts only ★ wearers while someone is ★', () => {

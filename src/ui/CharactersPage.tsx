@@ -12,7 +12,7 @@ import { ImprovePage } from './ImprovePage'
 import { Info } from './Info'
 import { useLocal } from './local'
 import { BuildingToggle, marks } from './marks'
-import { useGuarantee } from './RerollPage'
+import { belowNote, finishNote, useGuarantee } from './RerollPage'
 import { RosterPage } from './RosterPage'
 import { charactersHref, replaceHash, type CharactersRoute, type CharactersView } from './routes'
 
@@ -235,7 +235,7 @@ function SlotCell({ slot, rating, fixes }: { slot: SlotKey; rating: number | nul
     swap &&
       `⇄ Equip ${setName(swap.piece.setKey)} ${statShort(swap.piece.mainStatKey)}: +${swapGain(swap).toFixed(1)}${swap.mainFrom ? ` (main ${statShort(swap.mainFrom)} →)` : ''}`,
     reroll &&
-      `⟳ Reroll ${reroll.spare ? `spare ${setName(reroll.piece.setKey)} ${statShort(reroll.piece.mainStatKey)}` : 'worn'} (${reroll.chosen.map(statShort).join(' + ')}): +${reroll.gain.toFixed(2)}, ${Math.round(reroll.chance * 100)}%`,
+      `⟳ Reroll ${reroll.spare ? `spare ${setName(reroll.piece.setKey)} ${statShort(reroll.piece.mainStatKey)}` : 'worn'} (${reroll.chosen.map(statShort).join(' + ')}): +${reroll.gain.toFixed(2)}, ${Math.round(reroll.chance * 100)}%${reroll.finish ? `, ${finishNote(reroll.finish)}` : ''}${reroll.elsewhere ? `\n   ${belowNote(reroll.ref.char, reroll.elsewhere)}` : ''}`,
     level &&
       `⬆ Level ${setName(level.piece.setKey)} ${statShort(level.piece.mainStatKey)} +${level.piece.level}: +${level.gain.toFixed(2)}, ${Math.round(level.chance * 100)}%`,
   ].filter(Boolean)

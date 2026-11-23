@@ -12,6 +12,7 @@ import { SLOT_ICON } from './ArtifactCard'
 import { EquipLog, ErChange, ErGainNote, erTargetText, runs, TradeNote } from './FarmPage'
 import { useLocal } from './local'
 import { BuildingToggle, marks } from './marks'
+import { finishNote } from './RerollPage'
 import { buildsHref, charactersHref } from './routes'
 
 const pct = (x: number) => (x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`)
@@ -536,6 +537,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
         <>
           {' '}
           pick {r.chosen.map(statShort).join(' + ')}
+          {r.finish && <div className="sub-note">{finishNote(r.finish)}</div>}
           {r.erBound && <div className="sub-note">keeps needed ER</div>}
           <ErChange er={r.er} approx />
         </>
@@ -557,6 +559,7 @@ function slotRows(s: SlotPlan, plan: ImprovePlan, equip: (p: Piece) => void): Ro
           {setName(o.piece.setKey)} · <b>{statShort(o.piece.mainStatKey)}</b> ({o.current.toFixed(1)} now), pick{' '}
           {o.chosen.map(statShort).join(' + ')}
           <div className="sub-note">{shortSubs(o.piece)}</div>
+          {o.finish && <div className="sub-note">{finishNote(o.finish)}</div>}
           {s.now !== null && o.bar < s.now - 0.05 && (
             <div className="sub-note" title="ER past target: ER lines don't count">
               vs {o.bar.toFixed(1)} worn, ER past target

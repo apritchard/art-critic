@@ -25,7 +25,7 @@ import {
 import type { Piece } from './load'
 import { fourPieceSets, mainStatOk } from './match'
 import { chanceToBeat, currentValue, expectedFinal, expectedGainOver } from './projection'
-import { DUST_COST, rerollOdds, rerollTerms, spareReroll, type Guarantee, type RerollOdds } from './reroll'
+import { DUST_COST, finishOf, rerollable, rerollOdds, rerollTerms, spareReroll, type Finish, type Guarantee, type RerollOdds } from './reroll'
 import type { ArtifactConfig, SlotKey } from './types'
 import { SLOTS } from './types'
 
@@ -82,16 +82,20 @@ export interface LevelOption extends PieceOption {
 export interface RerollChoice extends RerollOdds {
   cost: number
   er: ErChange | null
+  /** A worn piece still to level: leveled to +20 first (see rerollOdds). */
+  finish: Finish | null
 }
 
 /**
- * A spare +20 that a reroll could lift past the worn piece, judged as on the Reroll tab (spareReroll) but for this
- * character, whoever else it would suit. `value` is its average after the reroll, and `er` the total with it on, on
- * average; `erGain` is 0, since ER is handled by the reroll's own terms.
+ * A spare that a reroll could lift past the worn piece, judged as on the Reroll tab (spareReroll) but for this
+ * character, whoever else it would suit: a +20, or one from +12 leveled to +20 first. `value` is its average after the
+ * reroll, and `er` the total with it on, on average; `erGain` is 0, since ER is handled by the reroll's own terms.
  */
 export interface SpareRerollOption extends PieceOption {
   /** Its value for this build as it is. */
   current: number
+  /** Still to level: leveled to +20 first. */
+  finish: Finish | null
   /** The worn piece's value it's measured against: below the slot's `now` when ER past their target doesn't count. */
   bar: number
   /** The two lines to pick. */
@@ -266,7 +270,7 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
       .slice(0, SHOWN.level)
 
     let reroll: RerollChoice | null = null
-    if (wornPiece && wornPiece.rarity === 5 && wornPiece.level === 20 && mainStatOk(ref.build, wornPiece)) {
+    if (wornPiece && rerollable(wornPiece) && mainStatOk(ref.build, wornPiece)) {
       const terms = rerollTerms(wornPiece, ref.build, erNow)
       const odds = rerollOdds(wornPiece, terms.weights, guarantee, terms.erMin)
       if (odds) {
@@ -274,16 +278,17 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
           ...odds,
           cost: DUST_COST[slot],
           er: erNow !== null && odds.erAfter !== undefined ? { from: erNow, to: erNow - terms.line + odds.erAfter, need, cap } : null,
+          finish: finishOf(wornPiece, terms.weights),
         }
       }
     }
 
-    // Spares a reroll could lift past the worn piece (ones already past it are under `spares`). Like leveling, not
-    // ones that would break a set bonus.
+    // Spares a reroll could lift past the worn piece (ones already past it are under `spares`), +20s and ones to level
+    // to +20 first. Like leveling, not ones that would break a set bonus.
     const spareRerolls =
       wornPiece && now !== null
         ? candidates
-            .filter((p) => !p.owner && p.level === 20)
+            .filter((p) => !p.owner && rerollable(p))
             .flatMap((p): SpareRerollOption[] => {
               const fit = fitOf(p)
               if (fit.kind === 'breaks') return []
@@ -300,6 +305,7 @@ export function improveCharacter(input: ImproveInput): ImprovePlan {
                   er: o.er && { from: o.er.now, to: o.er.after, need: o.er.need, cap: o.er.cap },
                   erGain: 0,
                   current: o.current,
+                  finish: o.finish,
                   bar: o.spare!.bar,
                   chosen: o.chosen,
                   cost: o.cost,

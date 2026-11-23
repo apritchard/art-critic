@@ -57,7 +57,7 @@ export const FIX_MIN_GAIN = PRIORITY_STEPS[0]
  * The Characters board: every character in `result`, with the build they wear, their slot ratings and ER, and per
  * slot the best free swap (`plan.swaps`), reroll (`rerolls`, from planRerolls) and piece to level for them. Free
  * swaps are listed whatever their gain (planFarming already sets a floor); rerolls and pieces to level from
- * FIX_MIN_GAIN. A reroll worth more moved to someone else (`elsewhere`) isn't one.
+ * FIX_MIN_GAIN. A reroll worth more moved to someone ranked at least as high (`elsewhere`, not `below`) isn't one.
  */
 export function characterBoard(
   result: EvaluationResult,
@@ -86,7 +86,7 @@ export function characterBoard(
   const swaps = new Map(plan.swaps.map((s) => [`${s.char}|${s.slot}`, s]))
   const rerollBest = new Map<string, RerollOption>()
   for (const o of rerolls) {
-    if (o.elsewhere || o.gain < FIX_MIN_GAIN) continue
+    if ((o.elsewhere && !o.elsewhere.below) || o.gain < FIX_MIN_GAIN) continue
     const key = `${o.ref.char}|${o.spare?.replaces.slotKey ?? o.piece.slotKey}`
     if (o.gain > (rerollBest.get(key)?.gain ?? -1)) rerollBest.set(key, o)
   }

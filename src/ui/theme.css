@@ -481,8 +481,8 @@ kbd {
   color: var(--accent);
 }
 
-/* Nothing to change about its lock: faded, but a leveling badge and the substats stay readable. */
-.inv-cell.idle > :not(.inv-up):not(.inv-subs) {
+/* Nothing to change about its lock: faded, but the leveling and reroll badges and the substats stay readable. */
+.inv-cell.idle > :not(.inv-badges):not(.inv-subs) {
   opacity: 0.55;
 }
 
@@ -570,7 +570,7 @@ kbd {
   color: var(--muted);
 }
 
-/* Worth leveling (the Level up queue) or rerolling (⟳, worn +20s), brighter by expected gain: t0 below 0.5 rolls (or
+/* Worth leveling (the To level queue) or rerolling (⟳), brighter by expected gain: t0 below 0.5 rolls (or
    not for a ★ character) up to t4 at 3+ (PRIORITY_STEPS). */
 .inv-up {
   padding: 0 3px;
@@ -582,10 +582,13 @@ kbd {
   white-space: nowrap;
 }
 
-.inv-cell .inv-up {
+/* Top right: ⬆ and ⟳ side by side when a piece still to level is worth both. */
+.inv-badges {
   position: absolute;
   top: 1px;
   right: 2px;
+  display: flex;
+  gap: 2px;
 }
 
 .inv-up.t1 {
