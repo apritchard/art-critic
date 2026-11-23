@@ -1,9 +1,9 @@
 import { useDeferredValue, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import type { EvaluationResult } from '../engine/evaluate'
+import type { Evaluation, EvaluationResult } from '../engine/evaluate'
 import type { LevelingAdvice } from '../engine/fodder'
 import { levelPriority, type RerollPriority } from '../engine/inventory'
 import { useStore } from '../state/store'
-import { BuildTable, isHeld } from './ArtifactCard'
+import { BuildTable, isHeld, WasLine } from './ArtifactCard'
 import { FitPanel, useFitting } from './FitPanel'
 import { levelLine, rerollKey, rerollLine } from './InventoryView'
 import { levelKey } from './ListView'
@@ -35,6 +35,8 @@ interface Props {
   onClose: () => void
   /** Shows the piece in the grid, from the list. */
   onFind?: () => void
+  /** While the set brief's what-if is on: the real verdicts of the pieces it changes. No done marks then. */
+  was: Map<string, Evaluation> | null
 }
 
 /** The inspector's default size: its width docked at the side, its height docked at the bottom. */
@@ -95,7 +97,7 @@ function DockSwitch({ dock, onDock }: Pick<Props, 'dock' | 'onDock'>) {
  * and Closest build (the builds nearest to keeping it, with the set and main-stat edits that would), so a verdict can
  * be checked without leaving the grid.
  */
-export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDock, size, onSize, onClose, onFind }: Props) {
+export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDock, size, onSize, onClose, onFind, was }: Props) {
   const { config, setCharacterBuilds } = useStore()
   // Ranking every build for a piece costs about an evaluation, so moving through the grid doesn't wait on it.
   const shownId = useDeferredValue(id)
@@ -153,15 +155,19 @@ export function PieceInspector({ result, id, rerolls, advice, dock, placed, onDo
         title="Piece"
         editLink={editLink}
         tools={tools}
-        actions={<Actions result={result} id={shownId} rerolls={rerolls} advice={advice} onFind={onFind} />}
+        actions={<Actions result={result} id={shownId} rerolls={rerolls} advice={advice} onFind={onFind} was={was} />}
       />
     </Frame>
   )
 }
 
 /** Buttons to mark the piece's lock change done, and to mark it leveled or rerolled, with why it's worth either. */
-function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' | 'id' | 'rerolls' | 'advice' | 'onFind'>) {
+function Actions({ result, id, rerolls, advice, onFind, was }: Pick<Props, 'result' | 'id' | 'rerolls' | 'advice' | 'onFind' | 'was'>) {
   const { done, toggleDone } = useStore()
+  // No done marks while the set brief's what-if is on.
+  const preview = was !== null
+  const really = was?.get(id)
+  const previewTitle = 'What-if: reset it in the set brief to mark pieces done'
   const [showBuilds, setShowBuilds] = useState(false)
   const ev = result.evaluations.find((e) => e.piece.id === id)
   if (!ev) return null
@@ -178,7 +184,8 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action ${ev.action}${isDone ? ' is-done' : ''}`}
             onClick={() => toggleDone(id)}
-            title={isDone ? 'Done: click to undo' : 'Mark done (Space)'}
+            disabled={preview}
+            title={preview ? previewTitle : isDone ? 'Done: click to undo' : 'Mark done (Space)'}
           >
             {isDone ? '✓ done' : ev.action === 'lock' ? '🔒 LOCK it' : '🔓 UNLOCK it'}
           </button>
@@ -187,7 +194,8 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action level${leveled ? ' is-done' : ''}`}
             onClick={() => toggleDone(levelKey(id))}
-            title={leveled ? 'Leveled: click to undo' : 'Mark leveled (L)'}
+            disabled={preview}
+            title={preview ? previewTitle : leveled ? 'Leveled: click to undo' : 'Mark leveled (L)'}
           >
             {leveled ? '✓ leveled' : `${isHeld(level) ? '⏸' : '⬆'} leveled to +${level.next}`}
           </button>
@@ -196,7 +204,8 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           <button
             className={`action level${rerolled ? ' is-done' : ''}`}
             onClick={() => toggleDone(rerollKey(id))}
-            title={rerolled ? 'Rerolled: click to undo' : 'Mark rerolled (R)'}
+            disabled={preview}
+            title={preview ? previewTitle : rerolled ? 'Rerolled: click to undo' : 'Mark rerolled (R)'}
           >
             {rerolled ? '✓ rerolled' : '⟳ rerolled'}
           </button>
@@ -212,6 +221,7 @@ function Actions({ result, id, rerolls, advice, onFind }: Pick<Props, 'result' |
           </button>
         )}
       </div>
+      {really && <WasLine was={really} />}
       {level && level.char && <p className="sub-note">{levelLine(level)}</p>}
       {reroll && <p className="sub-note">{rerollLine(reroll)}</p>}
       {showBuilds && <BuildTable piece={ev.piece} candidates={ev.candidates} />}

@@ -13,7 +13,7 @@ import type { Piece } from '../engine/load'
 import { characterName, formatStat, isPercent, SLOT_LABEL, setName, statLabel, statShort } from '../engine/stats'
 import type { GoodSubstat } from '../engine/types'
 import { useStore } from '../state/store'
-import { isHeld, SLOT_ICON, valueLine, weightClass } from './ArtifactCard'
+import { isHeld, SLOT_ICON, valueLine, verdictLabel, weightClass } from './ArtifactCard'
 import { levelKey } from './ListView'
 import { useLocal } from './local'
 import { marks } from './marks'
@@ -54,15 +54,36 @@ interface Props {
   advice: LevelingAdvice
   /** Controls the page puts first in the filter bar (the view switch). */
   toolbar: ReactNode
+  /** The set brief, under the filter bar. */
+  brief?: ReactNode
+  /**
+   * While the brief's what-if is on: the real verdicts of the pieces it changes, by id. Done marks can't be made then,
+   * since the lock changes shown aren't the real ones.
+   */
+  was: Map<string, Evaluation> | null
 }
+
+/** "kept": what a piece the what-if changes really is, on its cell's bar. */
+export const wasLabel = (e: Evaluation) =>
+  e.grade === 'keep' ? 'kept' : e.grade === 'marginal' ? (e.piece.level === 20 ? 'backup' : 'marginal') : 'toss'
+
+/** The title line for a piece the what-if changes: its real verdict and reason. */
+export const wasLine = (e: Evaluation) =>
+  `What-if changes it. Really: ${verdictLabel(e)}${e.action ? ` (${e.action.toUpperCase()})` : ''} · ${e.reason}`
 
 /**
  * One set's pieces in the order the game's inventory shows them (filter by set, and Not Equipped unless equipped
  * pieces are included), each marked with its lock change and whether it's worth leveling or rerolling, so they can
  * be worked through in-game in one pass. Clicking a piece opens it in the inspector; its lock bar marks it done.
  */
-export function InventoryView({ result, set: setPick, onSet, selected, onSelect, jump, rerolls, advice, toolbar }: Props) {
-  const { done, toggleDone } = useStore()
+export function InventoryView({ result, set: setPick, onSet, selected, onSelect, jump, rerolls, advice, toolbar, brief, was }: Props) {
+  const store = useStore()
+  const { done } = store
+  // No done marks while a what-if is on: they'd be for lock changes that aren't the real ones.
+  const preview = was !== null
+  const toggleDone = (id: string, value?: boolean) => {
+    if (!preview) store.toggleDone(id, value)
+  }
   const [guarantee] = useGuarantee()
   const [colsPick, setCols] = useLocal<number>('inventory:cols', DEFAULT_COLS)
   const [withEquipped, setWithEquipped] = useLocal('inventory:equipped', false)
@@ -271,6 +292,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
             marking
           </label>
         </div>
+        {set && brief}
 
         {set ? (
           <>
@@ -308,7 +330,11 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
                 </b>
               )}
               {spot && !jumpEv && <b className="inv-spot-note">followed piece not in export · </b>}
-              {left.length > 0 ? (
+              {preview ? (
+                <span className="muted" title="Reset the what-if in the brief to mark pieces done">
+                  what-if: done marks off
+                </span>
+              ) : left.length > 0 ? (
                 <button className="link" onClick={() => markAll(true)}>
                   Mark all done
                 </button>
@@ -344,6 +370,7 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
                   spot={spot}
                   selected={selected}
                   onSelect={onSelect}
+                  was={was}
                 />
               ))}
             </div>
@@ -379,6 +406,7 @@ function Row({
   spot,
   selected,
   onSelect,
+  was,
 }: {
   n: number
   row: Evaluation[]
@@ -390,6 +418,7 @@ function Row({
   spot: string | undefined
   selected: string | null
   onSelect: (id: string) => void
+  was: Map<string, Evaluation> | null
 }) {
   return (
     <>
@@ -408,6 +437,8 @@ function Row({
           spot={e.piece.id === spot}
           selected={e.piece.id === selected}
           onSelect={onSelect}
+          preview={was !== null}
+          was={was?.get(e.piece.id)}
         />
       ))}
     </>
@@ -426,6 +457,8 @@ function Cell({
   spot,
   selected,
   onSelect,
+  preview,
+  was,
 }: {
   e: Evaluation
   isDone: boolean
@@ -441,6 +474,10 @@ function Cell({
   /** Open in the inspector: outlined. */
   selected: boolean
   onSelect: (id: string) => void
+  /** A what-if is on: its lock bar can't mark it done. */
+  preview: boolean
+  /** Its real verdict, when the what-if changes it: outlined, and its bar says what it really is. */
+  was: Evaluation | undefined
 }) {
   const p = e.piece
   const weights = e.best?.ref.build.substats ?? {}
@@ -450,6 +487,7 @@ function Cell({
     ...subs,
     p.owner ? `Equipped on ${characterName(p.owner)}` : '',
     e.reason,
+    was && wasLine(was),
     level && `${leveled ? 'Marked leveled. ' : ''}${levelLine(level)}`,
     reroll && `${rerolled ? 'Marked rerolled. ' : ''}${rerollLine(reroll)}`,
   ]
@@ -458,8 +496,11 @@ function Cell({
   const hold = isHeld(level)
   const heat = level && !leveled ? (hold ? 0 : level.tier) : reroll && !rerolled ? reroll.tier : null
   const act = e.action ? `act-${e.action}` : 'idle'
-  const cls = ['inv-cell', act, isDone ? 'done' : '', heat !== null ? `t${heat}` : '', e.action ? 'has-act' : ''].filter(Boolean).join(' ')
-  const slotCls = ['inv-slot', act, isDone ? 'done' : '', selected ? 'inv-selected' : '', spot ? 'inv-followed' : ''].filter(Boolean).join(' ')
+  const bar = !!e.action || !!was
+  const cls = ['inv-cell', act, isDone ? 'done' : '', heat !== null ? `t${heat}` : '', bar ? 'has-act' : ''].filter(Boolean).join(' ')
+  const slotCls = ['inv-slot', act, isDone ? 'done' : '', selected ? 'inv-selected' : '', spot ? 'inv-followed' : '', was ? 'inv-was' : '']
+    .filter(Boolean)
+    .join(' ')
   return (
     <div className={slotCls}>
       <button className={cls} title={title} onClick={() => onSelect(p.id)} aria-pressed={selected}>
@@ -491,14 +532,27 @@ function Cell({
           </span>
         )}
       </button>
-      {e.action && (
-        <button
-          className="inv-act"
-          onClick={() => toggle(p.id)}
-          title={isDone ? 'Marked done: click to undo' : `Click once you've ${e.action === 'lock' ? 'locked' : 'unlocked'} it in-game`}
-        >
-          {isDone ? '✓ done' : e.action === 'lock' ? 'LOCK' : 'UNLOCK'}
-        </button>
+      {was ? (
+        <span className="inv-act" title={wasLine(was)}>
+          really {wasLabel(was)}
+        </span>
+      ) : (
+        e.action && (
+          <button
+            className="inv-act"
+            onClick={() => toggle(p.id)}
+            disabled={preview}
+            title={
+              preview
+                ? 'What-if: reset it in the brief to mark pieces done'
+                : isDone
+                  ? 'Marked done: click to undo'
+                  : `Click once you've ${e.action === 'lock' ? 'locked' : 'unlocked'} it in-game`
+            }
+          >
+            {isDone ? '✓ done' : e.action === 'lock' ? 'LOCK' : 'UNLOCK'}
+          </button>
+        )
       )}
     </div>
   )

@@ -171,15 +171,24 @@ interface Props {
   advice: LevelingAdvice
   /** Controls the page puts first in the filter bar (the view switch). */
   toolbar: ReactNode
+  /** The set brief, under the filter bar, for one set. */
+  brief?: ReactNode
+  /** While the brief's what-if is on: the real verdicts of the pieces it changes, by id. No done marks then. */
+  was: Map<string, Evaluation> | null
 }
 
 /**
  * The Artifacts tab's list: one card per piece, filtered to lock changes, the Level up queue or everything, at any
  * level. The old Triage +0, In progress, +20 review and Level up tabs are its filter combinations.
  */
-export function ListView({ result, set, onSet, show, onShow, level, onLevel, inspected, onInspect, advice, toolbar }: Props) {
+export function ListView({ result, set, onSet, show, onShow, level, onLevel, inspected, onInspect, advice, toolbar, brief, was }: Props) {
   const store = useStore()
-  const { done, toggleDone } = store
+  const { done } = store
+  // No done marks while a what-if is on: they'd be for lock changes that aren't the real ones.
+  const preview = was !== null
+  const toggleDone = (id: string, value?: boolean) => {
+    if (!preview) store.toggleDone(id, value)
+  }
   const leveling = show === 'level'
   const [slot, setSlot] = useLocal<SlotKey | 'all'>('list:slot', 'all')
   const [main, setMain] = useLocal<string>('list:main', 'all')
@@ -298,6 +307,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
   }, [focusIdx, list])
 
   function markDone(e: Evaluation, i: number) {
+    if (preview) return
     const wasDone = isDone(e)
     toggleDone(keyOf(e), !wasDone)
     if (wasDone) return
@@ -313,8 +323,6 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
     setMain('all')
     setFocus(0)
   }
-
-  const users = set !== 'all' && set !== OFF_SET ? (result.setUsers[set] ?? []) : []
 
   return (
     <div className="listview">
@@ -429,11 +437,7 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
             <b>Off-set picks</b>: filter by slot + main stat in-game
           </div>
         )}
-        {set !== 'all' && set !== OFF_SET && (
-          <div className="set-info">
-            <b>{setName(set)}</b> · {users.length ? <>4pc users: {users.map(userLabel).join(', ')}</> : 'no 4pc users'}
-          </div>
-        )}
+        {set !== 'all' && set !== OFF_SET && brief}
 
         <div className="cards">
           {list.length === 0 && (
@@ -455,6 +459,8 @@ export function ListView({ result, set, onSet, show, onShow, level, onLevel, ins
               onDone={() => markDone(e, i)}
               onToggleExpand={() => setExpanded(expanded === e.piece.id ? null : e.piece.id)}
               onInspect={() => (setFocus(i), onInspect(e.piece.id))}
+              preview={preview}
+              was={was?.get(e.piece.id)}
             />
           ))}
         </div>
@@ -498,12 +504,6 @@ function Counts({ lock, unlock, level }: { lock: number; unlock: number; level: 
       {level > 0 && <span className="c-level">⬆{level}</span>}
     </span>
   )
-}
-
-/** "Nilou (t2, 2pc)": a set's user, with its tier past 1 and whether they keep it for 2pc pairs only. */
-function userLabel(u: EvaluationResult['setUsers'][string][number]): string {
-  const notes = [u.tier > 1 && `t${u.tier}`, u.twoPieceOnly && '2pc'].filter(Boolean)
-  return `${characterName(u.char)}${notes.length ? ` (${notes.join(', ')})` : ''}`
 }
 
 function railTitle(set: string, result: EvaluationResult): string {

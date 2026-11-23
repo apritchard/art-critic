@@ -78,13 +78,17 @@ interface Props {
   onToggleExpand: () => void
   /** Opens the piece in the inspector beside the list, with Closest build. */
   onInspect?: () => void
+  /** A what-if is on in the set brief: its button can't mark it done. */
+  preview?: boolean
+  /** Its real verdict, when the what-if changes it. */
+  was?: Evaluation
 }
 
 export function ArtifactCard(props: Props) {
-  const { ev, leveling, priority, focused, inspected, done, expanded, onFocus, onDone, onToggleExpand, onInspect } = props
+  const { ev, leveling, priority, focused, inspected, done, expanded, onFocus, onDone, onToggleExpand, onInspect, preview, was } = props
   const { piece } = ev
   const weights = ev.best?.ref.build.substats ?? {}
-  const cls = ['card', `g-${ev.grade}`, focused && 'focused', inspected && 'inspected', done && 'done'].filter(Boolean).join(' ')
+  const cls = ['card', `g-${ev.grade}`, focused && 'focused', inspected && 'inspected', done && 'done', was && 'was'].filter(Boolean).join(' ')
 
   return (
     <div className={cls} onClick={onFocus}>
@@ -101,9 +105,9 @@ export function ArtifactCard(props: Props) {
         {piece.elixirCrafted && <span className="flag" title="Crafted with Sanctifying Elixir">⚗</span>}
         <span className={`verdict v-${ev.grade}`}>{verdictLabel(ev)}</span>
         {leveling ? (
-          <LevelButton ev={ev} held={isHeld(priority)} done={done} onDone={onDone} />
+          <LevelButton ev={ev} held={isHeld(priority)} done={done} onDone={onDone} preview={preview} />
         ) : (
-          <ActionButton ev={ev} done={done} onDone={onDone} />
+          <ActionButton ev={ev} done={done} onDone={onDone} preview={preview} />
         )}
       </div>
       <div className="card-set">{setName(piece.setKey)}</div>
@@ -126,6 +130,7 @@ export function ArtifactCard(props: Props) {
         ))}
       </div>
 
+      {was && <WasLine was={was} />}
       <div className="reason">
         <ReasonText ev={ev} />
         {ev.candidates.length > 0 && (
@@ -201,7 +206,19 @@ export function ReasonText({ ev }: { ev: Evaluation }) {
   )
 }
 
-function ActionButton({ ev, done, onDone }: { ev: Evaluation; done: boolean; onDone: () => void }) {
+/** What a piece the set brief's what-if changes really is: its verdict and reason with every build on. */
+export function WasLine({ was }: { was: Evaluation }) {
+  return (
+    <div className="was-line" title="The verdict with every build on">
+      What-if changes it. Really: <b>{verdictLabel(was)}</b>
+      {was.action && ` (${was.action.toUpperCase()})`} · {was.reason}
+    </div>
+  )
+}
+
+const PREVIEW_TITLE = 'What-if: reset it in the set brief to mark pieces done'
+
+function ActionButton({ ev, done, onDone, preview }: { ev: Evaluation; done: boolean; onDone: () => void; preview?: boolean }) {
   const click = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDone()
@@ -210,19 +227,41 @@ function ActionButton({ ev, done, onDone }: { ev: Evaluation; done: boolean; onD
     return <span className="action none">{ev.recommendLock ? '✓ keep' : '– tossed'}</span>
   }
   return (
-    <button className={`action ${ev.action}${done ? ' is-done' : ''}`} onClick={click} title="Click once you've done it in-game">
+    <button
+      className={`action ${ev.action}${done ? ' is-done' : ''}`}
+      onClick={click}
+      disabled={preview}
+      title={preview ? PREVIEW_TITLE : "Click once you've done it in-game"}
+    >
       {done ? '✓ done' : ev.action === 'lock' ? '🔒 LOCK' : '🔓 UNLOCK'}
     </button>
   )
 }
 
-function LevelButton({ ev, held, done, onDone }: { ev: Evaluation; held: boolean; done: boolean; onDone: () => void }) {
+function LevelButton({
+  ev,
+  held,
+  done,
+  onDone,
+  preview,
+}: {
+  ev: Evaluation
+  held: boolean
+  done: boolean
+  onDone: () => void
+  preview?: boolean
+}) {
   const click = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDone()
   }
   return (
-    <button className={`action level${done ? ' is-done' : ''}`} onClick={click} title="Click once you've leveled it in-game">
+    <button
+      className={`action level${done ? ' is-done' : ''}`}
+      onClick={click}
+      disabled={preview}
+      title={preview ? PREVIEW_TITLE : "Click once you've leveled it in-game"}
+    >
       {done ? '✓ leveled' : `${held ? '⏸' : '⬆'} +${ev.nextStop}`}
     </button>
   )

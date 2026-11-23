@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import type { EvaluationResult } from '../engine/evaluate'
+import { useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { withoutBuilds, type Evaluation, type EvaluationResult } from '../engine/evaluate'
 import type { FarmScope } from '../engine/farm'
 import { levelingAdvice } from '../engine/fodder'
 import { rerollPriority, type RerollPriority } from '../engine/inventory'
 import { planRerolls } from '../engine/reroll'
 import { useStore } from '../state/store'
 import { InventoryView } from './InventoryView'
-import { ListView } from './ListView'
+import { ListView, OFF_SET } from './ListView'
 import { useLocal } from './local'
 import { DEFAULT_SIZE, PieceInspector, type Dock } from './PieceInspector'
 import { useGuarantee } from './RerollPage'
+import { SetBrief, type WhatIfChanges } from './SetBrief'
 import { artifactsHref, replaceHash, type ArtifactsRoute, type ArtifactsView, type LevelFilter, type ShowFilter } from './routes'
 
 /** Whether the window is taller than wide, as on a portrait monitor; follows it as it changes. */
@@ -30,7 +31,7 @@ function usePortrait(): boolean {
  * queue or everything. A piece opens in the inspector beside it, with Closest build, so checking a verdict doesn't
  * leave the page. The view, set and inspected piece are kept in the URL, so Back comes here as it was.
  */
-export function ArtifactsPage({ result, route }: { result: EvaluationResult; route: ArtifactsRoute }) {
+export function ArtifactsPage({ result: real, route }: { result: EvaluationResult; route: ArtifactsRoute }) {
   const { pieces, er, config, data, settings } = useStore()
   const [guarantee] = useGuarantee()
   const [view, setView] = useLocal<ArtifactsView>('artifacts:view', 'grid')
@@ -47,6 +48,42 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
   const [sizes, setSizes] = useLocal('artifacts:inspectorSize', DEFAULT_SIZE)
   const size = sizes[placed] ?? DEFAULT_SIZE[placed]
   const [jump, setJump] = useState<{ piece: string; key: string } | undefined>(undefined)
+
+  // The set brief's what-if: builds switched off, for one set. Never saved, and dropped on picking another set.
+  const briefSet = set !== 'all' && set !== OFF_SET ? set : null
+  const [whatIf, setWhatIf] = useState<{ set: string; off: Set<string> } | null>(null)
+  useEffect(() => setWhatIf(null), [briefSet])
+  const offNow = useMemo(() => (whatIf && whatIf.set === briefSet ? whatIf.off : new Set<string>()), [whatIf, briefSet])
+  // Re-planning the badges for a what-if takes a moment, so the brief follows clicks at once and the views catch up.
+  const off = useDeferredValue(offNow)
+  // Everything on the page follows the what-if: the views, their badges and the inspector.
+  const result = useMemo(() => (off.size ? withoutBuilds(real, off, config, settings) : real), [real, off, config, settings])
+  // The real verdicts of the pieces the what-if changes (its verdict or lock), for their cells and cards to show.
+  const was = useMemo(() => {
+    if (result === real) return null
+    const m = new Map<string, Evaluation>()
+    real.evaluations.forEach((e, i) => {
+      const now = result.evaluations[i]
+      if (e.verdict !== now.verdict || e.recommendLock !== now.recommendLock) m.set(e.piece.id, e)
+    })
+    return m
+  }, [real, result])
+  const changes = useMemo((): WhatIfChanges | null => {
+    if (!was || !briefSet) return null
+    const here = [...was.values()].filter((e) => e.piece.setKey === briefSet)
+    return { here: here.length, unkept: here.filter((e) => e.recommendLock).length, elsewhere: was.size - here.length }
+  }, [was, briefSet])
+  const brief = briefSet ? (
+    <SetBrief
+      key={briefSet}
+      result={real}
+      set={briefSet}
+      off={offNow}
+      onOff={(next) => setWhatIf({ set: briefSet, off: next })}
+      changes={changes}
+      pending={off !== offNow}
+    />
+  ) : null
 
   // A link followed (or an old tab's): its view, filters, set, and the piece to open and scroll to.
   useEffect(() => {
@@ -131,6 +168,8 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           rerolls={rerolls ?? new Map()}
           advice={advice}
           toolbar={toolbar}
+          brief={brief}
+          was={was}
         />
       ) : (
         <ListView
@@ -145,6 +184,8 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           onInspect={setInspected}
           advice={advice}
           toolbar={toolbar}
+          brief={brief}
+          was={was}
         />
       )}
       {inspected && (
@@ -160,6 +201,7 @@ export function ArtifactsPage({ result, route }: { result: EvaluationResult; rou
           onSize={(px) => setSizes({ ...DEFAULT_SIZE, ...sizes, [placed]: px })}
           onClose={() => setInspected(null)}
           onFind={view === 'list' ? () => find(inspected) : undefined}
+          was={was}
         />
       )}
     </div>

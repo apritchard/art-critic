@@ -331,18 +331,62 @@ export function evaluate(
   }
 
   // 2–6. What each character wears, and every piece judged against every active build.
-  const { perPiece, usable, barFor, setFor } = judge(pieces, activeBuilds, config, settings)
+  const judged = judge(pieces, activeBuilds, config, settings)
   for (const summary of characters) {
     for (const b of summary.builds) {
       const build = config.characters[summary.char].builds[b.idx]
       for (const slot of SLOTS) {
-        const eq = usable(summary.char, build, slot)
+        const eq = judged.usable(summary.char, build, slot)
         const value = eq ? expectedFinal(eq, build.substats) : null
         b.slots[slot] = { value, quality: eq && value !== null ? value / referenceValue(build, eq.mainStatKey) : null }
       }
     }
   }
 
+  return decide(pieces, judged.perPiece, activeBuilds, characters, judged, config, settings)
+}
+
+/** "Xilonen|0": one build of one character, as what-if lists of builds to leave out name it. */
+export const buildKey = (ref: Pick<ActiveBuild, 'char' | 'buildIdx'>) => `${ref.char}|${ref.buildIdx}`
+
+/**
+ * The result as it would be with some active builds switched off (`off`, by `buildKey`): a what-if, as if they were
+ * switched off in the Roster. Each build is judged on its own (its worn set, bars, spares, off-set lane and cap pools
+ * are its own), so the other builds' candidates are just as they were: this drops the switched-off builds' candidates
+ * and decides every verdict again, without judging any piece anew. `result` is unchanged.
+ */
+export function withoutBuilds(
+  result: EvaluationResult,
+  off: ReadonlySet<string>,
+  config: ArtifactConfig,
+  settings: Settings,
+): EvaluationResult {
+  if (!result.activeBuilds.some((r) => off.has(buildKey(r)))) return result
+  const activeBuilds = result.activeBuilds.filter((r) => !off.has(buildKey(r)))
+  const left = new Set(activeBuilds)
+  const pieces = result.evaluations.map((e) => e.piece)
+  const perPiece = result.evaluations.map((e) => e.candidates.filter((c) => left.has(c.ref)))
+  const characters = result.characters.map((c) => ({
+    ...c,
+    builds: c.builds.map((b) => (off.has(buildKey({ char: c.char, buildIdx: b.idx })) ? { ...b, enabled: false } : b)),
+  }))
+  return decide(pieces, perPiece, activeBuilds, characters, wornContext(pieces, activeBuilds, config, settings), config, settings)
+}
+
+/**
+ * Step 7 of `evaluate`: every piece's verdict from its candidates (`perPiece`, in `pieces` order), each character's
+ * count of pieces kept for them, and who lists each set. Sorts each piece's candidates in place, and sets `kept` on
+ * `characters`.
+ */
+function decide(
+  pieces: Piece[],
+  perPiece: Candidate[][],
+  activeBuilds: ActiveBuild[],
+  characters: CharacterSummary[],
+  { barFor, setFor }: Pick<Judgement, 'barFor' | 'setFor'>,
+  config: ArtifactConfig,
+  settings: Settings,
+): EvaluationResult {
   // 7. Verdicts. A piece no build can use is still shown what it would be worth as someone's off-set piece.
   const spares = pieces.filter((p) => !p.owner && p.rarity === 5)
   const gainFor = (ref: ActiveBuild, p: Piece): number | null =>
@@ -472,50 +516,8 @@ export interface Judgement {
  * pools are its own), so a what-if run can pass edited copies of builds and read their candidates directly.
  */
 export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: ArtifactConfig, settings: Settings): Judgement {
-  // What each character wears now.
-  const equipped = new Map<string, Piece>()
-  for (const p of pieces) if (p.owner) equipped.set(`${p.owner}|${p.slotKey}`, p)
-  const worn = wornSets(pieces)
-  const wearable = (ref: ActiveBuild, piece: Piece): boolean =>
-    !!swapSetFit(worn.get(ref.char) ?? {}, equipped.get(`${ref.char}|${piece.slotKey}`)?.setKey, piece.setKey, ref.build, config)
-  const usable = (char: string, build: BuildConfig, slot: SlotKey): Piece | null => {
-    const eq = equipped.get(`${char}|${slot}`)
-    return eq && eq.rarity === 5 && mainStatOk(build, eq) ? eq : null
-  }
-  // Asked for every piece and build, so remembered per build, character and slot.
-  const bars = new Map<BuildConfig, Map<string, number | null>>()
-  const barFor = (char: string, build: BuildConfig, slot: SlotKey): number | null => {
-    let byBuild = bars.get(build)
-    if (!byBuild) bars.set(build, (byBuild = new Map()))
-    const key = `${char}|${slot}`
-    if (!byBuild.has(key)) {
-      const eq = usable(char, build, slot)
-      byBuild.set(key, eq ? expectedFinal(eq, build.substats) : null)
-    }
-    return byBuild.get(key)!
-  }
-
-  // A build whose character already wears one of its 4pc sets is committed to it: another set's pieces only
-  // count if that set is ranked a better tier (worth switching to). Pieces they're wearing always count. A 4pc of
-  // a set the build keeps for 2pc pairs only commits it to nothing, so its partner sets keep counting.
-  const commitment = new Map<ActiveBuild, { set: string; tier: number }>()
-  if (settings.commitToWornSet) {
-    for (const ref of activeBuilds) {
-      const committed = commitmentOf(ref.build, worn.get(ref.char) ?? {})
-      if (committed) commitment.set(ref, committed)
-    }
-  }
-  const setFor = (ref: ActiveBuild, piece: Piece): SetMatch => {
-    const match = matchSet(ref.build, piece.setKey, config, settings.setMatch)
-    const committed = commitment.get(ref)
-    const sidelined =
-      match?.kind === '4pc' &&
-      !!committed &&
-      piece.owner !== ref.char &&
-      piece.setKey !== committed.set &&
-      match.tier >= committed.tier
-    return sidelined ? null : match
-  }
+  const context = wornContext(pieces, activeBuilds, config, settings)
+  const { barFor, setFor, wearable } = context
 
   // Threshold scaling depends only on the build and the main stat.
   const scales = new Map<string, ReturnType<typeof scaling>>()
@@ -662,7 +664,64 @@ export function judge(pieces: Piece[], activeBuilds: ActiveBuild[], config: Arti
     })
   }
 
-  return { perPiece, usable, barFor, setFor, wearable }
+  return { perPiece, ...context }
+}
+
+/**
+ * What every character wears, and the helpers that read it for a list of builds: no piece is judged here, so it's
+ * cheap. `judge` builds on it, and `withoutBuilds` needs only it.
+ */
+function wornContext(
+  pieces: Piece[],
+  activeBuilds: ActiveBuild[],
+  config: ArtifactConfig,
+  settings: Settings,
+): Omit<Judgement, 'perPiece'> {
+  // What each character wears now.
+  const equipped = new Map<string, Piece>()
+  for (const p of pieces) if (p.owner) equipped.set(`${p.owner}|${p.slotKey}`, p)
+  const worn = wornSets(pieces)
+  const wearable = (ref: ActiveBuild, piece: Piece): boolean =>
+    !!swapSetFit(worn.get(ref.char) ?? {}, equipped.get(`${ref.char}|${piece.slotKey}`)?.setKey, piece.setKey, ref.build, config)
+  const usable = (char: string, build: BuildConfig, slot: SlotKey): Piece | null => {
+    const eq = equipped.get(`${char}|${slot}`)
+    return eq && eq.rarity === 5 && mainStatOk(build, eq) ? eq : null
+  }
+  // Asked for every piece and build, so remembered per build, character and slot.
+  const bars = new Map<BuildConfig, Map<string, number | null>>()
+  const barFor = (char: string, build: BuildConfig, slot: SlotKey): number | null => {
+    let byBuild = bars.get(build)
+    if (!byBuild) bars.set(build, (byBuild = new Map()))
+    const key = `${char}|${slot}`
+    if (!byBuild.has(key)) {
+      const eq = usable(char, build, slot)
+      byBuild.set(key, eq ? expectedFinal(eq, build.substats) : null)
+    }
+    return byBuild.get(key)!
+  }
+
+  // A build whose character already wears one of its 4pc sets is committed to it: another set's pieces only
+  // count if that set is ranked a better tier (worth switching to). Pieces they're wearing always count. A 4pc of
+  // a set the build keeps for 2pc pairs only commits it to nothing, so its partner sets keep counting.
+  const commitment = new Map<ActiveBuild, { set: string; tier: number }>()
+  if (settings.commitToWornSet) {
+    for (const ref of activeBuilds) {
+      const committed = commitmentOf(ref.build, worn.get(ref.char) ?? {})
+      if (committed) commitment.set(ref, committed)
+    }
+  }
+  const setFor = (ref: ActiveBuild, piece: Piece): SetMatch => {
+    const match = matchSet(ref.build, piece.setKey, config, settings.setMatch)
+    const committed = commitment.get(ref)
+    const sidelined =
+      match?.kind === '4pc' &&
+      !!committed &&
+      piece.owner !== ref.char &&
+      piece.setKey !== committed.set &&
+      match.tier >= committed.tier
+    return sidelined ? null : match
+  }
+  return { usable, barFor, setFor, wearable }
 }
 
 /** Best first: in-cap, then surviving, then passing the gate, then by projected value. */

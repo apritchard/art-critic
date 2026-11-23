@@ -2,7 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { defaultSettings, evaluate } from './evaluate'
+import { buildKey, defaultSettings, evaluate, withoutBuilds } from './evaluate'
 import { planFarming, type DomainsFile } from './farm'
 import { loadPieces } from './load'
 import type { ArtifactConfig, GoodExport, Roster } from './types'
@@ -83,6 +83,23 @@ describe.skipIf(!exportFile)('real export', () => {
     expect(cont).toBeLessThan(80)
     // Equipped pieces are never recommended for unlocking.
     expect(evaluations.some((e) => e.piece.owner && e.action === 'unlock')).toBe(false)
+  })
+
+  it('matches a what-if without some builds to evaluating with them switched off', () => {
+    const settings = defaultSettings(config)
+    const result = evaluate(pieces, data.characters, config, settings, {})
+    // Every seventh active build: a spread of characters, sets and slots.
+    const off = result.activeBuilds.filter((_, i) => i % 7 === 3)
+    const roster: Roster = {}
+    for (const ref of off) {
+      const entry = (roster[ref.char] ??= { priority: ref.priority, disabledBuilds: [] })
+      entry.disabledBuilds.push(ref.buildIdx)
+    }
+    const t0 = performance.now()
+    const what = withoutBuilds(result, new Set(off.map(buildKey)), config, settings)
+    const ms = performance.now() - t0
+    console.log(`what-if without ${off.length} builds: ${ms.toFixed(0)}ms`)
+    expect(what).toEqual(evaluate(pieces, data.characters, config, settings, roster))
   })
 
   it('plans farming without reusing a spare or double-booking a slot', () => {

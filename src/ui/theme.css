@@ -2221,3 +2221,237 @@ a.chip {
   padding: 0;
   font-size: 12px;
 }
+
+/* Set brief: who a set is for and what they want, above the Artifacts grid and list */
+
+.brief {
+  container-type: inline-size;
+  margin: 8px 16px 4px;
+  padding: 6px 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 13px;
+}
+
+/* A what-if is on: the brief, the cells it changes and their cards are dashed. */
+.brief.whatif {
+  border-style: dashed;
+  border-color: var(--text);
+}
+
+.brief-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.brief-fold {
+  padding: 0 6px;
+  border-color: transparent;
+}
+
+.brief-whatif {
+  padding: 0 8px;
+  border: 1px dashed var(--text);
+  border-radius: 999px;
+}
+
+.brief-tools {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.brief-tools .ghost.on {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+
+.brief-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.brief-row {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.brief-label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* In a narrow pane (the list beside the inspector), each row's label goes above its chips. */
+@container (max-width: 420px) {
+  .brief-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+.brief-chips,
+.brief-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.brief-group {
+  margin-right: 10px;
+}
+
+.brief-chip {
+  flex: none;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.brief-chip:hover,
+.brief-chip.lit {
+  border-color: var(--accent);
+}
+
+.brief-chip.lit {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* A tier's label, which switches its whole tier. */
+.brief-chip.brief-tier {
+  padding: 0 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* 📌 Building and ★ Priority builds. */
+.brief-chip.brief-who.first {
+  font-weight: 600;
+}
+
+.brief-chip.partial {
+  border-style: dashed;
+}
+
+.brief-chip.off {
+  background: transparent;
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.brief-n {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pieces of the set kept for a build; bold when some are kept for it alone. */
+.brief-kept {
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--keep-bg);
+  color: var(--keep);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-kept.only {
+  font-weight: 700;
+}
+
+.brief-minor {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.brief-table-wrap {
+  overflow-x: auto;
+  margin-top: 6px;
+}
+
+.brief-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.brief-table th {
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+}
+
+.brief-table td {
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.brief-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-table tr.off td {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* A piece the what-if changes: outlined dashed, its bar saying what it really is. */
+.inv-slot.inv-was:not(.inv-selected) > .inv-cell {
+  outline: 2px dashed var(--text);
+  outline-offset: 1px;
+}
+
+.inv-slot > span.inv-act {
+  text-align: center;
+}
+
+.inv-slot.inv-was > .inv-act {
+  color: var(--text);
+  border-top-color: var(--text);
+  font-weight: 400;
+}
+
+.inv-slot > .inv-act:disabled {
+  cursor: default;
+}
+
+.inv-slot > .inv-act:disabled:hover {
+  background: transparent;
+}
+
+.card.was {
+  outline: 2px dashed var(--text);
+  outline-offset: -2px;
+}
+
+.was-line {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.action:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

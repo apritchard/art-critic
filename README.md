@@ -35,6 +35,7 @@ Click any piece to open it in the inspector. It shows why the piece got its verd
 
 Also in the Artifacts tab:
 
+- **Set brief:** above the grid, who uses the set, the main stats and substats they want, and how many pieces are kept for each. Click a character, tier or stat to see the set as if those builds were switched off: the pieces that would change are outlined.
 - **List view:** a card per piece, across all sets or one. Filter to lock changes, pieces to level, or everything, at any level.
 - **⟳ badge:** a +20 worth a Dust of Enlightenment reroll.
 - **Layout:** the inspector docks at the side or the bottom (handy on a portrait monitor), and the set rail folds away.
