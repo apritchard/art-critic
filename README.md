@@ -29,7 +29,7 @@ Go through your inventory one set at a time, with the game open alongside.
 4. Level the **⬆+4** pieces to the stop shown. The hotter the badge, the bigger the expected gain; blue and up is high priority. A dimmed **⏸** piece is kept but on hold: your EXP on hand does more elsewhere.
 5. Re-export and load it. Each piece you leveled is judged again on what it rolled.
 
-Click any piece to open it in the inspector. It shows why the piece got its verdict, who it's for, and **Closest build**: what would have to change for a build to keep it. Edit a build right there and the verdict updates.
+Click any piece to open it in the inspector. It shows why the piece got its verdict, who it's for, and **Closest build**: what would have to change for a build to keep it. You can edit the build here or navigate to the build to change its configuration if you feel this piece is not actually good for this character.
 
 ![Closest build on a Wanderer's Troupe sands marked UNLOCK: Tighnari's build passes it on every layer except the cap, with the three sands ranked above it](docs/screenshots/closest-build.png)
 
