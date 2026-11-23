@@ -1,7 +1,7 @@
 # art-critic
 Know which Genshin Impact artifacts to lock, level, feed, reroll or farm.
 
-Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of your account and judges every 5★ piece against a researched build for each of your characters. It runs as a local web page you keep next to the game.
+Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of your account and judges every 5★ piece against a default build for each of your characters. It runs as a local web page you keep next to the game.
 
 ![The Artifacts grid for Noblesse Oblige, laid out like the in-game inventory, with LOCK and UNLOCK bars, leveling badges and 4L/3L tags for the lines each piece dropped with, and the inspector open on a flower worth leveling for Bennett](docs/screenshots/artifacts.png)
 
@@ -15,7 +15,7 @@ Then tell it who you care about:
 
 - **Characters → Roster:** mark characters **★ Priority** (you want good pieces for them), Normal, or Ignore (don't keep pieces for them).
 - **📌 Building:** pin the few you're working on right now. They lead every list, and Spend ranks for them. Unpin them from the header when you move on.
-- **Builds:** every character starts with a researched build. Change the sets, main stats, substat weights or ER target to match how you play them.
+- **Builds:** every character starts with a default build. Change the sets, main stats, substat weights or ER target to match how you play them.
 
 Your choices are saved in `state/user-state.json`. That file and your exports stay on your machine.
 
