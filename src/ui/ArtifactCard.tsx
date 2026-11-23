@@ -2,6 +2,7 @@ import { tooFewLines, type Candidate, type Evaluation } from '../engine/evaluate
 import { describeSetMatch } from '../engine/match'
 import { AVG_TIER, characterName, formatStat, MAX_ROLL, SLOT_LABEL, setName, statLabel } from '../engine/stats'
 import { MAX_PRICE } from '../engine/fodder'
+import { startLines } from '../engine/projection'
 import type { LevelPriority, LevelValue } from '../engine/inventory'
 import type { Piece } from '../engine/load'
 import type { GoodSubstat, SlotKey } from '../engine/types'
@@ -53,6 +54,25 @@ export function valueLine(v: LevelValue): string {
   return `Held: ${rate} vs ${per100k(v.price)} elsewhere${v.first ? '' : ' (after Rank for)'}`
 }
 
+/** "4-liner: dropped with 4 substats, so all 5 upgrades roll (9 rolls by +20)", for the 4L/3L tag's title. */
+export const linesTitle = (lines: 3 | 4) =>
+  lines === 4
+    ? '4-liner: dropped with 4 substats, so all 5 upgrades roll (9 rolls by +20)'
+    : '3-liner: dropped with 3 substats; +4 adds the 4th, so 4 upgrades roll (8 rolls by +20)'
+
+/**
+ * How many lines the piece dropped with: 4L stands out, 3L stays faint. It shows at +20 too, where both have 4 lines,
+ * and the game sorts 4-liners first within a level, slot and lock state.
+ */
+export function LinesTag({ piece, className = '' }: { piece: Piece; className?: string }) {
+  const lines = startLines(piece)
+  return (
+    <span className={`lines l${lines} ${className}`.trim()} title={linesTitle(lines)}>
+      {lines}L
+    </span>
+  )
+}
+
 /** Colors a substat by how much the build weighs it. */
 export const weightClass = (w: number) => (w >= 0.75 ? 'w-hi' : w >= 0.3 ? 'w-mid' : w > 0 ? 'w-lo' : 'w-zero')
 
@@ -98,6 +118,7 @@ export function ArtifactCard(props: Props) {
         </span>
         <span className="main-stat">{statLabel(piece.mainStatKey)}</span>
         <span className="level">+{piece.level}</span>
+        <LinesTag piece={piece} />
         <span className="lockstate" title={piece.lock ? 'Currently locked' : 'Currently unlocked'}>
           {piece.lock ? '🔒' : '🔓'}
         </span>

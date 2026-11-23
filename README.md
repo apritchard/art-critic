@@ -3,7 +3,7 @@ Know which Genshin Impact artifacts to lock, level, feed, reroll or farm.
 
 Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of your account and judges every 5★ piece against a researched build for each of your characters. It runs as a local web page you keep next to the game.
 
-![The Artifacts grid for Noblesse Oblige, laid out like the in-game inventory, with LOCK and UNLOCK bars and leveling badges, and the inspector open on a flower worth leveling for Bennett](docs/screenshots/artifacts.png)
+![The Artifacts grid for Noblesse Oblige, laid out like the in-game inventory, with LOCK and UNLOCK bars, leveling badges and 4L/3L tags for the lines each piece dropped with, and the inspector open on a flower worth leveling for Bennett](docs/screenshots/artifacts.png)
 
 ## Setup
 
@@ -38,6 +38,7 @@ Also in the Artifacts tab:
 - **Set brief:** above the grid, who uses the set, the main stats and substats they want, and how many pieces are kept for each. Click a character, tier or stat to see the set as if those builds were switched off: the pieces that would change are outlined.
 - **List view:** a card per piece, across all sets or one. Filter to lock changes, pieces to level, or everything, at any level.
 - **⟳ badge:** a +20 worth a Dust of Enlightenment reroll.
+- **4L / 3L:** how many lines each piece dropped with, still shown at +20, where the game sorts 4-liners first.
 - **Layout:** the inspector docks at the side or the bottom (handy on a portrait monitor), and the set rail folds away.
 
 ## Find quick boosts
@@ -77,7 +78,7 @@ Click a character to open their page. It lists every way to improve each slot, w
 
 ![Where to spend resin: domains ranked by expected gain per 200 resin, with the characters each one helps](docs/screenshots/resin.png)
 
-![Feed or box, and the best pieces to level: the EXP on hand covers the first 101 of the 160 pieces in the queue](docs/screenshots/fodder.png)
+![Feed or box, and the best pieces to level: the EXP on hand covers the first 100 of the 161 pieces in the queue](docs/screenshots/fodder.png)
 
 ![Spend → Dust: +20s ranked by gain per Dust, with the chance a reroll comes out better and the two lines to pick](docs/screenshots/dust.png)
 

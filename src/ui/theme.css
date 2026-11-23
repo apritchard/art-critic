@@ -536,6 +536,35 @@ kbd {
   font-size: 11px;
 }
 
+/* The lines a piece dropped with (LinesTag): 4L outlined in gold, so 4-liners stand out; 3L faint. */
+.lines {
+  padding: 0 2px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.lines.l4 {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lines.l3 {
+  font-weight: 400;
+  color: var(--faint);
+}
+
+/* In a grid cell: under the lock, beside the slot icon, so the cell keeps its size. */
+.inv-lines {
+  position: absolute;
+  top: 18px;
+  left: 2px;
+  font-size: 9px;
+}
+
 .inv-owner {
   font-weight: 400;
   color: var(--muted);

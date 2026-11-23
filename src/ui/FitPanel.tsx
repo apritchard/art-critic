@@ -16,7 +16,7 @@ import { allSubs } from '../engine/projection'
 import { characterName, formatStat, SLOT_LABEL, setName, slotPlural, statLabel, statShort, topKept } from '../engine/stats'
 import type { BuildConfig, Settings } from '../engine/types'
 import { useStore } from '../state/store'
-import { ReasonText, SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
+import { LinesTag, ReasonText, SLOT_ICON, verdictLabel, weightClass } from './ArtifactCard'
 import { useLocal } from './local'
 import { marks } from './marks'
 import { buildsHref, inventoryHref } from './routes'
@@ -245,7 +245,7 @@ export function FitPanel({ fitting, char, idx, build, save, onPick, onClose, act
       {piece && (
         <span className="fit-piece">
           {SLOT_ICON[piece.slotKey]} {setName(piece.setKey)} · {statLabel(piece.mainStatKey)} · +{piece.level}{' '}
-          <span title={piece.lock ? 'Locked now' : 'Unlocked now'}>{piece.lock ? '🔒' : '🔓'}</span>
+          <LinesTag piece={piece} /> <span title={piece.lock ? 'Locked now' : 'Unlocked now'}>{piece.lock ? '🔒' : '🔓'}</span>
         </span>
       )}
       {tools && <span className="fit-tools">{tools}</span>}

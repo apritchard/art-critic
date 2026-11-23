@@ -10,10 +10,11 @@ import {
   type RerollPriority,
 } from '../engine/inventory'
 import type { Piece } from '../engine/load'
+import { startLines } from '../engine/projection'
 import { characterName, formatStat, isPercent, SLOT_LABEL, setName, statLabel, statShort } from '../engine/stats'
 import type { GoodSubstat } from '../engine/types'
 import { useStore } from '../state/store'
-import { isHeld, SLOT_ICON, valueLine, verdictLabel, weightClass } from './ArtifactCard'
+import { isHeld, LinesTag, SLOT_ICON, valueLine, verdictLabel, weightClass } from './ArtifactCard'
 import { levelKey } from './ListView'
 import { useLocal } from './local'
 import { marks } from './marks'
@@ -383,8 +384,9 @@ export function InventoryView({ result, set: setPick, onSet, selected, onSelect,
                 </span>
               ))}{' '}
               (high ≥ {HIGH_PRIORITY_GAIN}) · <span className="inv-up t2 held">⏸+8</span> held: EXP better spent elsewhere ·{' '}
-              <span className="inv-up t2">⟳</span> reroll worth it ({GUARANTEE[guarantee]}) · order: level, slot, locked,
-              4-line, newest; 4★ shift it
+              <span className="inv-up t2">⟳</span> reroll worth it ({GUARANTEE[guarantee]}) ·{' '}
+              <span className="lines l4">4L</span>/<span className="lines l3">3L</span> lines at drop · order: level, slot,
+              locked, 4L, newest; 4★ shift it
             </p>
           </>
         ) : (
@@ -483,7 +485,7 @@ function Cell({
   const weights = e.best?.ref.build.substats ?? {}
   const subs = [...p.substats.map((s) => formatStat(s.key, s.value)), ...(p.unactivatedSubstats ?? []).map((s) => `${formatStat(s.key, s.value)} (unactivated)`)]
   const title = [
-    `${setName(p.setKey)} ${SLOT_LABEL[p.slotKey].toLowerCase()} · ${statLabel(p.mainStatKey)} · +${p.level}${p.lock ? ' · locked' : ''}`,
+    `${setName(p.setKey)} ${SLOT_LABEL[p.slotKey].toLowerCase()} · ${statLabel(p.mainStatKey)} · +${p.level} · ${startLines(p)}-liner${p.lock ? ' · locked' : ''}`,
     ...subs,
     p.owner ? `Equipped on ${characterName(p.owner)}` : '',
     e.reason,
@@ -505,6 +507,7 @@ function Cell({
     <div className={slotCls}>
       <button className={cls} title={title} onClick={() => onSelect(p.id)} aria-pressed={selected}>
         {p.lock && <span className="inv-lock">🔒</span>}
+        <LinesTag piece={p} className="inv-lines" />
         {level && (
           <span className={`inv-up t${level.tier}${leveled ? ' leveled' : hold ? ' held' : ''}`}>
             {leveled ? '✓' : hold ? '⏸' : '⬆'}+{level.next}
