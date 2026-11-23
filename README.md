@@ -1,7 +1,7 @@
 # art-critic
 Know which Genshin Impact artifacts to lock, level, feed, reroll or farm.
 
-Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of your account and judges every 5★ piece against a default build for each of your characters. It runs as a local web page you keep next to the game.
+Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of your account and judges every 5★ piece against a configurable build for each of your characters. It runs as a local web page you keep next to the game.
 
 ![The Artifacts grid for Noblesse Oblige, laid out like the in-game inventory, with LOCK and UNLOCK bars, leveling badges and 4L/3L tags for the lines each piece dropped with, and the inspector open on a flower worth leveling for Bennett](docs/screenshots/artifacts.png)
 
@@ -13,7 +13,7 @@ Art Critic reads an [Irminsul](https://github.com/konkers/irminsul) export of yo
 
 Then tell it who you care about:
 
-- **Characters → Roster:** mark characters **★ Priority** (you want good pieces for them), Normal, or Ignore (don't keep pieces for them).
+- **Characters → Roster:** mark characters **★ Priority**, Normal, or Ignore to determine whether Art Critic should consider their builds when assessing artifacts.
 - **📌 Building:** pin the few you're working on right now. They lead every list, and Spend ranks for them. Unpin them from the header when you move on.
 - **Builds:** every character starts with a default build. Change the sets, main stats, substat weights or ER target to match how you play them.
 
@@ -27,7 +27,7 @@ Go through your inventory one set at a time, with the game open alongside.
 2. In-game, filter the inventory to that set. The grid is in the game's own order, cell for cell.
 3. Follow the green **LOCK** and red **UNLOCK** bars. <kbd>Space</kbd> marks a piece done and jumps to the next.
 4. Level the **⬆+4** pieces to the stop shown. The hotter the badge, the bigger the expected gain; blue and up is high priority. A dimmed **⏸** piece is kept but on hold: your EXP on hand does more elsewhere.
-5. Re-export and load it. Each piece you leveled is judged again on what it actually rolled.
+5. Re-export and load it. Each piece you leveled is judged again on what it rolled.
 
 Click any piece to open it in the inspector. It shows why the piece got its verdict, who it's for, and **Closest build**: what would have to change for a build to keep it. Edit a build right there and the verdict updates.
 
