@@ -41,7 +41,7 @@ Also in the Artifacts tab:
 - **4L / 3L:** how many lines each piece dropped with, still shown at +20, where the game sorts 4-liners first.
 - **Layout:** the inspector docks at the side or the bottom (handy on a portrait monitor), and the set rail folds away.
 
-## Find quick boosts
+## Find quick upgrades or unfinished characters
 
 **Characters → Board** lists every active character, least built first.
 
